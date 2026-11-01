@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ShieldCheck, Lock, Mail, Key } from 'lucide-react';
+import { ShieldCheck, Lock, Mail, Key, UserPlus } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
 
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
@@ -16,13 +17,44 @@ export default function LoginPage() {
   const [mfaChallengeId, setMfaChallengeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMessage(null);
+    setSuccessMessage(null);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    if (mode === 'signup') {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        setLoading(false);
+        return;
+      }
+
+      if (data.session) {
+        router.push('/hari-ini');
+        router.refresh();
+      } else {
+        setSuccessMessage(
+          'Pendaftaran berhasil! Silakan periksa email untuk verifikasi atau masuk langsung jika auto-confirm aktif.'
+        );
+        setMode('login');
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Mode: login
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -34,7 +66,8 @@ export default function LoginPage() {
     }
 
     // Periksa apakah akun memerlukan verifikasi MFA / TOTP
-    const { data: mfaData, error: mfaError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    const { data: mfaData, error: mfaError } =
+      await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
     if (!mfaError && mfaData.nextLevel === 'aal2' && mfaData.currentLevel === 'aal1') {
       const factors = await supabase.auth.mfa.listFactors();
       const totpFactor = factors.data?.totp?.[0];
@@ -49,7 +82,7 @@ export default function LoginPage() {
       }
     }
 
-    router.push('/transaksi');
+    router.push('/hari-ini');
     router.refresh();
   };
 
@@ -72,7 +105,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push('/transaksi');
+    router.push('/hari-ini');
     router.refresh();
   };
 
@@ -96,26 +129,70 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <div className="w-full max-w-md p-8 border border-border bg-card rounded-lg shadow-sm">
-        <div className="mb-8 text-center">
+        <div className="mb-6 text-center">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3 text-foreground">
-            <Lock className="w-6 h-6" />
+            {mode === 'login' ? <Lock className="w-6 h-6" /> : <UserPlus className="w-6 h-6" />}
           </div>
-          <h1 className="text-xl font-semibold tracking-tight">Masuk ke Orbit</h1>
+          <h1 className="text-xl font-semibold tracking-tight">
+            {mode === 'login' ? 'Masuk ke Orbit' : 'Daftar Akun Orbit'}
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Pusat kendali keuangan pribadi terenkripsi
+            Pusat kendali keuangan & kerja terpadu
           </p>
         </div>
 
+        {/* Tab Toggle Mode */}
+        {!factorId && (
+          <div className="flex border border-border rounded-md p-1 mb-6 bg-muted/30">
+            <button
+              type="button"
+              onClick={() => {
+                setMode('login');
+                setErrorMessage(null);
+                setSuccessMessage(null);
+              }}
+              className={`flex-1 py-1.5 text-xs font-medium rounded transition-colors ${
+                mode === 'login'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Masuk
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode('signup');
+                setErrorMessage(null);
+                setSuccessMessage(null);
+              }}
+              className={`flex-1 py-1.5 text-xs font-medium rounded transition-colors ${
+                mode === 'signup'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Daftar Akun Baru
+            </button>
+          </div>
+        )}
+
         {errorMessage && (
-          <div className="mb-4 p-3 text-sm rounded bg-expense/10 text-expense border border-expense/20">
+          <div className="mb-4 p-3 text-xs rounded bg-expense/10 text-expense border border-expense/20">
             {errorMessage}
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="mb-4 p-3 text-xs rounded bg-income/10 text-income border border-income/20">
+            {successMessage}
           </div>
         )}
 
         {factorId && mfaChallengeId ? (
           <form onSubmit={handleVerifyTotp} className="space-y-4">
             <div>
-              <label htmlFor="totp" className="block text-sm font-medium mb-1">
+              <label htmlFor="totp" className="block text-xs font-medium mb-1">
                 Kode Autentikator 2FA
               </label>
               <div className="relative">
@@ -133,7 +210,7 @@ export default function LoginPage() {
                 />
                 <Key className="w-4 h-4 text-muted-foreground absolute left-3 top-3" />
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-[11px] text-muted-foreground mt-1">
                 Masukkan 6 digit kode dari aplikasi autentikator Anda.
               </p>
             </div>
@@ -141,16 +218,16 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading || totpCode.length !== 6}
-              className="w-full py-2 px-4 rounded bg-foreground text-background font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="w-full py-2 px-4 rounded bg-foreground text-background font-medium hover:opacity-90 transition-opacity disabled:opacity-50 text-sm"
             >
               {loading ? 'Memverifikasi...' : 'Verifikasi & Masuk'}
             </button>
           </form>
         ) : (
           <div className="space-y-4">
-            <form onSubmit={handleEmailLogin} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium mb-1">
+                <label htmlFor="email" className="block text-xs font-medium mb-1">
                   Email
                 </label>
                 <div className="relative">
@@ -168,7 +245,7 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium mb-1">
+                <label htmlFor="password" className="block text-xs font-medium mb-1">
                   Kata Sandi
                 </label>
                 <div className="relative">
@@ -176,9 +253,10 @@ export default function LoginPage() {
                     id="password"
                     type="password"
                     required
+                    minLength={6}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Minimal 10 karakter"
+                    placeholder="Minimal 6 karakter"
                     className="w-full px-3 py-2 pl-9 border border-border rounded bg-background focus:outline-none focus:ring-1 focus:ring-foreground text-sm"
                   />
                   <Lock className="w-4 h-4 text-muted-foreground absolute left-3 top-3" />
@@ -190,7 +268,11 @@ export default function LoginPage() {
                 disabled={loading}
                 className="w-full py-2 px-4 rounded bg-foreground text-background font-medium hover:opacity-90 transition-opacity disabled:opacity-50 text-sm"
               >
-                {loading ? 'Memproses...' : 'Masuk'}
+                {loading
+                  ? 'Memproses...'
+                  : mode === 'signup'
+                  ? 'Buat Akun'
+                  : 'Masuk'}
               </button>
             </form>
 
@@ -212,12 +294,6 @@ export default function LoginPage() {
               <ShieldCheck className="w-4 h-4" />
               <span>Masuk dengan Google</span>
             </button>
-
-            <div className="mt-6 pt-4 border-t border-border text-center">
-              <p className="text-xs text-muted-foreground">
-                Pendaftaran publik dimatikan. Hubungi pemilik akun untuk penambahan akses.
-              </p>
-            </div>
           </div>
         )}
       </div>
