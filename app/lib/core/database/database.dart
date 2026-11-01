@@ -3,8 +3,6 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:sqlite3/sqlite3.dart';
-import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
 import 'package:orbit_app/core/storage/secure_storage_service.dart';
 
 part 'database.g.dart';
@@ -69,7 +67,7 @@ class LocalTransactions extends Table {
 // Tabel Outbox Sinkronisasi Idempoten (PRD Bagian 12)
 class SyncOutbox extends Table {
   TextColumn get id => text()(); // client_generated_id (UUID)
-  TextColumn get tableName => text()();
+  TextColumn get targetTable => text()();
   TextColumn get recordId => text()();
   TextColumn get action => text()(); // insert / update / delete / rpc
   TextColumn get payload => text()(); // JSON string

@@ -63,7 +63,19 @@ Bila terdapat celah pada endpoint tertentu:
 
 ## 4. Fase Pemulihan (Recovery)
 1. **Pemulihan Data (Data Restore)**:
-   - Jika terjadi manipulasi atau penghapusan data, pulihkan dari snapshot backup harian Supabase / pg_dump.
+   - Jika terjadi manipulasi atau penghapusan data, pulihkan dari snapshot backup harian GitHub Actions / pg_dump.
+   - Prosedur pemulihan dari artefak terenkripsi:
+     1. Unduh artefak `orbit_backup_YYYYMMDD_HHMMSS.dump.gpg` dari tab **Actions > Database Backup (Daily Encrypted)** di GitHub repository.
+     2. Siapkan passphrase dekripsi dari secret manager / GitHub Secrets `BACKUP_ENCRYPTION_KEY`.
+     3. Tentukan connection string basis data tujuan:
+        ```bash
+        export TARGET_DATABASE_URL="postgres://postgres:[PASSWORD]@[HOST]:[PORT]/postgres"
+        ```
+     4. Jalankan skrip pemulihan:
+        ```bash
+        chmod +x ./supabase/scripts/restore.sh
+        ./supabase/scripts/restore.sh path/to/orbit_backup_YYYYMMDD_HHMMSS.dump.gpg
+        ```
    - Untuk transaksi yang terhapus lunak (< 30 hari), gunakan `fn_restore_transaction(id)`.
 2. **Patch Celah Keamanan**:
    - Tulis regression test (misal uji pgTAP untuk celah RLS atau unit test untuk celah input).

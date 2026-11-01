@@ -35,17 +35,16 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       final user = _supabase.auth.currentUser;
       if (user == null) return;
 
-      var query = _supabase
+      var filterBuilder = _supabase
           .from('transactions')
           .select('*, accounts!inner(name), categories(name)')
-          .eq('status', 'confirmed')
-          .order('occurred_at', ascending: false);
+          .eq('status', 'confirmed');
 
       if (!_showDeleted) {
-        query = query.filter('deleted_at', 'is', null);
+        filterBuilder = filterBuilder.filter('deleted_at', 'is', null);
       }
 
-      final data = await query;
+      final data = await filterBuilder.order('occurred_at', ascending: false);
       setState(() {
         _transactions = List<Map<String, dynamic>>.from(data);
         _loading = false;

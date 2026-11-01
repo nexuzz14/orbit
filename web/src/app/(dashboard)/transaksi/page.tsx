@@ -255,6 +255,7 @@ export default function TransaksiPage() {
         type: txnType,
         status: 'confirmed',
         amount: numAmount,
+        amount_base: numAmount,
         currency: selectedAcc.currency,
         source: source,
         merchant: merchant || null,

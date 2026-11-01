@@ -78,7 +78,7 @@ export default function RingkasanPage() {
               <span>
                 Periode Siklus:{' '}
                 <strong className="text-foreground">
-                  {formatDateOnly(currentTotal.month_start)} – {formatDateOnly(currentTotal.month_end)}
+                  {formatDateOnly(currentTotal.month_start ?? '')} – {formatDateOnly(currentTotal.month_end ?? '')}
                 </strong>
               </span>
             </div>
@@ -92,7 +92,7 @@ export default function RingkasanPage() {
                 <TrendingUp className="w-4 h-4 text-income" />
               </div>
               <div className="text-2xl font-semibold tabular-nums text-income">
-                {formatCurrency(currentTotal?.income || 0, currentTotal?.currency)}
+                {formatCurrency(currentTotal?.income || 0, currentTotal?.currency ?? 'IDR')}
               </div>
               <div className="text-xs text-muted-foreground">
                 {currentTotal?.txn_count || 0} transaksi terkonfirmasi
@@ -105,7 +105,7 @@ export default function RingkasanPage() {
                 <TrendingDown className="w-4 h-4 text-expense" />
               </div>
               <div className="text-2xl font-semibold tabular-nums text-expense">
-                {formatCurrency(currentTotal?.expense || 0, currentTotal?.currency)}
+                {formatCurrency(currentTotal?.expense || 0, currentTotal?.currency ?? 'IDR')}
               </div>
               <div className="text-xs text-muted-foreground">Tidak termasuk transfer antar akun</div>
             </div>
@@ -120,7 +120,7 @@ export default function RingkasanPage() {
                   (currentTotal?.net || 0) >= 0 ? 'text-income' : 'text-expense'
                 }`}
               >
-                {formatCurrency(currentTotal?.net || 0, currentTotal?.currency)}
+                {formatCurrency(currentTotal?.net || 0, currentTotal?.currency ?? 'IDR')}
               </div>
               <div className="text-xs text-muted-foreground">Pemasukan dikurangi pengeluaran</div>
             </div>
@@ -154,17 +154,17 @@ export default function RingkasanPage() {
                           {s.source}
                         </td>
                         <td className="p-3 text-right tabular-nums text-income">
-                          {formatCurrency(Number(s.income), s.currency)}
+                          {formatCurrency(Number(s.income ?? 0), s.currency ?? 'IDR')}
                         </td>
                         <td className="p-3 text-right tabular-nums text-expense">
-                          {formatCurrency(Number(s.expense), s.currency)}
+                          {formatCurrency(Number(s.expense ?? 0), s.currency ?? 'IDR')}
                         </td>
                         <td
                           className={`p-3 text-right tabular-nums font-medium ${
-                            Number(s.net) >= 0 ? 'text-income' : 'text-expense'
+                            Number(s.net ?? 0) >= 0 ? 'text-income' : 'text-expense'
                           }`}
                         >
-                          {formatCurrency(Number(s.net), s.currency)}
+                          {formatCurrency(Number(s.net ?? 0), s.currency ?? 'IDR')}
                         </td>
                         <td className="p-3 text-right text-xs text-muted-foreground tabular-nums">
                           {s.txn_count}

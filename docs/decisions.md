@@ -85,3 +85,16 @@ Dokumen ini mencatat keputusan teknis, arsitektur, dan keamanan yang diambil sel
   3. RLS deny-by-default aktif 100% di seluruh 18 tabel public dan bucket `attachments`.
   4. Parameter lingkungan disediakan melalui `.env.example` dan `.env.local` tanpa menyimpan secret di git repo.
 - **Konsekuensi**: Infrastruktur cloud database siap digunakan langsung oleh aplikasi web Next.js dan Flutter mobile app.
+
+---
+
+## ADR-009: Backup Database Terjadwal Harian dan Pemulihan Terenkripsi
+- **Status**: Diterima (Fase 1 / Fondasi)
+- **Konteks**: Memenuhi kebutuhan pemulihan bencana (disaster recovery) dan mitigasi ransomware atau manipulasi data tanpa membocorkan kredensial atau isi database.
+- **Keputusan**:
+  1. Workflow GitHub Actions `.github/workflows/backup.yml` berjalan otomatis harian pada 02:00 UTC (09:00 WIB).
+  2. Menggunakan `pg_dump` dengan format custom (`--format=custom`, `--no-owner`, `--no-acl`).
+  3. Hasil dump langsung dienkripsi menggunakan GPG cipher AES-256 (`gpg --symmetric`) menggunakan secret `BACKUP_ENCRYPTION_KEY` dari GitHub Secrets.
+  4. File mentah tanpa enkripsi segera dihapus dari runner. File dump terenkripsi disimpan sebagai artefak GitHub Actions privat dengan retensi 30 hari.
+  5. Disediakan skrip pemulihan `supabase/scripts/restore.sh` yang terdokumentasi di `docs/runbook-insiden.md`.
+- **Konsekuensi**: Salinan data selalu aman di luar Supabase, terenkripsi end-to-end, dan dapat dipulihkan kapan saja ke database mana pun.

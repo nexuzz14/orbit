@@ -1,4 +1,4 @@
-# Orbit: PRD dan Instruksi Pembangunan (Versi 5)
+# Orbit: PRD dan Instruksi Pembangunan (Versi 5.1)
 
 ## 0. Instruksi untuk AI Agent (baca dulu)
 
@@ -105,7 +105,8 @@ Kriteria: pengguna tidak dapat membaca atau menulis data di luar workspace yang 
 Kriteria (saat diaktifkan): viewer tidak bisa insert/update/delete lewat API; anggota yang dicabut langsung kehilangan akses.
 
 ### M3. Akun/Dompet
-- Jenis: cash, bank, e-wallet, kartu kredit, tabungan. Field: nama, jenis, mata uang, saldo awal, warna/ikon, urutan, likuid atau tidak, privat atau dibagikan, diarsipkan.
+- Jenis: cash, bank, e-wallet, kartu kredit, tabungan. Field: nama, jenis, mata uang, saldo awal, warna/ikon, urutan, likuid atau tidak, privat atau dibagikan, diarsipkan, match_hints (text[]).
+- accounts.match_hints (text[]) berisi label produk rekening (misalnya "TAHAPAN XPRESI") untuk menentukan akun secara otomatis pada draft dari T1 (Sumber Dana) dan T4. Nomor rekening tetap tidak disimpan.
 - Saldo dihitung dari saldo awal + transaksi confirmed, tidak disimpan sebagai angka mentah.
 - Rekonsiliasi: pengguna memasukkan saldo asli, sistem menunjukkan selisih dan menawarkan transaksi koreksi dengan kategori khusus "Koreksi saldo".
 Kriteria: saldo selalu sama dengan hasil hitung ulang dari seluruh transaksi.
@@ -150,7 +151,8 @@ Sampel nyata menunjukkan layar bukti transaksi memuat data jauh lebih lengkap da
 Template yang didukung (parser berbasis label, bukan posisi piksel):
 - T1, Pembayaran QRIS: judul "Pembayaran QRIS Berhasil"; tanggal dan jam di bawah judul (contoh "31 Okt 2026 17:39:21"); nominal besar ("IDR 13,000.00"); label Pembayaran ke (merchant, diikuti kode lokasi setelah koma), Pengakuisisi, Jenis Transaksi, Lokasi Merchant, Sumber Dana, Total Bayar, No. Referensi.
 - T2, Transfer ke BCA Virtual Account: judul "Transfer Berhasil"; tanggal dan jam; nominal; label Nama (nama tagihan/produk), Nama Produk, Jenis Transaksi, Total Tagihan, Total Bayar, No. Referensi.
-- T3, Detail Catatan Finansial untuk pemasukan: kalimat "Transfer masuk sebesar IDR {nominal} dari {pengirim} - {bank} ke no. rekening {...} pada tanggal {tanggal}." dan jam pada header layar.
+- T3, Detail Catatan Finansial untuk transfer masuk: header tanggal dan jam (contoh "24 Okt 2026 19:14:16"); kalimat "Transfer masuk sebesar IDR {nominal} dari {pengirim} - {bank} ke no. rekening {...} pada tanggal {tanggal}.".
+- T4, Detail Catatan Finansial untuk pemasukan: header tanggal dan jam (contoh "01 Nov 2026 11:00:23"); judul "Cashflow - Pemasukan"; kalimat "Pemasukan sebesar IDR {nominal} pada kategori {kategori_bank} ke {rekening tersamar} - {produk_rekening} pada tanggal {tanggal}.". Bedakan T3 ("Transfer masuk ... dari") dan T4 ("Pemasukan ... pada kategori"). Produk rekening dicocokkan dengan accounts.match_hints untuk menentukan akun secara otomatis. Nomor rekening tetap tidak disimpan.
 - Template lain (transfer keluar ke rekening, top-up e-wallet, pengeluaran dan pemasukan lain) ditambahkan setelah sampelnya dikumpulkan di docs/samples/bukti/.
 
 Aturan ekstraksi:
@@ -174,8 +176,10 @@ Alur:
 Kriteria: pada set uji T1 sampai T3, nominal, waktu, dan merchant/pengirim benar di minimal 95% gambar; satu transaksi dengan notifikasi dan bukti menghasilkan satu transaksi akhir; tidak ada data terlarang di database dan log; dari berbagi gambar sampai draft terisi lengkap kurang dari 5 detik di perangkat menengah.
 
 #### M7b. Notification listener (BCA mobile, myBCA, e-wallet)
-- Daftar aplikasi yang dibaca dipilih pengguna di pengaturan; nama paket diambil dari perangkat, bukan ditulis mati. Hanya paket terpilih yang diproses.
-- Pola pengeluaran BCA (dari sampel): "Pengeluaran sebesar IDR {nominal} di kategori {kategori}." dengan judul "Financial Diary" (BCA mobile) atau "Catatan Finansial" (myBCA). Teks tidak memuat merchant, nama akun, maupun jam. Waktu kejadian diambil dari waktu notifikasi diterima di perangkat. Kategori bank ("Pembayaran") tidak dipakai.
+- Daftar aplikasi yang dibaca dipilih pengguna di pengaturan; nama paket diambil dari perangkat, bukan ditulis mati. Hanya paket terpilih yang diproses. Paket di luar allowlist dibuang sebelum dibaca dan tidak pernah masuk log.
+- Pola pengeluaran BCA (dari sampel): "Pengeluaran sebesar IDR {nominal} di kategori {kategori_bank}." dengan judul "Financial Diary" (BCA mobile) atau "Catatan Finansial" (myBCA). Teks tidak memuat merchant, nama akun, maupun jam. Waktu kejadian diambil dari waktu notifikasi diterima di perangkat. Kategori bank disimpan di kolom baru transactions.bank_category dan dipakai hanya sebagai petunjuk, bukan keputusan. Kategori bank generik ("Pembayaran") tidak memberi saran.
+- Pola pemasukan BCA (dari sampel): "Pemasukan sebesar IDR {nominal} di kategori {kategori_bank}." (BCA mobile diawali "Financial Diary: ", myBCA dengan judul "Catatan Finansial"). Kategori bank disimpan di transactions.bank_category. category_rules mendukung match_field bank_category. Kategori bank generik tidak memberi saran.
+- Abaikan notifikasi ringkasan grup (group summary / FLAG_GROUP_SUMMARY). Deduplikasi dalam satu paket berdasarkan tuple (paket, kunci notifikasi, waktu posting) karena notifikasi dapat dikirim ulang atau diperbarui. Deduplikasi lintas paket tetap berdasarkan nominal, jenis, dan jendela waktu 2 menit.
 - Parser menolak teks yang tidak cocok dengan pola yang diketahui; notifikasi tidak dikenal masuk daftar "tidak terbaca" yang dapat dilaporkan untuk dibuatkan parser. Pola pemasukan (transfer masuk) dan top-up dibuat setelah sampel tersedia di docs/samples/notifications.md.
 - Teks mentah diproses di perangkat dan tidak disimpan setelah diparse; yang masuk database hanya hasil terstruktur sebagai draft.
 - Deduplikasi lintas aplikasi: dua notifikasi dari paket berbeda dengan jenis dan nominal sama dalam jendela 2 menit dianggap satu kejadian dan digabung menjadi satu draft. Dua notifikasi dari paket yang sama dengan nominal sama dianggap dua kejadian. Pengguna dapat memilih satu aplikasi sebagai sumber utama dan mengabaikan yang lain.
@@ -202,7 +206,7 @@ Kriteria: pada set uji sampel mutasi, nominal dan jenis benar di minimal 95% bar
 #### M7e. Pemasukan yang diharapkan dan transfer masuk
 - Notifikasi push transfer masuk tidak membawa nama pengirim. Aplikasi tidak boleh menebak sumber atau proyek dari push, dan tidak menandai apa pun lunas otomatis. Nama pengirim dan bank tersedia dari layar detail (T3) dan dapat diambil lewat M7a.
 - Draft pemasukan masuk Inbox dengan sumber dan proyek kosong, status "perlu dilengkapi", kecuali sudah diperkaya dari T3.
-- Tabel expected_incomes berisi uang saku/gaji intern berulang (nominal, tanggal perkiraan, toleransi hari) dan pembayaran proyek berstatus belum lunas atau sebagian (dari project_payments). Draft dicocokkan berdasarkan nominal (persis, atau dalam toleransi untuk potongan biaya), jendela tanggal, dan nama pengirim bila ada.
+- Tabel expected_incomes berisi uang saku/gaji intern berulang (nominal, tanggal perkiraan, toleransi hari) dan pembayaran proyek berstatus belum lunas atau sebagian (dari project_payments). Draft dicocokkan berdasarkan nominal (persis, atau dalam toleransi untuk potongan biaya), jendela tanggal, dan nama pengirim bila ada. Kategori bank "Gaji" pada pemasukan menjadi sinyal tambahan pencocokan expected_incomes jenis uang saku/gaji. Tetap berupa saran yang membutuhkan konfirmasi.
 - Hasil pencocokan hanya saran: satu kandidat tampil sebagai tombol "Konfirmasi sebagai: <nama>"; beberapa kandidat tampil sebagai daftar urut kedekatan; tanpa kandidat tampil tombol cepat sumber (Intern/Freelance/Kuliah/Personal) dan daftar proyek berstatus berjalan.
 - Konfirmasi saran pembayaran proyek memanggil fn_mark_payment_paid dan menautkan draft ke pembayaran tersebut tanpa transaksi ganda. Konfirmasi saran uang saku/gaji menandai pemasukan rutin bulan itu sebagai diterima.
 Kriteria: draft transfer masuk dengan nominal cocok ke satu kandidat dapat dikonfirmasi dengan satu tap; draft tanpa kandidat dapat dilengkapi dengan maksimal dua tap.
@@ -309,10 +313,10 @@ Konvensi: id uuid; created_at, updated_at; deleted_at untuk soft delete; uang nu
 - workspaces: id, name, type (personal/shared), base_currency, owner_id
 - workspace_members: workspace_id, user_id, role
 - workspace_invites: id, workspace_id, email, role, token_hash, expires_at, accepted_at, revoked_at
-- accounts: id, workspace_id, name, type, currency, initial_balance, is_liquid, visibility, created_by, archived, sort_order
+- accounts: id, workspace_id, name, type, currency, initial_balance, is_liquid, visibility, match_hints (text[]), created_by, archived, sort_order
 - categories: id, workspace_id, name, type, icon, color, parent_id, archived
-- category_rules: id, workspace_id, match_field (merchant/product/counterparty/amount/time), pattern, match_type, amount_min, amount_max, day_of_month, category_id, account_id, source (intern/freelance/kuliah/personal), project_id, priority, auto_apply
-- transactions: id, workspace_id, account_id, category_id, project_id, type, status (draft/confirmed), draft_state (baru/perlu_dilengkapi/perlu_dicek), amount, currency, fx_rate, amount_base, source (intern/freelance/kuliah/personal), merchant, merchant_normalized, location_hint, counterparty, counterparty_bank, product_name, txn_kind, note, occurred_at, transfer_group_id, origin (manual/sentence/notification/proof_image/statement/receipt/recurring), source_package, import_batch_id, external_id_hash, dedupe_hash, created_by
+- category_rules: id, workspace_id, match_field (merchant/product/counterparty/amount/time/bank_category), pattern, match_type, amount_min, amount_max, day_of_month, category_id, account_id, source (intern/freelance/kuliah/personal), project_id, priority, auto_apply
+- transactions: id, workspace_id, account_id, category_id, project_id, type, status (draft/confirmed), draft_state (baru/perlu_dilengkapi/perlu_dicek), amount, currency, fx_rate, amount_base, source (intern/freelance/kuliah/personal), bank_category, merchant, merchant_normalized, location_hint, counterparty, counterparty_bank, product_name, txn_kind, note, occurred_at, transfer_group_id, origin (manual/sentence/notification/proof_image/statement/receipt/recurring), source_package, import_batch_id, external_id_hash, dedupe_hash, created_by
 - transaction_items: id, transaction_id, name, qty, unit_price, category_id, project_id
 - attachments: id, workspace_id, owner_table, owner_id, storage_path, mime, size
 - exchange_rates: date, from_currency, to_currency, rate, source

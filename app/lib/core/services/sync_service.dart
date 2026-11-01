@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -22,7 +23,7 @@ class SyncService {
     await db.into(db.syncOutbox).insert(
       SyncOutboxCompanion.insert(
         id: clientGeneratedId,
-        tableName: tableName,
+        targetTable: tableName,
         recordId: recordId,
         action: action,
         payload: jsonEncode(payload),
@@ -50,11 +51,11 @@ class SyncService {
         final payload = jsonDecode(op.payload) as Map<String, dynamic>;
 
         if (op.action == 'rpc') {
-          await supabase.rpc(op.tableName, params: payload);
+          await supabase.rpc(op.targetTable, params: payload);
         } else if (op.action == 'insert') {
-          await supabase.from(op.tableName).insert(payload);
+          await supabase.from(op.targetTable).insert(payload);
         } else if (op.action == 'update') {
-          await supabase.from(op.tableName).update(payload).eq('id', op.recordId);
+          await supabase.from(op.targetTable).update(payload).eq('id', op.recordId);
         } else if (op.action == 'delete') {
           await supabase.rpc('fn_delete_transaction', params: {'p_transaction_id': op.recordId});
         }

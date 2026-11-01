@@ -115,12 +115,12 @@ insert into tok values
 create function pg_temp.expand(p_sql text) returns text language plpgsql as $f$
 declare
   r record;
-  v text := p_sql;
+  v_sql text := p_sql;
 begin
-  for r in select k, v as val from pg_temp.tok loop
-    v := replace(v, r.k, r.val);
+  for r in select t.k, t.v as val from pg_temp.tok t loop
+    v_sql := replace(v_sql, r.k, r.val);
   end loop;
-  return v;
+  return v_sql;
 end;
 $f$;
 
@@ -302,6 +302,9 @@ select is(pg_temp.classify(pg_temp.run_as('a0000000-0000-0000-0000-000000000003'
 select is(pg_temp.run_as('anon', $q$select 1 from public.v_account_balances$q$), 'err:42501', 'view v_account_balances tidak dapat diakses anon');
 
 -- Storage: objek lampiran mengikuti keanggotaan workspace.
+insert into storage.objects (id, bucket_id, name, owner)
+values ('c1000000-0000-0000-0000-000000000001', 'attachments', 'b0000000-0000-0000-0000-000000000001/a.png', 'a0000000-0000-0000-0000-000000000001')
+on conflict (id) do nothing;
 select is(pg_temp.classify(pg_temp.run_as('a0000000-0000-0000-0000-000000000003', $q$select 1 from storage.objects where bucket_id = 'attachments'$q$)), 'allow', 'storage: viewer membaca objek workspace sendiri');
 select is(pg_temp.run_as('a0000000-0000-0000-0000-000000000004', $q$select 1 from storage.objects where bucket_id = 'attachments'$q$), 'ok:0', 'storage: outsider tidak melihat objek workspace lain');
 select is(pg_temp.run_as('a0000000-0000-0000-0000-000000000003', pg_temp.expand($q$insert into storage.objects (bucket_id, name) values ('attachments', '{S}/viewer.png')$q$)), 'err:42501', 'storage: viewer tidak mengunggah');

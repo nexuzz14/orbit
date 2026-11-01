@@ -73,12 +73,12 @@ export default function AkunPage() {
   };
 
   const openEditModal = (acc: AccountBalanceRow) => {
-    setName(acc.name);
-    setType(acc.type);
-    setCurrency(acc.currency);
-    setInitialBalance(String(acc.initial_balance));
-    setIsLiquid(acc.is_liquid);
-    setVisibility(acc.visibility);
+    setName(acc.name ?? '');
+    setType(acc.type ?? 'cash');
+    setCurrency(acc.currency ?? 'IDR');
+    setInitialBalance(String(acc.initial_balance ?? 0));
+    setIsLiquid(acc.is_liquid ?? true);
+    setVisibility(acc.visibility ?? 'shared');
     setFormError(null);
     setFormMode('edit');
     setEditingId(acc.account_id);
@@ -227,7 +227,7 @@ export default function AkunPage() {
                 <div className="mt-4">
                   <div className="text-xs text-muted-foreground">Saldo Saat Ini</div>
                   <div className="text-xl font-semibold tabular-nums mt-0.5">
-                    {formatCurrency(Number(a.balance), a.currency)}
+                    {formatCurrency(Number(a.balance ?? 0), a.currency ?? 'IDR')}
                   </div>
                 </div>
               </div>
@@ -247,7 +247,7 @@ export default function AkunPage() {
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => toggleArchive(a.account_id, a.archived)}
+                    onClick={() => toggleArchive(a.account_id ?? '', a.archived ?? false)}
                     type="button"
                     title={a.archived ? 'Buka Arsip' : 'Arsipkan'}
                     className="p-1 hover:text-foreground transition-colors"

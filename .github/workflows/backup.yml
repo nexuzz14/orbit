@@ -1,0 +1,57 @@
+name: Database Backup (Daily Encrypted)
+
+on:
+  schedule:
+    # Berjalan harian pada 02:00 UTC (09:00 WIB)
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    name: Backup & Enkripsi Database
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pasang PostgreSQL Client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client gnupg
+
+      - name: Jalankan pg_dump & Enkripsi GPG
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$BACKUP_ENCRYPTION_KEY" ]; then
+            echo "Error: Secret DATABASE_URL atau BACKUP_ENCRYPTION_KEY belum dikonfigurasi di GitHub Secrets."
+            exit 1
+          fi
+
+          BACKUP_DATE=$(date +'%Y%m%d_%H%M%S')
+          RAW_FILE="orbit_backup_${BACKUP_DATE}.dump"
+          ENC_FILE="orbit_backup_${BACKUP_DATE}.dump.gpg"
+
+          echo "Memulai pg_dump..."
+          pg_dump "$DATABASE_URL" \
+            --format=custom \
+            --no-owner \
+            --no-acl \
+            --file="$RAW_FILE"
+
+          echo "Mengenkripsi dump dengan AES256 via GPG..."
+          gpg --symmetric --batch --yes \
+            --passphrase "$BACKUP_ENCRYPTION_KEY" \
+            --cipher-algo AES256 \
+            -o "$ENC_FILE" \
+            "$RAW_FILE"
+
+          # Hapus file mentah tanpa enkripsi dari runner
+          rm -f "$RAW_FILE"
+          echo "Dump terenkripsi berhasil dibuat: $ENC_FILE"
+          echo "FILENAME=$ENC_FILE" >> $GITHUB_ENV
+
+      - name: Simpan Artefak Terenkripsi
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.FILENAME }}
+          path: ${{ env.FILENAME }}
+          retention-days: 30

@@ -38,9 +38,9 @@ class _LoginScreenState extends State<LoginScreen> {
         await SecureStorageService.saveSessionToken(session.accessToken);
 
         // Periksa apakah memerlukan 2FA
-        final mfaResponse = await Supabase.instance.client.auth.mfa.getAuthenticatorAssuranceLevel();
-        if (mfaResponse.nextLevel == AuthenticatorAssuranceLevel.aal2 &&
-            mfaResponse.currentLevel == AuthenticatorAssuranceLevel.aal1) {
+        final mfaResponse = Supabase.instance.client.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (mfaResponse.nextLevel == AuthenticatorAssuranceLevels.aal2 &&
+            mfaResponse.currentLevel == AuthenticatorAssuranceLevels.aal1) {
           final factors = await Supabase.instance.client.auth.mfa.listFactors();
           final totpFactor = factors.totp.firstOrNull;
           if (totpFactor != null) {
