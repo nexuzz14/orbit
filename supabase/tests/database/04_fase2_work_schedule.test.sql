@@ -538,4 +538,5 @@ select ok(
   'fn_detect_conflicts menandai hari padat (is_heavy_day = true) jika durasi >= 8 jam'
 );
 
+select * from finish();
 rollback;
