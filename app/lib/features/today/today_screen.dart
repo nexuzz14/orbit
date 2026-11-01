@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:orbit_app/core/constants/app_colors.dart';
 import 'package:orbit_app/core/database/database.dart';
+import 'package:orbit_app/features/accounts/accounts_screen.dart';
+import 'package:orbit_app/features/inbox/inbox_screen.dart';
 import 'package:intl/intl.dart';
 
 class TodayScreen extends StatefulWidget {
@@ -24,7 +27,8 @@ class _TodayScreenState extends State<TodayScreen> {
   int _draftCount = 0;
   List<Map<String, dynamic>> _accounts = [];
 
-  final _currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+  final _currencyFormatter =
+      NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
   final _today = DateTime.now();
   late final String _todayStr = DateFormat('yyyy-MM-dd').format(_today);
 
@@ -83,16 +87,16 @@ class _TodayScreenState extends State<TodayScreen> {
         try {
           for (final item in _agendaItems) {
             await _db.into(_db.localAgendaCache).insertOnConflictUpdate(
-              LocalAgendaCacheCompanion.insert(
-                id: item['id'] as String,
-                workspaceId: wsId,
-                itemType: item['item_type'] as String,
-                kind: item['kind'] as String,
-                title: item['title'] as String,
-                status: item['status'] as String,
-                cachedDate: _todayStr,
-              ),
-            );
+                  LocalAgendaCacheCompanion.insert(
+                    id: item['id'] as String,
+                    workspaceId: wsId,
+                    itemType: item['item_type'] as String,
+                    kind: item['kind'] as String,
+                    title: item['title'] as String,
+                    status: item['status'] as String,
+                    cachedDate: _todayStr,
+                  ),
+                );
           }
         } catch (_) {}
       }
@@ -140,21 +144,23 @@ class _TodayScreenState extends State<TodayScreen> {
               ..where((tbl) => tbl.cachedDate.equals(_todayStr)))
             .get();
 
-        _agendaItems = cached.map((c) => {
-          'id': c.id,
-          'item_type': c.itemType,
-          'kind': c.kind,
-          'title': c.title,
-          'status': c.status,
-          'is_overdue': c.isOverdue,
-          'starts_at': c.startsAt?.toIso8601String(),
-          'ends_at': c.endsAt?.toIso8601String(),
-          'all_day': c.allDay,
-          'location': c.location,
-          'checklist_total': c.checklistTotal,
-          'checklist_done': c.checklistDone,
-          'project_name': c.projectName,
-        }).toList();
+        _agendaItems = cached
+            .map((c) => {
+                  'id': c.id,
+                  'item_type': c.itemType,
+                  'kind': c.kind,
+                  'title': c.title,
+                  'status': c.status,
+                  'is_overdue': c.isOverdue,
+                  'starts_at': c.startsAt?.toIso8601String(),
+                  'ends_at': c.endsAt?.toIso8601String(),
+                  'all_day': c.allDay,
+                  'location': c.location,
+                  'checklist_total': c.checklistTotal,
+                  'checklist_done': c.checklistDone,
+                  'project_name': c.projectName,
+                })
+            .toList();
       } catch (_) {}
     } finally {
       if (mounted) {
@@ -190,13 +196,15 @@ class _TodayScreenState extends State<TodayScreen> {
 
   // Dialog konfirmasi pelunasan termin
   void _showMilestoneConfirmDialog(String milestoneId, String taskTitle) {
-    String? selectedAccount = _accounts.isNotEmpty ? _accounts.first['id'] as String : null;
+    String? selectedAccount =
+        _accounts.isNotEmpty ? _accounts.first['id'] as String : null;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Pelunasan Milestone', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          title: const Text('Pelunasan Milestone',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,20 +214,22 @@ class _TodayScreenState extends State<TodayScreen> {
                 style: const TextStyle(fontSize: 13),
               ),
               const SizedBox(height: 12),
-              const Text('Akun Penerima:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              const Text('Akun Penerima:',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
               DropdownButtonFormField<String>(
                 value: selectedAccount,
                 items: _accounts
                     .map((acc) => DropdownMenuItem(
                           value: acc['id'] as String,
-                          child: Text(acc['name'] as String, style: const TextStyle(fontSize: 13)),
+                          child: Text(acc['name'] as String,
+                              style: const TextStyle(fontSize: 13)),
                         ))
                     .toList(),
                 onChanged: (val) => setDialogState(() => selectedAccount = val),
                 decoration: const InputDecoration(
-                  contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  border: OutlineInputBorder(),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 ),
               ),
             ],
@@ -249,16 +259,118 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
+  Future<void> _showAccountSecuritySheet() async {
+    final user = _supabase.auth.currentUser;
+    final newPassCtrl = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.asset(
+                    'assets/images/orbit_icon.png',
+                    width: 36,
+                    height: 36,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Akun & Keamanan Orbit',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                      Text(
+                        user?.email ?? '-',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: newPassCtrl,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Kata Sandi Baru (Min. 6 Karakter)',
+                prefixIcon: Icon(Icons.lock_reset, size: 20),
+              ),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: () async {
+                final pass = newPassCtrl.text.trim();
+                if (pass.length < 6) return;
+                try {
+                  await _supabase.auth.updateUser(UserAttributes(password: pass));
+                  if (ctx.mounted) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      const SnackBar(content: Text('Kata sandi berhasil diperbarui.')),
+                    );
+                  }
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text('Gagal memperbarui sandi: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Perbarui Kata Sandi'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await _supabase.auth.signOut();
+              },
+              icon: const Icon(Icons.logout, color: AppColors.expense, size: 18),
+              label: const Text(
+                'Keluar dari Akun',
+                style: TextStyle(color: AppColors.expense, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Color _getKindColor(String kind) {
     switch (kind) {
       case 'intern':
-        return Colors.blue;
+        return AppColors.kindIntern;
       case 'freelance':
-        return Colors.purple;
+        return AppColors.kindFreelance;
       case 'kuliah':
-        return Colors.amber;
+        return AppColors.kindKuliah;
       default:
-        return Colors.teal;
+        return AppColors.kindPribadi;
     }
   }
 
@@ -277,24 +389,84 @@ class _TodayScreenState extends State<TodayScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final overdueTasks = _agendaItems.where((i) => i['item_type'] == 'task' && i['is_overdue'] == true).toList();
-    final events = _agendaItems.where((i) => i['item_type'] == 'event').toList();
-    final todayTasks = _agendaItems.where((i) => i['item_type'] == 'task' && i['is_overdue'] != true).toList();
+    final overdueTasks = _agendaItems
+        .where((i) => i['item_type'] == 'task' && i['is_overdue'] == true)
+        .toList();
+    final events =
+        _agendaItems.where((i) => i['item_type'] == 'event').toList();
+    final todayTasks = _agendaItems
+        .where((i) => i['item_type'] == 'task' && i['is_overdue'] != true)
+        .toList();
 
-    final dateFormatted = DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(_today);
+    String dateFormatted;
+    try {
+      dateFormatted = DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(_today);
+    } catch (_) {
+      dateFormatted = _todayStr;
+    }
 
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            const Text('Hari Ini', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            Text(dateFormatted, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.outline)),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.asset(
+                'assets/images/orbit_icon.png',
+                width: 34,
+                height: 34,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Hari Ini',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                  ),
+                  Text(
+                    dateFormatted,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.account_balance_wallet_outlined, size: 21),
+            tooltip: 'Akun & Dompet',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AccountsScreen()),
+              ).then((_) => _loadData());
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.inbox_outlined, size: 21),
+            tooltip: 'Inbox Draft',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const InboxScreen()),
+              ).then((_) => _loadData());
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.manage_accounts_outlined, size: 21),
+            tooltip: 'Akun & Sandi',
+            onPressed: _showAccountSecuritySheet,
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh, size: 21),
             onPressed: _loadData,
           ),
         ],
@@ -306,6 +478,83 @@ class _TodayScreenState extends State<TodayScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  // Hero Financial & Activity Banner
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: AppColors.brandGradient,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.brandIndigo.withValues(alpha: 0.3),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'TOTAL SALDO LIKUID',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.1,
+                                color: Colors.white70,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '$_draftCount Draft Inbox',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _currencyFormatter.format(_liquidBalance),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            _buildHeroStatPill(
+                              Icons.event_available,
+                              '${events.length} Agenda',
+                            ),
+                            const SizedBox(width: 8),
+                            _buildHeroStatPill(
+                              Icons.task_alt,
+                              '${todayTasks.where((t) => t['status'] == 'done').length}/${todayTasks.length + overdueTasks.length} Tugas',
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
                   // Filter Chips
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -320,21 +569,22 @@ class _TodayScreenState extends State<TodayScreen> {
                           },
                         ),
                         const SizedBox(width: 6),
-                        ...['intern', 'freelance', 'kuliah', 'pribadi'].map((k) => Padding(
-                              padding: const EdgeInsets.only(right: 6),
-                              child: FilterChip(
-                                label: Text(_getKindLabel(k)),
-                                selected: _selectedKind == k,
-                                onSelected: (_) {
-                                  setState(() => _selectedKind = k);
-                                  _loadData();
-                                },
-                              ),
-                            )),
+                        ...['intern', 'freelance', 'kuliah', 'pribadi']
+                            .map((k) => Padding(
+                                  padding: const EdgeInsets.only(right: 6),
+                                  child: FilterChip(
+                                    label: Text(_getKindLabel(k)),
+                                    selected: _selectedKind == k,
+                                    onSelected: (_) {
+                                      setState(() => _selectedKind = k);
+                                      _loadData();
+                                    },
+                                  ),
+                                )),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
 
                   // Peringatan Benturan & Hari Padat
                   if (_conflicts.isNotEmpty)
@@ -342,18 +592,23 @@ class _TodayScreenState extends State<TodayScreen> {
                       padding: const EdgeInsets.all(12),
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.withOpacity(0.4)),
+                        color: AppColors.expense.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: AppColors.expense.withValues(alpha: 0.4)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
+                          const Icon(Icons.warning_amber_rounded,
+                              color: AppColors.expense, size: 20),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Benturan Jadwal: ${_conflicts.first['event1_title']} tumpang tindih waktu.',
-                              style: const TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.expense,
+                                  fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],
@@ -365,94 +620,58 @@ class _TodayScreenState extends State<TodayScreen> {
                       padding: const EdgeInsets.all(12),
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
-                        color: Colors.amber.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.amber.withOpacity(0.4)),
+                        color: AppColors.warning.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: AppColors.warning.withValues(alpha: 0.4)),
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.info_outline, color: Colors.amber, size: 20),
+                          Icon(Icons.info_outline,
+                              color: AppColors.warning, size: 20),
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Hari Padat: Durasi jadwal kegiatan mencapai >= 8 jam.',
-                              style: TextStyle(fontSize: 12, color: Colors.amber, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.warning,
+                                  fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],
                       ),
                     ),
 
-                  // Ringkasan Uang
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Theme.of(context).dividerColor),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Saldo Kas & Bank', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                              const SizedBox(height: 4),
-                              Text(
-                                _currencyFormatter.format(_liquidBalance),
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Theme.of(context).dividerColor),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Draft Inbox', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                              const SizedBox(height: 4),
-                              Text(
-                                '$_draftCount transaksi',
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
                   // Tugas Terlambat (Overdue) - Di Atas
                   if (overdueTasks.isNotEmpty) ...[
-                    const Text('Tugas Terlambat', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.red)),
+                    const Text('Tugas Terlambat',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.expense)),
                     const SizedBox(height: 6),
-                    ...overdueTasks.map((t) => _buildTaskTile(t, isOverdue: true)),
+                    ...overdueTasks
+                        .map((t) => _buildTaskTile(t, isOverdue: true)),
                     const SizedBox(height: 16),
                   ],
 
                   // Jadwal Hari Ini
-                  const Text('Jadwal Kegiatan', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  const Text('Jadwal Kegiatan',
+                      style:
+                          TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   if (events.isEmpty)
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
+                        color: Theme.of(context).cardColor,
                         border: Border.all(color: Theme.of(context).dividerColor),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Center(
-                        child: Text('Tidak ada jadwal untuk hari ini.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        child: Text('Tidak ada jadwal untuk hari ini.',
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
                       ),
                     )
                   else
@@ -460,24 +679,54 @@ class _TodayScreenState extends State<TodayScreen> {
                   const SizedBox(height: 16),
 
                   // Tugas Hari Ini
-                  const Text('Tugas Hari Ini', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  const Text('Tugas Hari Ini',
+                      style:
+                          TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   if (todayTasks.isEmpty)
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
+                        color: Theme.of(context).cardColor,
                         border: Border.all(color: Theme.of(context).dividerColor),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Center(
-                        child: Text('Semua tugas hari ini telah rampung.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        child: Text('Semua tugas hari ini telah rampung.',
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
                       ),
                     )
                   else
-                    ...todayTasks.map((t) => _buildTaskTile(t, isOverdue: false)),
+                    ...todayTasks
+                        .map((t) => _buildTaskTile(t, isOverdue: false)),
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildHeroStatPill(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.white),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -491,25 +740,26 @@ class _TodayScreenState extends State<TodayScreen> {
     final color = _getKindColor(kind);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(4),
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
               _getKindLabel(kind),
-              style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  fontSize: 10, color: color, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(width: 10),
@@ -519,25 +769,33 @@ class _TodayScreenState extends State<TodayScreen> {
               children: [
                 Text(
                   evt['title'] as String? ?? '',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Row(
                   children: [
-                    Icon(Icons.access_time, size: 12, color: Theme.of(context).colorScheme.outline),
+                    Icon(Icons.access_time,
+                        size: 12, color: Theme.of(context).colorScheme.outline),
                     const SizedBox(width: 4),
                     Text(
                       evt['all_day'] == true ? 'Seharian' : timeStr,
-                      style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.outline),
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.outline),
                     ),
                     if (evt['location'] != null) ...[
                       const SizedBox(width: 8),
-                      Icon(Icons.location_on_outlined, size: 12, color: Theme.of(context).colorScheme.outline),
+                      Icon(Icons.location_on_outlined,
+                          size: 12,
+                          color: Theme.of(context).colorScheme.outline),
                       const SizedBox(width: 2),
                       Expanded(
                         child: Text(
                           evt['location'] as String,
-                          style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.outline),
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context).colorScheme.outline),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -558,13 +816,17 @@ class _TodayScreenState extends State<TodayScreen> {
     final color = _getKindColor(kind);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
+      margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: isOverdue ? Colors.red.withOpacity(0.05) : Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(8),
+        color: isOverdue
+            ? AppColors.expense.withValues(alpha: 0.05)
+            : Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isOverdue ? Colors.red.withOpacity(0.3) : Theme.of(context).dividerColor,
+          color: isOverdue
+              ? AppColors.expense.withValues(alpha: 0.3)
+              : Theme.of(context).dividerColor,
         ),
       ),
       child: Row(
@@ -572,7 +834,9 @@ class _TodayScreenState extends State<TodayScreen> {
           IconButton(
             icon: Icon(
               isDone ? Icons.check_circle : Icons.circle_outlined,
-              color: isDone ? Colors.green : (isOverdue ? Colors.red : Colors.grey),
+              color: isDone
+                  ? AppColors.income
+                  : (isOverdue ? AppColors.expense : Colors.grey),
               size: 20,
             ),
             onPressed: () => _toggleTask(task),
@@ -585,29 +849,35 @@ class _TodayScreenState extends State<TodayScreen> {
                   task['title'] as String? ?? '',
                   style: TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                     decoration: isDone ? TextDecoration.lineThrough : null,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
+                        color: color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(5),
                       ),
                       child: Text(
                         _getKindLabel(kind),
-                        style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 9,
+                            color: color,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                     if (task['project_name'] != null) ...[
                       const SizedBox(width: 6),
                       Text(
                         task['project_name'] as String,
-                        style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.outline),
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Theme.of(context).colorScheme.outline),
                       ),
                     ],
                   ],

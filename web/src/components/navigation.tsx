@@ -82,19 +82,28 @@ export function Navigation() {
   return (
     <>
       {/* Mobile Top Header */}
-      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 border-b border-border bg-card/95 backdrop-blur-sm">
-        <div>
-          <Link href="/hari-ini" className="font-semibold text-base tracking-tight">
-            Orbit
-          </Link>
-          <div className="text-[10px] text-muted-foreground">Pusat Kendali</div>
-        </div>
-        <div className="flex items-center gap-2">
+      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 border-b border-border bg-card/95 backdrop-blur-md">
+        <Link href="/hari-ini" className="flex items-center gap-2.5">
+          <img
+            src="/orbit-icon.png"
+            alt="Orbit"
+            className="w-8 h-8 rounded-lg shadow-sm object-cover"
+          />
+          <div>
+            <div className="font-bold text-sm tracking-tight leading-none">
+              <span className="orbit-gradient-text">ORBIT</span>
+            </div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">
+              Productivity &amp; Finance
+            </div>
+          </div>
+        </Link>
+        <div className="flex items-center gap-1.5">
           <button
             onClick={toggleTheme}
             type="button"
             aria-label="Ganti Tema"
-            className="p-2 text-muted-foreground hover:text-foreground rounded-md transition-colors"
+            className="p-2 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
           >
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
@@ -102,7 +111,7 @@ export function Navigation() {
             onClick={() => setMobileOpen(!mobileOpen)}
             type="button"
             aria-label="Buka Menu"
-            className="p-2 text-muted-foreground hover:text-foreground rounded-md transition-colors"
+            className="p-2 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -133,15 +142,25 @@ export function Navigation() {
         }}
       >
         {/* Top Orbit Brand Header */}
-        <div className="h-14 px-4 border-b border-border flex items-center justify-between shrink-0">
-          <div>
-            <Link href="/hari-ini" className="font-semibold text-sm tracking-tight block">
-              Orbit
-            </Link>
-            <div className="text-[10px] text-muted-foreground -mt-0.5">
-              Pusat Kendali Keuangan & Kerja
+        <div className="h-16 px-4 border-b border-border flex items-center justify-between shrink-0">
+          <Link href="/hari-ini" className="flex items-center gap-3 group">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-xl bg-indigo-500/25 blur-sm group-hover:bg-indigo-500/40 transition-all" />
+              <img
+                src="/orbit-icon.png"
+                alt="Orbit"
+                className="relative w-9 h-9 rounded-xl shadow-md object-cover border border-white/10"
+              />
             </div>
-          </div>
+            <div>
+              <span className="font-bold text-base tracking-tight block leading-none">
+                <span className="orbit-gradient-text">ORBIT</span>
+              </span>
+              <span className="text-[10px] font-medium text-muted-foreground tracking-wide block mt-1">
+                Productivity &amp; Finance
+              </span>
+            </div>
+          </Link>
           <button
             onClick={() => setMobileOpen(false)}
             className="p-1 text-muted-foreground hover:text-foreground md:hidden"
@@ -152,7 +171,7 @@ export function Navigation() {
         </div>
 
         {/* Non-scrollable Navigation List (Compact and fits 100vh) */}
-        <nav className="flex-1 flex flex-col justify-center px-2 py-1 space-y-0.5 overflow-hidden">
+        <nav className="flex-1 flex flex-col justify-center px-3 py-1 space-y-0.5 overflow-hidden">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = pathname.startsWith(item.href);
@@ -161,13 +180,17 @@ export function Navigation() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-2.5 px-3 py-1.5 text-xs rounded transition-colors ${
+                className={`flex items-center gap-2.5 px-3 py-1.5 text-xs rounded-lg transition-all ${
                   active
-                    ? 'bg-muted text-foreground font-semibold'
-                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                    ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-semibold border border-indigo-500/30 shadow-sm'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground border border-transparent'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <Icon
+                  className={`w-3.5 h-3.5 shrink-0 ${
+                    active ? 'text-indigo-500 dark:text-sky-400' : ''
+                  }`}
+                />
                 <span className="truncate">{item.label}</span>
               </Link>
             );
@@ -175,14 +198,18 @@ export function Navigation() {
         </nav>
 
         {/* Bottom Actions (Always pinned at the bottom) */}
-        <div className="p-2.5 border-t border-border space-y-1 shrink-0">
+        <div className="p-3 border-t border-border space-y-1 shrink-0 bg-muted/20">
           <button
             onClick={toggleTheme}
             type="button"
-            className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded transition-colors"
+            className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted/60 hover:text-foreground rounded-lg transition-colors"
           >
             <span className="flex items-center gap-2">
-              {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              {isDark ? (
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+              ) : (
+                <Moon className="w-3.5 h-3.5 text-indigo-500" />
+              )}
               <span>{isDark ? 'Mode Terang' : 'Mode Gelap'}</span>
             </span>
           </button>
@@ -190,7 +217,7 @@ export function Navigation() {
           <button
             onClick={handleSignOut}
             type="button"
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-expense hover:bg-expense/10 rounded transition-colors"
+            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-expense hover:bg-expense/10 rounded-lg transition-colors font-medium"
           >
             <LogOut className="w-3.5 h-3.5 shrink-0" />
             <span>Keluar</span>

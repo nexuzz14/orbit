@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ShieldCheck, Lock, Mail, Key, UserPlus } from 'lucide-react';
+import { Lock, Mail, Key, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
@@ -34,6 +34,24 @@ export default function LoginPage() {
     setErrorMessage(null);
     setSuccessMessage(null);
 
+    if (mode === 'forgot') {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/pengaturan`,
+      });
+
+      if (error) {
+        setErrorMessage(`Gagal mengirim tautan pemulihan: ${error.message}`);
+        setLoading(false);
+        return;
+      }
+
+      setSuccessMessage(
+        'Tautan pemulihan kata sandi telah dikirim ke email Anda. Silakan periksa kotak masuk atau folder spam.'
+      );
+      setLoading(false);
+      return;
+    }
+
     if (mode === 'signup') {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -54,7 +72,7 @@ export default function LoginPage() {
         router.refresh();
       } else {
         setSuccessMessage(
-          'Pendaftaran berhasil! Silakan periksa email untuk verifikasi atau masuk langsung jika auto-confirm aktif.'
+          'Pendaftaran berhasil! Silakan periksa email untuk verifikasi atau masuk langsung.'
         );
         setMode('login');
         setLoading(false);
@@ -136,23 +154,40 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-md p-8 border border-border bg-card rounded-lg shadow-sm">
+    <div className="min-h-screen relative flex items-center justify-center p-4 bg-background overflow-hidden">
+      {/* Ambient Orbital Glow */}
+      <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[520px] h-[520px] rounded-full bg-indigo-500/15 blur-[110px]" />
+      <div className="pointer-events-none absolute -bottom-32 left-1/3 w-[400px] h-[400px] rounded-full bg-sky-500/10 blur-[100px]" />
+
+      <div className="relative z-10 w-full max-w-md p-8 border border-border/80 bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl">
+        {/* Orbit Brand Identity */}
         <div className="mb-6 text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3 text-foreground">
-            {mode === 'login' ? <Lock className="w-6 h-6" /> : <UserPlus className="w-6 h-6" />}
+          <div className="inline-flex items-center justify-center mb-3 relative">
+            <div className="absolute inset-0 rounded-2xl bg-indigo-500/30 blur-md" />
+            <img
+              src="/orbit-icon.png"
+              alt="Orbit Logo"
+              className="relative w-16 h-16 rounded-2xl shadow-lg object-cover border border-white/10"
+            />
           </div>
-          <h1 className="text-xl font-semibold tracking-tight">
-            {mode === 'login' ? 'Masuk ke Orbit' : 'Daftar Akun Orbit'}
+          <h1 className="text-2xl font-bold tracking-tight">
+            <span className="orbit-gradient-text">ORBIT</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Pusat kendali keuangan & kerja terpadu
+          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mt-0.5">
+            Productivity &amp; Finance
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">
+            {mode === 'login'
+              ? 'Masuk ke pusat kendali keuangan & kerja Anda'
+              : mode === 'signup'
+              ? 'Buat akun baru untuk mengelola produktivitas & finansial'
+              : 'Pulihkan akses kata sandi akun Orbit Anda'}
           </p>
         </div>
 
-        {/* Tab Toggle Mode */}
-        {!factorId && (
-          <div className="flex border border-border rounded-md p-1 mb-6 bg-muted/30">
+        {/* Tab Toggle Mode (Login / Signup) */}
+        {!factorId && mode !== 'forgot' && (
+          <div className="flex border border-border rounded-xl p-1 mb-6 bg-muted/50">
             <button
               type="button"
               onClick={() => {
@@ -160,9 +195,9 @@ export default function LoginPage() {
                 setErrorMessage(null);
                 setSuccessMessage(null);
               }}
-              className={`flex-1 py-1.5 text-xs font-medium rounded transition-colors ${
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
                 mode === 'login'
-                  ? 'bg-background text-foreground shadow-sm'
+                  ? 'bg-card text-foreground shadow-sm border border-border/60'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -175,9 +210,9 @@ export default function LoginPage() {
                 setErrorMessage(null);
                 setSuccessMessage(null);
               }}
-              className={`flex-1 py-1.5 text-xs font-medium rounded transition-colors ${
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
                 mode === 'signup'
-                  ? 'bg-background text-foreground shadow-sm'
+                  ? 'bg-card text-foreground shadow-sm border border-border/60'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -187,21 +222,23 @@ export default function LoginPage() {
         )}
 
         {errorMessage && (
-          <div className="mb-4 p-3 text-xs rounded bg-expense/10 text-expense border border-expense/20">
-            {errorMessage}
+          <div className="mb-4 p-3.5 text-xs rounded-xl bg-expense/10 text-expense border border-expense/25 flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{errorMessage}</span>
           </div>
         )}
 
         {successMessage && (
-          <div className="mb-4 p-3 text-xs rounded bg-income/10 text-income border border-income/20">
-            {successMessage}
+          <div className="mb-4 p-3.5 text-xs rounded-xl bg-income/10 text-income border border-income/25 flex items-start gap-2.5">
+            <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{successMessage}</span>
           </div>
         )}
 
         {factorId && mfaChallengeId ? (
           <form onSubmit={handleVerifyTotp} className="space-y-4">
             <div>
-              <label htmlFor="totp" className="block text-xs font-medium mb-1">
+              <label htmlFor="totp" className="block text-xs font-medium mb-1.5">
                 Kode Autentikator 2FA
               </label>
               <div className="relative">
@@ -215,11 +252,11 @@ export default function LoginPage() {
                   value={totpCode}
                   onChange={(e) => setTotpCode(e.target.value.trim())}
                   placeholder="000000"
-                  className="w-full px-3 py-2 pl-9 border border-border rounded bg-background tracking-widest text-center text-lg font-mono focus:outline-none focus:ring-1 focus:ring-foreground"
+                  className="w-full px-3 py-2.5 pl-9 border border-border rounded-xl bg-background tracking-widest text-center text-lg font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-                <Key className="w-4 h-4 text-muted-foreground absolute left-3 top-3" />
+                <Key className="w-4 h-4 text-muted-foreground absolute left-3 top-3.5" />
               </div>
-              <p className="text-[11px] text-muted-foreground mt-1">
+              <p className="text-[11px] text-muted-foreground mt-1.5">
                 Masukkan 6 digit kode dari aplikasi autentikator Anda.
               </p>
             </div>
@@ -227,7 +264,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading || totpCode.length !== 6}
-              className="w-full py-2 px-4 rounded bg-foreground text-background font-medium hover:opacity-90 transition-opacity disabled:opacity-50 text-sm"
+              className="w-full py-2.5 px-4 rounded-xl orbit-btn-primary font-semibold disabled:opacity-50 text-sm"
             >
               {loading ? 'Memverifikasi...' : 'Verifikasi & Masuk'}
             </button>
@@ -236,8 +273,8 @@ export default function LoginPage() {
           <div className="space-y-4">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-xs font-medium mb-1">
-                  Email
+                <label htmlFor="email" className="block text-xs font-medium mb-1.5">
+                  Alamat Email
                 </label>
                 <div className="relative">
                   <input
@@ -247,62 +284,117 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="nama@domain.com"
-                    className="w-full px-3 py-2 pl-9 border border-border rounded bg-background focus:outline-none focus:ring-1 focus:ring-foreground text-sm"
+                    className="w-full px-3.5 py-2.5 pl-10 border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm transition-shadow"
                   />
-                  <Mail className="w-4 h-4 text-muted-foreground absolute left-3 top-3" />
+                  <Mail className="w-4 h-4 text-muted-foreground absolute left-3.5 top-3" />
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="password" className="block text-xs font-medium mb-1">
-                  Kata Sandi
-                </label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    type="password"
-                    required
-                    minLength={6}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Minimal 6 karakter"
-                    className="w-full px-3 py-2 pl-9 border border-border rounded bg-background focus:outline-none focus:ring-1 focus:ring-foreground text-sm"
-                  />
-                  <Lock className="w-4 h-4 text-muted-foreground absolute left-3 top-3" />
+              {mode !== 'forgot' && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label htmlFor="password" className="block text-xs font-medium">
+                      Kata Sandi
+                    </label>
+                    {mode === 'login' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMode('forgot');
+                          setErrorMessage(null);
+                          setSuccessMessage(null);
+                        }}
+                        className="text-xs font-medium text-indigo-500 hover:text-indigo-400 transition-colors"
+                      >
+                        Lupa kata sandi?
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type="password"
+                      required
+                      minLength={6}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Minimal 6 karakter"
+                      className="w-full px-3.5 py-2.5 pl-10 border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm transition-shadow"
+                    />
+                    <Lock className="w-4 h-4 text-muted-foreground absolute left-3.5 top-3" />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2 px-4 rounded bg-foreground text-background font-medium hover:opacity-90 transition-opacity disabled:opacity-50 text-sm"
+                className="w-full py-2.5 px-4 rounded-xl orbit-btn-primary font-semibold disabled:opacity-50 text-sm"
               >
                 {loading
                   ? 'Memproses...'
                   : mode === 'signup'
-                  ? 'Buat Akun'
-                  : 'Masuk'}
+                  ? 'Buat Akun Orbit'
+                  : mode === 'forgot'
+                  ? 'Kirim Tautan Reset Sandi'
+                  : 'Masuk ke Orbit'}
               </button>
+
+              {mode === 'forgot' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('login');
+                    setErrorMessage(null);
+                    setSuccessMessage(null);
+                  }}
+                  className="w-full py-2 px-4 text-xs font-medium text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Kembali ke Halaman Masuk</span>
+                </button>
+              )}
             </form>
 
-            <div className="relative my-4">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">atau</span>
-              </div>
-            </div>
+            {mode !== 'forgot' && (
+              <>
+                <div className="relative my-5">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border" />
+                  </div>
+                  <div className="relative flex justify-center text-[11px] uppercase tracking-wider">
+                    <span className="bg-card px-3 text-muted-foreground">atau lanjutkan dengan</span>
+                  </div>
+                </div>
 
-            <button
-              onClick={handleGoogleLogin}
-              type="button"
-              disabled={loading}
-              className="w-full py-2 px-4 border border-border rounded font-medium hover:bg-muted/50 transition-colors flex items-center justify-center gap-2 text-sm"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Masuk dengan Google</span>
-            </button>
+                <button
+                  onClick={handleGoogleLogin}
+                  type="button"
+                  disabled={loading}
+                  className="w-full py-2.5 px-4 border border-border bg-background/60 rounded-xl font-medium hover:bg-muted/70 transition-all flex items-center justify-center gap-2.5 text-sm shadow-sm"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      fill="#4285F4"
+                      d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"
+                    />
+                  </svg>
+                  <span>Masuk dengan Google</span>
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>

@@ -8,34 +8,64 @@
   --card: #ffffff;
   --card-foreground: #0f172a;
   --border: #e2e8f0;
-  --primary: #0f172a;
-  --primary-foreground: #f8fafc;
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
 }
 
 .dark {
-  --background: #090d16;
-  --foreground: #f1f5f9;
-  --card: #111827;
-  --card-foreground: #f1f5f9;
-  --border: #1f2937;
-  --primary: #f1f5f9;
-  --primary-foreground: #0f172a;
-  --muted: #1e293b;
+  --background: #060913;
+  --foreground: #f8fafc;
+  --card: #0d1322;
+  --card-foreground: #f8fafc;
+  --border: #1e293b;
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  --muted: #161f33;
   --muted-foreground: #94a3b8;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   min-height: 100vh;
 }
 
 /* Format angka uang tabular rata kanan */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+/* Orbit Brand Utilities */
+.orbit-gradient-bg {
+  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #8b5cf6 100%);
+}
+
+.orbit-gradient-text {
+  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.orbit-btn-primary {
+  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 55%, #8b5cf6 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.35);
+  transition: all 0.2s ease;
+}
+
+.orbit-btn-primary:hover:not(:disabled) {
+  box-shadow: 0 6px 20px 0 rgba(99, 102, 241, 0.5);
+  transform: translateY(-1px);
+}
+
+.orbit-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06);
 }
 
 /* Sidebar Terkunci Permanen (Fixed Lock) */

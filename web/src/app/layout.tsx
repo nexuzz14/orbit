@@ -5,8 +5,8 @@ import './globals.css';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Orbit',
-  description: 'Pusat kendali pribadi untuk uang, tugas, dan jadwal',
+  title: 'Orbit — Productivity & Finance',
+  description: 'Pusat kendali pribadi untuk uang, tugas, dan jadwal terpadu',
 };
 
 export default async function RootLayout({

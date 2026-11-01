@@ -58,6 +58,13 @@ export default function PengaturanPage() {
   const [pendingFactorId, setPendingFactorId] = useState<string | null>(null);
   const [mfaError, setMfaError] = useState<string | null>(null);
 
+  // Change Password state
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordMsg, setPasswordMsg] = useState<string | null>(null);
+  const [passwordErr, setPasswordErr] = useState<string | null>(null);
+  const [savingPassword, setSavingPassword] = useState(false);
+
   const loadData = useCallback(async () => {
     setLoading(true);
 
@@ -246,6 +253,35 @@ export default function PengaturanPage() {
     window.location.href = '/login';
   };
 
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordMsg(null);
+    setPasswordErr(null);
+
+    if (newPassword.length < 6) {
+      setPasswordErr('Kata sandi baru minimal harus 6 karakter.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordErr('Konfirmasi kata sandi tidak cocok.');
+      return;
+    }
+
+    setSavingPassword(true);
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    setSavingPassword(false);
+
+    if (error) {
+      setPasswordErr(`Gagal memperbarui kata sandi: ${error.message}`);
+    } else {
+      setPasswordMsg('Kata sandi akun berhasil diperbarui.');
+      setNewPassword('');
+      setConfirmPassword('');
+    }
+  };
+
   return (
     <div className="space-y-8 max-w-4xl">
       <div>
@@ -304,9 +340,72 @@ export default function PengaturanPage() {
 
               <button
                 type="submit"
-                className="px-4 py-2 text-sm font-medium bg-foreground text-background rounded hover:opacity-90 transition-opacity"
+                className="px-4 py-2 text-xs font-semibold orbit-btn-primary rounded-xl"
               >
                 Simpan Profil
+              </button>
+            </form>
+          </div>
+
+          {/* Bagian Ubah Kata Sandi */}
+          <div className="p-6 border border-border bg-card rounded-xl space-y-4 shadow-sm">
+            <div className="flex items-center gap-3 border-b border-border pb-3">
+              <Key className="w-5 h-5 text-indigo-500" />
+              <div>
+                <h2 className="text-base font-semibold">Kata Sandi Akun</h2>
+                <p className="text-xs text-muted-foreground">
+                  Perbarui kata sandi akun Anda atau atur kata sandi baru setelah pemulihan email
+                </p>
+              </div>
+            </div>
+
+            {passwordMsg && (
+              <div className="p-3 text-xs rounded-xl bg-income/10 text-income border border-income/20 flex items-center gap-2">
+                <Check className="w-4 h-4" />
+                <span>{passwordMsg}</span>
+              </div>
+            )}
+
+            {passwordErr && (
+              <div className="p-3 text-xs rounded-xl bg-expense/10 text-expense border border-expense/20 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                <span>{passwordErr}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">
+              <div>
+                <label className="block text-xs font-medium mb-1">Kata Sandi Baru</label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Minimal 6 karakter"
+                  className="w-full px-3.5 py-2 text-sm border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium mb-1">Konfirmasi Kata Sandi Baru</label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Ulangi kata sandi baru"
+                  className="w-full px-3.5 py-2 text-sm border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={savingPassword}
+                className="px-4 py-2 text-xs font-semibold orbit-btn-primary rounded-xl disabled:opacity-50"
+              >
+                {savingPassword ? 'Menyimpan...' : 'Perbarui Kata Sandi'}
               </button>
             </form>
           </div>

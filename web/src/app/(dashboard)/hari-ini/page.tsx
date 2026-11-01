@@ -308,28 +308,35 @@ export default function HariIniPage() {
   return (
     <div className="space-y-6">
       {/* Header & Filter Jenis */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Hari Ini</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {formatDateIndo(todayStr)}
-          </p>
+      <div className="relative overflow-hidden rounded-2xl border border-indigo-500/20 bg-gradient-to-r from-indigo-500/10 via-sky-500/5 to-purple-500/10 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <img
+            src="/orbit-icon.png"
+            alt="Orbit"
+            className="w-11 h-11 rounded-xl shadow-md object-cover border border-white/10 hidden sm:block"
+          />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Hari Ini</h1>
+            <p className="text-xs font-medium text-muted-foreground mt-0.5">
+              {formatDateIndo(todayStr)}
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => setShowQuickTaskModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-foreground text-background rounded-md hover:bg-foreground/90 transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold orbit-btn-primary rounded-xl"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Tambah Tugas</span>
           </button>
           <Link
             href="/jadwal"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-border bg-card text-foreground rounded-md hover:bg-muted transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-border bg-card/80 text-foreground rounded-xl hover:bg-muted transition-colors"
           >
-            <Calendar className="w-3.5 h-3.5" />
+            <Calendar className="w-3.5 h-3.5 text-indigo-500" />
             <span>Tambah Jadwal</span>
           </Link>
         </div>
@@ -340,10 +347,10 @@ export default function HariIniPage() {
         <button
           type="button"
           onClick={() => setSelectedKind('all')}
-          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
             selectedKind === 'all'
-              ? 'bg-foreground text-background'
-              : 'bg-muted text-muted-foreground hover:text-foreground'
+              ? 'orbit-btn-primary'
+              : 'bg-card border border-border text-muted-foreground hover:text-foreground'
           }`}
         >
           Semua Kegiatan
@@ -357,10 +364,10 @@ export default function HariIniPage() {
               key={kind}
               type="button"
               onClick={() => setSelectedKind(kind)}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
                 active
-                  ? 'bg-foreground text-background'
-                  : 'bg-muted text-muted-foreground hover:text-foreground'
+                  ? 'orbit-btn-primary'
+                  : 'bg-card border border-border text-muted-foreground hover:text-foreground'
               }`}
             >
               <Icon className="w-3 h-3" />
@@ -441,43 +448,51 @@ export default function HariIniPage() {
       )}
 
       {/* Bagian Uang Ringkas */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="p-4 rounded-lg border border-border bg-card">
-          <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <Wallet className="w-3.5 h-3.5" />
-            Total Saldo Likuid
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+        <div className="p-4 rounded-xl border border-border bg-card shadow-sm flex flex-col justify-between">
+          <div className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+            <span>Total Saldo Likuid</span>
+            <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500">
+              <Wallet className="w-3.5 h-3.5" />
+            </span>
           </div>
-          <div className="text-lg font-semibold mt-1 tracking-tight">
+          <div className="text-lg font-bold mt-2 tracking-tight tabular-nums">
             {formatCurrency(liquidBalance)}
           </div>
         </div>
 
-        <div className="p-4 rounded-lg border border-border bg-card">
-          <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <Inbox className="w-3.5 h-3.5" />
-            Draft di Inbox
+        <div className="p-4 rounded-xl border border-border bg-card shadow-sm flex flex-col justify-between">
+          <div className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+            <span>Draft di Inbox</span>
+            <span className="p-1.5 rounded-lg bg-sky-500/10 text-sky-500">
+              <Inbox className="w-3.5 h-3.5" />
+            </span>
           </div>
-          <div className="text-lg font-semibold mt-1 tracking-tight">
+          <div className="text-lg font-bold mt-2 tracking-tight">
             {draftCount} transaksi
           </div>
         </div>
 
-        <div className="p-4 rounded-lg border border-border bg-card">
-          <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5" />
-            Jadwal Hari Ini
+        <div className="p-4 rounded-xl border border-border bg-card shadow-sm flex flex-col justify-between">
+          <div className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+            <span>Jadwal Hari Ini</span>
+            <span className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-500">
+              <Calendar className="w-3.5 h-3.5" />
+            </span>
           </div>
-          <div className="text-lg font-semibold mt-1 tracking-tight">
+          <div className="text-lg font-bold mt-2 tracking-tight">
             {scheduledEvents.length} agenda
           </div>
         </div>
 
-        <div className="p-4 rounded-lg border border-border bg-card">
-          <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <CheckSquare className="w-3.5 h-3.5" />
-            Tugas Hari Ini
+        <div className="p-4 rounded-xl border border-border bg-card shadow-sm flex flex-col justify-between">
+          <div className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+            <span>Tugas Hari Ini</span>
+            <span className="p-1.5 rounded-lg bg-purple-500/10 text-purple-500">
+              <CheckSquare className="w-3.5 h-3.5" />
+            </span>
           </div>
-          <div className="text-lg font-semibold mt-1 tracking-tight">
+          <div className="text-lg font-bold mt-2 tracking-tight">
             {todayTasks.filter((t) => t.status === 'done').length}/{todayTasks.length + overdueTasks.length} selesai
           </div>
         </div>
