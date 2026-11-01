@@ -129,7 +129,7 @@ select pg_temp.exec_as(
   'b1000000-0000-0000-0000-000000000002',
   format($q$
     insert into public.project_payments (id, workspace_id, project_id, label, amount, due_date)
-    values ('c2000000-0000-0000-0000-000000000001', %L, 'c1000000-0000-0000-0000-000000000001', 'DP 50%', 5000000, current_date - 1)
+    values ('c2000000-0000-0000-0000-000000000001', %L, 'c1000000-0000-0000-0000-000000000001', 'DP 50%%', 5000000, current_date - 1)
   $q$, (select wid from ws_f2 where uid = 'b1000000-0000-0000-0000-000000000001'))
 );
 
@@ -302,7 +302,7 @@ select is(
     where pm.id = 'c2000000-0000-0000-0000-000000000001'
   ),
   500000.0000::numeric,
-  'transaksi fee dibuat otomatis dengan nominal 500,000 (10%%)'
+  'transaksi fee dibuat otomatis dengan nominal 500,000 (10%)'
 );
 
 -- Batalkan status lunas (p_account_id = null)
@@ -347,7 +347,7 @@ select pg_temp.exec_as(
   'b1000000-0000-0000-0000-000000000002',
   format($q$
     insert into public.project_payments (id, workspace_id, project_id, label, amount, due_date)
-    values ('c2000000-0000-0000-0000-000000000002', %L, 'c1000000-0000-0000-0000-000000000001', 'Pelunasan 50%', 5000000, current_date - 2)
+    values ('c2000000-0000-0000-0000-000000000002', %L, 'c1000000-0000-0000-0000-000000000001', 'Pelunasan 50%%', 5000000, current_date - 2)
   $q$, (select wid from ws_f2 where uid = 'b1000000-0000-0000-0000-000000000001'))
 );
 
