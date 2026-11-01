@@ -73,3 +73,15 @@ Dokumen ini mencatat keputusan teknis, arsitektur, dan keamanan yang diambil sel
   3. `FLAG_SECURE` dipasang pada window activity untuk mencegah screen scraping dan screenshot pada layar keuangan.
   4. Antrean sinkronisasi offline (Outbox) menggunakan UUID idempoten.
 - **Konsekuensi**: Data terlindungi saat perangkat hilang atau dicuri.
+
+---
+
+## ADR-008: Deployment dan Konfigurasi Supabase Cloud
+- **Status**: Diterima (Fase 1)
+- **Konteks**: Lingkungan database produksi/staging dideploy ke Supabase Cloud (region `ap-southeast-1` Singapore) untuk mendukung sinkronisasi multi-klien (Web dan Flutter Mobile).
+- **Keputusan**:
+  1. Project di-provisioning melalui Supabase MCP pada region yang ditentukan.
+  2. Seluruh 6 file migrasi diaplikasikan penuh secara berurutan.
+  3. RLS deny-by-default aktif 100% di seluruh 18 tabel public dan bucket `attachments`.
+  4. Parameter lingkungan disediakan melalui `.env.example` dan `.env.local` tanpa menyimpan secret di git repo.
+- **Konsekuensi**: Infrastruktur cloud database siap digunakan langsung oleh aplikasi web Next.js dan Flutter mobile app.
