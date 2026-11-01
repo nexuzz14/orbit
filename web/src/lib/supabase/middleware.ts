@@ -47,7 +47,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isAuthPage && !request.nextUrl.pathname.startsWith('/auth/callback')) {
     const url = request.nextUrl.clone();
-    url.pathname = '/transaksi';
+    url.pathname = '/hari-ini';
     return NextResponse.redirect(url);
   }
 
