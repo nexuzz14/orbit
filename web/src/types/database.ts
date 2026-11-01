@@ -167,6 +167,63 @@ export type Database = {
           },
         ]
       }
+      budgets: {
+        Row: {
+          amount: number
+          category_id: string
+          created_at: string
+          currency: string
+          deleted_at: string | null
+          id: string
+          notify_at_percent: number
+          period: string
+          rollover: boolean
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          amount: number
+          category_id: string
+          created_at?: string
+          currency?: string
+          deleted_at?: string | null
+          id?: string
+          notify_at_percent?: number
+          period?: string
+          rollover?: boolean
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string
+          created_at?: string
+          currency?: string
+          deleted_at?: string | null
+          id?: string
+          notify_at_percent?: number
+          period?: string
+          rollover?: boolean
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budgets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           archived: boolean
@@ -518,6 +575,208 @@ export type Database = {
         }
         Relationships: []
       }
+      expected_incomes: {
+        Row: {
+          amount: number
+          created_at: string
+          date_window_days: number
+          deleted_at: string | null
+          expected_date: string
+          id: string
+          label: string
+          matched_transaction_id: string | null
+          project_id: string | null
+          project_payment_id: string | null
+          recurrence: Json | null
+          source: Database["public"]["Enums"]["transaction_source"]
+          status: string
+          tolerance: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          date_window_days?: number
+          deleted_at?: string | null
+          expected_date: string
+          id?: string
+          label: string
+          matched_transaction_id?: string | null
+          project_id?: string | null
+          project_payment_id?: string | null
+          recurrence?: Json | null
+          source: Database["public"]["Enums"]["transaction_source"]
+          status?: string
+          tolerance?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date_window_days?: number
+          deleted_at?: string | null
+          expected_date?: string
+          id?: string
+          label?: string
+          matched_transaction_id?: string | null
+          project_id?: string | null
+          project_payment_id?: string | null
+          recurrence?: Json | null
+          source?: Database["public"]["Enums"]["transaction_source"]
+          status?: string
+          tolerance?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expected_incomes_matched_transaction_id_fkey"
+            columns: ["matched_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expected_incomes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expected_incomes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_profit"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "expected_incomes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_receivables"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "expected_incomes_project_payment_id_fkey"
+            columns: ["project_payment_id"]
+            isOneToOne: false
+            referencedRelation: "project_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expected_incomes_project_payment_id_fkey"
+            columns: ["project_payment_id"]
+            isOneToOne: false
+            referencedRelation: "v_receivables"
+            referencedColumns: ["payment_id"]
+          },
+          {
+            foreignKeyName: "expected_incomes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      income_split_rules: {
+        Row: {
+          active: boolean
+          created_at: string
+          deleted_at: string | null
+          goal_id: string
+          id: string
+          priority: number
+          source: Database["public"]["Enums"]["transaction_source"]
+          split_type: string
+          split_value: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          goal_id: string
+          id?: string
+          priority?: number
+          source: Database["public"]["Enums"]["transaction_source"]
+          split_type: string
+          split_value: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          goal_id?: string
+          id?: string
+          priority?: number
+          source?: Database["public"]["Enums"]["transaction_source"]
+          split_type?: string
+          split_value?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "income_split_rules_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "savings_goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "income_split_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_settings: {
+        Row: {
+          bills_reminder_enabled: boolean
+          budget_exceeded_enabled: boolean
+          budget_warning_enabled: boolean
+          daily_summary_time: string
+          receivables_reminder_enabled: boolean
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          bills_reminder_enabled?: boolean
+          budget_exceeded_enabled?: boolean
+          budget_warning_enabled?: boolean
+          daily_summary_time?: string
+          receivables_reminder_enabled?: boolean
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          bills_reminder_enabled?: boolean
+          budget_exceeded_enabled?: boolean
+          budget_warning_enabled?: boolean
+          daily_summary_time?: string
+          receivables_reminder_enabled?: boolean
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           base_currency: string
@@ -747,6 +1006,276 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "projects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_bill_instances: {
+        Row: {
+          bill_id: string
+          created_at: string
+          due_date: string
+          id: string
+          transaction_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          bill_id: string
+          created_at?: string
+          due_date: string
+          id?: string
+          transaction_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          bill_id?: string
+          created_at?: string
+          due_date?: string
+          id?: string
+          transaction_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_bill_instances_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_bill_instances_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_bill_instances_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_bills: {
+        Row: {
+          account_id: string
+          active: boolean
+          amount: number
+          auto_create_draft: boolean
+          category_id: string
+          created_at: string
+          currency: string
+          deleted_at: string | null
+          id: string
+          name: string
+          remind_days_before: number[]
+          schedule_type: string
+          schedule_value: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          account_id: string
+          active?: boolean
+          amount: number
+          auto_create_draft?: boolean
+          category_id: string
+          created_at?: string
+          currency?: string
+          deleted_at?: string | null
+          id?: string
+          name: string
+          remind_days_before?: number[]
+          schedule_type: string
+          schedule_value: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          account_id?: string
+          active?: boolean
+          amount?: number
+          auto_create_draft?: boolean
+          category_id?: string
+          created_at?: string
+          currency?: string
+          deleted_at?: string | null
+          id?: string
+          name?: string
+          remind_days_before?: number[]
+          schedule_type?: string
+          schedule_value?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_bills_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_bills_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "v_account_balances"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "recurring_bills_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_bills_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      savings_allocations: {
+        Row: {
+          amount: number
+          created_at: string
+          deleted_at: string | null
+          goal_id: string
+          id: string
+          note: string | null
+          rule_id: string | null
+          transaction_id: string
+          workspace_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          deleted_at?: string | null
+          goal_id: string
+          id?: string
+          note?: string | null
+          rule_id?: string | null
+          transaction_id: string
+          workspace_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          deleted_at?: string | null
+          goal_id?: string
+          id?: string
+          note?: string | null
+          rule_id?: string | null
+          transaction_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "savings_allocations_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "savings_goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "savings_allocations_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "income_split_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "savings_allocations_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "savings_allocations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      savings_goals: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          currency: string
+          current_amount: number
+          deleted_at: string | null
+          icon: string | null
+          id: string
+          is_completed: boolean
+          name: string
+          notes: string | null
+          target_amount: number
+          target_date: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          currency?: string
+          current_amount?: number
+          deleted_at?: string | null
+          icon?: string | null
+          id?: string
+          is_completed?: boolean
+          name: string
+          notes?: string | null
+          target_amount: number
+          target_date?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          currency?: string
+          current_amount?: number
+          deleted_at?: string | null
+          icon?: string | null
+          id?: string
+          is_completed?: boolean
+          name?: string
+          notes?: string | null
+          target_amount?: number
+          target_date?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "savings_goals_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "savings_goals_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "v_account_balances"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "savings_goals_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -1310,6 +1839,43 @@ export type Database = {
           },
         ]
       }
+      v_budget_progress: {
+        Row: {
+          base_budget_amount: number | null
+          budget_id: string | null
+          category_id: string | null
+          category_name: string | null
+          currency: string | null
+          effective_budget_amount: number | null
+          is_over_budget: boolean | null
+          is_warning: boolean | null
+          notify_at_percent: number | null
+          percentage_spent: number | null
+          period_end: string | null
+          period_start: string | null
+          remaining_amount: number | null
+          rollover: boolean | null
+          rollover_amount: number | null
+          spent_amount: number | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budgets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_monthly_category_summary: {
         Row: {
           category_id: string | null
@@ -1448,6 +2014,10 @@ export type Database = {
           title: string
         }[]
       }
+      fn_apply_income_split: {
+        Args: { p_transaction_id: string }
+        Returns: number
+      }
       fn_complete_task: {
         Args: { p_task_id: string }
         Returns: {
@@ -1532,6 +2102,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      fn_confirm_expected_income: {
+        Args: {
+          p_account_id?: string
+          p_draft_id: string
+          p_expected_income_id: string
+        }
+        Returns: string
+      }
       fn_create_transfer: {
         Args: {
           p_amount_in?: number
@@ -1569,6 +2147,10 @@ export type Database = {
           is_heavy_day: boolean
         }[]
       }
+      fn_generate_due_bill_drafts: {
+        Args: { p_target_date?: string }
+        Returns: number
+      }
       fn_log_sync_conflict: {
         Args: {
           p_payload: Json
@@ -1586,6 +2168,23 @@ export type Database = {
           p_payment_id: string
         }
         Returns: string
+      }
+      fn_match_expected_income: {
+        Args: { p_draft_id: string }
+        Returns: {
+          amount_diff: number
+          days_diff: number
+          draft_amount: number
+          draft_date: string
+          expected_amount: number
+          expected_date: string
+          expected_income_id: string
+          label: string
+          match_confidence: string
+          project_id: string
+          project_payment_id: string
+          source: Database["public"]["Enums"]["transaction_source"]
+        }[]
       }
       fn_my_sessions: {
         Args: never
@@ -1846,14 +2445,59 @@ export const Constants = {
   },
 } as const
 
-export type TransactionType = Database["public"]["Enums"]["transaction_type"];
-export type TransactionSource = Database["public"]["Enums"]["transaction_source"];
-export type ActivityKind = Database["public"]["Enums"]["activity_kind"];
-export type TaskPriority = Database["public"]["Enums"]["task_priority"];
-export type TaskStatus = Database["public"]["Enums"]["task_status"];
-export type ProjectStatus = Database["public"]["Enums"]["project_status"];
-export type FeeMode = Database["public"]["Enums"]["fee_mode"];
-export type ExceptionAction = Database["public"]["Enums"]["exception_action"];
-export type AccountType = Database["public"]["Enums"]["account_type"];
-export type AccountVisibility = Database["public"]["Enums"]["account_visibility"];
-export type CategoryType = Database["public"]["Enums"]["category_type"];
+
+// Helper Type Aliases for Orbit v5.1
+export type Views<T extends keyof Database['public']['Views']> = Database['public']['Views'][T]['Row'];
+
+// Common Enum Aliases
+export type AccountType = Enums<'account_type'>;
+export type AccountVisibility = Enums<'account_visibility'>;
+export type ActivityKind = Enums<'activity_kind'>;
+export type AuditAction = Enums<'audit_action'>;
+export type CategoryType = Enums<'category_type'>;
+export type DraftState = Enums<'draft_state'>;
+export type ExceptionAction = Enums<'exception_action'>;
+export type FeeMode = Enums<'fee_mode'>;
+export type ProjectStatus = Enums<'project_status'>;
+export type RuleMatchField = Enums<'rule_match_field'>;
+export type RuleMatchType = Enums<'rule_match_type'>;
+export type TaskPriority = Enums<'task_priority'>;
+export type TaskStatus = Enums<'task_status'>;
+export type TransactionOrigin = Enums<'transaction_origin'>;
+export type TransactionSource = Enums<'transaction_source'>;
+export type TransactionStatus = Enums<'transaction_status'>;
+export type TransactionType = Enums<'transaction_type'>;
+export type TransferDirection = Enums<'transfer_direction'>;
+export type UserRole = Enums<'user_role'>;
+export type WorkspaceType = Enums<'workspace_type'>;
+
+// Table Row Aliases
+export type Profile = Tables<'profiles'>;
+export type Workspace = Tables<'workspaces'>;
+export type WorkspaceMember = Tables<'workspace_members'>;
+export type Account = Tables<'accounts'>;
+export type Category = Tables<'categories'>;
+export type CategoryRule = Tables<'category_rules'>;
+export type Transaction = Tables<'transactions'>;
+export type TransactionItem = Tables<'transaction_items'>;
+export type Project = Tables<'projects'>;
+export type Task = Tables<'tasks'>;
+export type TaskChecklistItem = Tables<'task_checklist_items'>;
+export type Event = Tables<'events'>;
+export type EventException = Tables<'event_exceptions'>;
+
+// Phase 3 Table Row Aliases
+export type Budget = Tables<'budgets'>;
+export type RecurringBill = Tables<'recurring_bills'>;
+export type RecurringBillInstance = Tables<'recurring_bill_instances'>;
+export type SavingsGoal = Tables<'savings_goals'>;
+export type IncomeSplitRule = Tables<'income_split_rules'>;
+export type SavingsAllocation = Tables<'savings_allocations'>;
+export type ExpectedIncome = Tables<'expected_incomes'>;
+export type NotificationSettings = Tables<'notification_settings'>;
+
+// View Row Aliases
+export type AccountBalance = Views<'v_account_balances'>;
+export type MonthlySummary = Views<'v_monthly_summary'>;
+export type BudgetProgress = Views<'v_budget_progress'>;
+

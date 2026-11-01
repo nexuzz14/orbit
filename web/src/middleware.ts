@@ -3,9 +3,8 @@ import { updateSession } from '@/lib/supabase/middleware';
 
 export async function middleware(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
-  const response = await updateSession(request);
 
-  // Content Security Policy (PRD 9.8)
+  // Content Security Policy (PRD 9.8 & 9.16)
   const cspHeader = `
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic';
@@ -20,6 +19,13 @@ export async function middleware(request: NextRequest) {
     upgrade-insecure-requests;
   `.replace(/\s{2,}/g, ' ').trim();
 
+  // Teruskan x-nonce dan CSP ke request headers agar Server Components & Layout menerima nonce
+  request.headers.set('x-nonce', nonce);
+  request.headers.set('Content-Security-Policy', cspHeader);
+
+  const response = await updateSession(request);
+
+  // Set response headers ke browser klien
   response.headers.set('x-nonce', nonce);
   response.headers.set('Content-Security-Policy', cspHeader);
   response.headers.set('X-Content-Type-Options', 'nosniff');

@@ -15,7 +15,10 @@ import {
   Tags,
   LayoutDashboard,
   Inbox,
-  Shield
+  Shield,
+  PieChart,
+  CalendarClock,
+  Target
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -61,6 +64,9 @@ export function Navigation() {
     { href: '/tugas', label: 'Tugas', icon: CheckSquare },
     { href: '/proyek', label: 'Proyek & Kerja', icon: Briefcase },
     { href: '/transaksi', label: 'Transaksi', icon: Receipt },
+    { href: '/anggaran', label: 'Anggaran', icon: PieChart },
+    { href: '/tagihan', label: 'Tagihan Rutin', icon: CalendarClock },
+    { href: '/tabungan', label: 'Tabungan & Split', icon: Target },
     { href: '/akun', label: 'Akun', icon: Wallet },
     { href: '/kategori', label: 'Kategori', icon: Tags },
     { href: '/ringkasan', label: 'Ringkasan', icon: LayoutDashboard },

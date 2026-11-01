@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { formatDateIndo } from '@/lib/format';
-import type { Database } from '@/types/database';
+import type { Database, NotificationSettings } from '@/types/database';
 import {
   ShieldCheck,
   Smartphone,
@@ -11,7 +11,8 @@ import {
   LogOut,
   User,
   Check,
-  AlertCircle
+  AlertCircle,
+  Bell
 } from 'lucide-react';
 
 type SessionItem = {
@@ -37,6 +38,17 @@ export default function PengaturanPage() {
   const [monthStartDay, setMonthStartDay] = useState(1);
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
 
+  // Notification Settings state
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
+  const [budgetWarning, setBudgetWarning] = useState(true);
+  const [budgetExceeded, setBudgetExceeded] = useState(true);
+  const [billsReminder, setBillsReminder] = useState(true);
+  const [receivablesReminder, setReceivablesReminder] = useState(true);
+  const [dailySummaryTime, setDailySummaryTime] = useState('08:00');
+  const [notifMsg, setNotifMsg] = useState<string | null>(null);
+  const [savingNotif, setSavingNotif] = useState(false);
+
   // 2FA state
   const [hasMfa, setHasMfa] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
@@ -49,7 +61,9 @@ export default function PengaturanPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       setLoading(false);
       return;
@@ -66,6 +80,32 @@ export default function PengaturanPage() {
       setProfile(profData);
       setDisplayName(profData.display_name || '');
       setMonthStartDay(profData.month_start_day || 1);
+    }
+
+    // Ambil workspace_id
+    const { data: memberData } = await supabase
+      .from('workspace_members')
+      .select('workspace_id')
+      .limit(1)
+      .single();
+
+    if (memberData?.workspace_id) {
+      setWorkspaceId(memberData.workspace_id);
+      // Ambil preferensi notifikasi
+      const { data: notifData } = await supabase
+        .from('notification_settings')
+        .select('*')
+        .eq('workspace_id', memberData.workspace_id)
+        .maybeSingle();
+
+      if (notifData) {
+        setNotifSettings(notifData);
+        setBudgetWarning(notifData.budget_warning_enabled);
+        setBudgetExceeded(notifData.budget_exceeded_enabled);
+        setBillsReminder(notifData.bills_reminder_enabled);
+        setReceivablesReminder(notifData.receivables_reminder_enabled);
+        setDailySummaryTime(notifData.daily_summary_time || '08:00');
+      }
     }
 
     // Ambil daftar sesi
@@ -105,6 +145,36 @@ export default function PengaturanPage() {
       setProfileMsg('Profil berhasil diperbarui.');
       loadData();
     }
+  };
+
+  const handleSaveNotifications = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!workspaceId) return;
+
+    setSavingNotif(true);
+    setNotifMsg(null);
+
+    const payload = {
+      workspace_id: workspaceId,
+      budget_warning_enabled: budgetWarning,
+      budget_exceeded_enabled: budgetExceeded,
+      bills_reminder_enabled: billsReminder,
+      receivables_reminder_enabled: receivablesReminder,
+      daily_summary_time: dailySummaryTime,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase
+      .from('notification_settings')
+      .upsert(payload, { onConflict: 'workspace_id' });
+
+    if (error) {
+      setNotifMsg(`Gagal menyimpan preferensi: ${error.message}`);
+    } else {
+      setNotifMsg('Preferensi notifikasi berhasil disimpan.');
+      await loadData();
+    }
+    setSavingNotif(false);
   };
 
   const startTotpEnrollment = async () => {
@@ -179,9 +249,9 @@ export default function PengaturanPage() {
   return (
     <div className="space-y-8 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Keamanan & Sesi</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Keamanan & Pengaturan</h1>
         <p className="text-sm text-muted-foreground">
-          Kelola profil, autentikasi dua faktor (TOTP), dan kontrol sesi aktif
+          Kelola profil, preferensi notifikasi finansial, TOTP 2FA, dan sesi aktif
         </p>
       </div>
 
@@ -217,7 +287,7 @@ export default function PengaturanPage() {
 
               <div>
                 <label className="block text-xs font-medium mb-1">
-                  Tanggal Mulai Siklus Bulanan (1–28)
+                  Tanggal Mulai Siklus Bulanan (1-28)
                 </label>
                 <input
                   type="number"
@@ -228,7 +298,7 @@ export default function PengaturanPage() {
                   className="w-full px-3 py-2 text-sm border border-border rounded bg-background focus:outline-none"
                 />
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  Digunakan untuk menghitung laporan bulanan sesuai tanggal gajian / siklus Anda.
+                  Digunakan untuk menghitung laporan bulanan dan anggaran sesuai tanggal gajian.
                 </p>
               </div>
 
@@ -236,8 +306,90 @@ export default function PengaturanPage() {
                 type="submit"
                 className="px-4 py-2 text-sm font-medium bg-foreground text-background rounded hover:opacity-90 transition-opacity"
               >
-                Simpan Perubahan
+                Simpan Profil
               </button>
+            </form>
+          </div>
+
+          {/* Bagian Preferensi Notifikasi Finansial */}
+          <div className="p-6 border border-border bg-card rounded-lg space-y-4">
+            <div className="flex items-center gap-3 border-b border-border pb-3">
+              <Bell className="w-5 h-5 text-muted-foreground" />
+              <div>
+                <h2 className="text-base font-semibold">Preferensi Notifikasi & Peringatan</h2>
+                <p className="text-xs text-muted-foreground">
+                  Atur ambang batas peringatan anggaran, jadwal tagihan, dan ringkasan harian
+                </p>
+              </div>
+            </div>
+
+            {notifMsg && (
+              <div className="p-3 text-xs rounded bg-muted text-foreground flex items-center gap-2">
+                <Check className="w-4 h-4 text-income" />
+                <span>{notifMsg}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveNotifications} className="space-y-3 max-w-md">
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={budgetWarning}
+                  onChange={(e) => setBudgetWarning(e.target.checked)}
+                  className="rounded border-input text-primary focus:ring-ring"
+                />
+                <span className="text-xs font-medium">Peringatan Anggaran 80% (Waspada)</span>
+              </label>
+
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={budgetExceeded}
+                  onChange={(e) => setBudgetExceeded(e.target.checked)}
+                  className="rounded border-input text-primary focus:ring-ring"
+                />
+                <span className="text-xs font-medium">Peringatan Anggaran 100% (Over Budget)</span>
+              </label>
+
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={billsReminder}
+                  onChange={(e) => setBillsReminder(e.target.checked)}
+                  className="rounded border-input text-primary focus:ring-ring"
+                />
+                <span className="text-xs font-medium">Pengingat Tagihan Jatuh Tempo (H-3 & Hari-H)</span>
+              </label>
+
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={receivablesReminder}
+                  onChange={(e) => setReceivablesReminder(e.target.checked)}
+                  className="rounded border-input text-primary focus:ring-ring"
+                />
+                <span className="text-xs font-medium">Pengingat Piutang & Komitmen Pembayaran</span>
+              </label>
+
+              <div className="pt-2">
+                <label className="block text-xs font-medium mb-1">Waktu Ringkasan Pagi</label>
+                <input
+                  type="time"
+                  value={dailySummaryTime}
+                  onChange={(e) => setDailySummaryTime(e.target.value)}
+                  className="px-3 py-1.5 text-sm border border-border rounded bg-background focus:outline-none"
+                />
+              </div>
+
+              <div className="pt-3">
+                <button
+                  type="submit"
+                  disabled={savingNotif}
+                  className="px-4 py-2 text-sm font-medium bg-foreground text-background rounded hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {savingNotif ? 'Menyimpan...' : 'Simpan Preferensi Notifikasi'}
+                </button>
+              </div>
             </form>
           </div>
 

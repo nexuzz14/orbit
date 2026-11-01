@@ -4,7 +4,16 @@ import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { formatCurrency, formatDateIndo } from '@/lib/format';
 import type { Database, TransactionSource } from '@/types/database';
-import { Inbox as InboxIcon, Check, Trash2, Edit3, X, AlertCircle } from 'lucide-react';
+import {
+  Inbox as InboxIcon,
+  Check,
+  Trash2,
+  Edit3,
+  X,
+  AlertCircle,
+  Sparkles,
+  Link as LinkIcon
+} from 'lucide-react';
 
 type DraftRow = Database['public']['Tables']['transactions']['Row'] & {
   account_name?: string | null;
@@ -16,6 +25,17 @@ type Option = {
   name: string;
   type?: string;
 };
+
+interface MatchedExpectedIncome {
+  expected_income_id: string;
+  title: string;
+  expected_amount: number;
+  expected_date: string;
+  source: string;
+  confidence: 'exact' | 'high' | 'medium';
+  days_difference: number;
+  amount_difference: number;
+}
 
 export default function InboxPage() {
   const supabase = createClient();
@@ -30,6 +50,9 @@ export default function InboxPage() {
   const [selectedSource, setSelectedSource] = useState<TransactionSource>('personal');
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+
+  // Expected income match
+  const [matchedIncome, setMatchedIncome] = useState<MatchedExpectedIncome | null>(null);
 
   const loadDrafts = useCallback(async () => {
     setLoading(true);
@@ -100,11 +123,52 @@ export default function InboxPage() {
     setProcessing(false);
   };
 
-  const openCompleteModal = (draft: DraftRow) => {
+  const openCompleteModal = async (draft: DraftRow) => {
     setSelectedDraft(draft);
     setSelectedCategory(draft.category_id || '');
     setSelectedSource(draft.source || (draft.type === 'expense' ? 'personal' : 'intern'));
     setConfirmError(null);
+    setMatchedIncome(null);
+
+    // If it's an income draft, try matching with expected incomes
+    if (draft.type === 'income') {
+      const { data: matchData } = await supabase.rpc('fn_match_expected_income', {
+        p_draft_id: draft.id,
+      });
+
+      if (matchData && Array.isArray(matchData) && matchData.length > 0) {
+        const topMatch = matchData[0] as unknown as MatchedExpectedIncome;
+        setMatchedIncome(topMatch);
+        if (topMatch.source) {
+          setSelectedSource(topMatch.source as TransactionSource);
+        }
+      }
+    }
+  };
+
+  const handleConfirmWithExpectedIncome = async () => {
+    if (!selectedDraft || !matchedIncome) return;
+
+    setProcessing(true);
+    setConfirmError(null);
+
+    try {
+      const { error } = await supabase.rpc('fn_confirm_expected_income', {
+        p_expected_income_id: matchedIncome.expected_income_id,
+        p_draft_id: selectedDraft.id,
+        p_account_id: selectedDraft.account_id,
+      });
+
+      if (error) throw error;
+
+      setSelectedDraft(null);
+      setMatchedIncome(null);
+      await loadDrafts();
+    } catch (err: unknown) {
+      setConfirmError(err instanceof Error ? err.message : 'Gagal mencocokkan rencana pemasukan.');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const handleCompleteSubmit = async (e: React.FormEvent) => {
@@ -160,13 +224,13 @@ export default function InboxPage() {
         );
       case 'perlu_dilengkapi':
         return (
-          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-warning/10 text-warning">
+          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
             Perlu Dilengkapi
           </span>
         );
       case 'perlu_dicek':
         return (
-          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-expense/10 text-expense">
+          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-expense/10 text-expense border border-expense/20">
             Perlu Dicek
           </span>
         );
@@ -215,21 +279,26 @@ export default function InboxPage() {
                       <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                         {d.origin}
                       </span>
+                      {d.bank_category && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                          {d.bank_category}
+                        </span>
+                      )}
                     </div>
 
                     <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
                       <span>{formatDateIndo(d.occurred_at)}</span>
-                      <span>•</span>
+                      <span>·</span>
                       <span>{d.account_name}</span>
                       {d.category_name && (
                         <>
-                          <span>•</span>
+                          <span>·</span>
                           <span>{d.category_name}</span>
                         </>
                       )}
                       {d.source && (
                         <>
-                          <span>•</span>
+                          <span>·</span>
                           <span className="uppercase">{d.source}</span>
                         </>
                       )}
@@ -323,7 +392,38 @@ export default function InboxPage() {
                 <strong>{formatCurrency(Number(selectedDraft.amount), selectedDraft.currency)}</strong>
               </div>
               <div>Waktu: {formatDateIndo(selectedDraft.occurred_at)}</div>
+              {selectedDraft.bank_category && (
+                <div>
+                  Kategori Bank: <strong>{selectedDraft.bank_category}</strong>
+                </div>
+              )}
             </div>
+
+            {/* Rekomendasi Expected Income */}
+            {matchedIncome && (
+              <div className="p-3.5 rounded-lg border border-primary/30 bg-primary/5 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+                  <Sparkles className="w-4 h-4" />
+                  <span>Rekomendasi Pencocokan Rencana Ditemukan</span>
+                </div>
+                <div className="text-xs text-foreground space-y-0.5">
+                  <div className="font-medium">{matchedIncome.title}</div>
+                  <div className="text-muted-foreground">
+                    Target: {formatCurrency(matchedIncome.expected_amount)} | Keyakinan:{' '}
+                    <span className="font-semibold uppercase">{matchedIncome.confidence}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={handleConfirmWithExpectedIncome}
+                  disabled={processing}
+                  type="button"
+                  className="w-full mt-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  <LinkIcon className="w-3.5 h-3.5" />
+                  <span>Konfirmasi & Tautkan ke Rencana Ini</span>
+                </button>
+              </div>
+            )}
 
             <form onSubmit={handleCompleteSubmit} className="space-y-4">
               <div>
