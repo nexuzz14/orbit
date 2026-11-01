@@ -13,14 +13,14 @@ alter table public.transactions
 -- 3. Tambah nilai 'bank_category' ke enum rule_match_field
 alter type public.rule_match_field add value if not exists 'bank_category';
 
--- Perbarui constraint category_rules_check1 agar mendukung 'bank_category'
+-- Perbarui constraint category_rules_check1 agar mendukung 'bank_category' dan field pola lainnya
 alter table public.category_rules
   drop constraint if exists category_rules_check1;
 
 alter table public.category_rules
   add constraint category_rules_check1
   check (
-    (match_field in ('merchant', 'product', 'counterparty', 'bank_category') and pattern is not null)
+    (match_field not in ('amount', 'time') and pattern is not null)
     or (match_field = 'amount' and (amount_min is not null or amount_max is not null))
     or (match_field = 'time' and hour_from is not null and hour_to is not null)
   );
