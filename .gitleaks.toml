@@ -1,0 +1,12 @@
+title = "Orbit gitleaks"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Berkas contoh tanpa nilai rahasia"
+paths = [
+  '''\.env\.example$''',
+  '''docs/PRD\.md$''',
+  '''docs/changelog/.*''',
+]
