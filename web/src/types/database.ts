@@ -333,6 +333,20 @@ export type Database = {
             referencedColumns: ["id", "workspace_id"]
           },
           {
+            foreignKeyName: "category_rules_project_id_workspace_id_fkey"
+            columns: ["project_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_profit"
+            referencedColumns: ["project_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "category_rules_project_id_workspace_id_fkey"
+            columns: ["project_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "v_receivables"
+            referencedColumns: ["project_id", "workspace_id"]
+          },
+          {
             foreignKeyName: "category_rules_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -455,6 +469,20 @@ export type Database = {
             referencedColumns: ["id", "workspace_id"]
           },
           {
+            foreignKeyName: "events_project_id_workspace_id_fkey"
+            columns: ["project_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_profit"
+            referencedColumns: ["project_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "events_project_id_workspace_id_fkey"
+            columns: ["project_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "v_receivables"
+            referencedColumns: ["project_id", "workspace_id"]
+          },
+          {
             foreignKeyName: "events_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -519,6 +547,120 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      project_payments: {
+        Row: {
+          account_id: string | null
+          amount: number
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          due_date: string | null
+          fee_transaction_id: string | null
+          id: string
+          label: string
+          paid_amount: number
+          paid_at: string | null
+          project_id: string
+          status: string
+          transaction_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          due_date?: string | null
+          fee_transaction_id?: string | null
+          id?: string
+          label: string
+          paid_amount?: number
+          paid_at?: string | null
+          project_id: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          due_date?: string | null
+          fee_transaction_id?: string | null
+          id?: string
+          label?: string
+          paid_amount?: number
+          paid_at?: string | null
+          project_id?: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_payments_account_id_workspace_id_fkey"
+            columns: ["account_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "project_payments_account_id_workspace_id_fkey"
+            columns: ["account_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "v_account_balances"
+            referencedColumns: ["account_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "project_payments_fee_transaction_id_workspace_id_fkey"
+            columns: ["fee_transaction_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "project_payments_project_id_workspace_id_fkey"
+            columns: ["project_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "project_payments_project_id_workspace_id_fkey"
+            columns: ["project_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_profit"
+            referencedColumns: ["project_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "project_payments_project_id_workspace_id_fkey"
+            columns: ["project_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "v_receivables"
+            referencedColumns: ["project_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "project_payments_transaction_id_workspace_id_fkey"
+            columns: ["transaction_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "project_payments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       projects: {
         Row: {
@@ -743,11 +885,39 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "tasks_milestone_payment_id_fkey"
+            columns: ["milestone_payment_id"]
+            isOneToOne: false
+            referencedRelation: "project_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_milestone_payment_id_fkey"
+            columns: ["milestone_payment_id"]
+            isOneToOne: false
+            referencedRelation: "v_receivables"
+            referencedColumns: ["payment_id"]
+          },
+          {
             foreignKeyName: "tasks_project_id_workspace_id_fkey"
             columns: ["project_id", "workspace_id"]
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_workspace_id_fkey"
+            columns: ["project_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_profit"
+            referencedColumns: ["project_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_workspace_id_fkey"
+            columns: ["project_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "v_receivables"
+            referencedColumns: ["project_id", "workspace_id"]
           },
           {
             foreignKeyName: "tasks_workspace_id_fkey"
@@ -806,6 +976,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_profit"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "transaction_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_receivables"
+            referencedColumns: ["project_id"]
           },
           {
             foreignKeyName: "transaction_items_transaction_id_fkey"
@@ -962,6 +1146,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "transactions_project_id_workspace_id_fkey"
+            columns: ["project_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_profit"
+            referencedColumns: ["project_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "transactions_project_id_workspace_id_fkey"
+            columns: ["project_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "v_receivables"
+            referencedColumns: ["project_id", "workspace_id"]
           },
           {
             foreignKeyName: "transactions_workspace_id_fkey"
@@ -1162,8 +1360,124 @@ export type Database = {
           },
         ]
       }
+      v_project_profit: {
+        Row: {
+          client_name: string | null
+          contract_value: number | null
+          currency: string | null
+          kind: Database["public"]["Enums"]["activity_kind"] | null
+          margin_percent: number | null
+          net_profit: number | null
+          platform_fee_deducted: number | null
+          project_id: string | null
+          project_name: string | null
+          remaining_invoiced: number | null
+          status: Database["public"]["Enums"]["project_status"] | null
+          total_expense: number | null
+          total_invoiced: number | null
+          total_paid: number | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_receivables: {
+        Row: {
+          amount: number | null
+          client_name: string | null
+          days_overdue: number | null
+          due_date: string | null
+          is_overdue: boolean | null
+          label: string | null
+          paid_amount: number | null
+          payment_id: string | null
+          project_id: string | null
+          project_name: string | null
+          remaining_amount: number | null
+          status: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      fn_agenda: {
+        Args: {
+          p_end_date?: string
+          p_kind?: string
+          p_start_date: string
+          p_workspace_id: string
+        }
+        Returns: {
+          all_day: boolean
+          checklist_done: number
+          checklist_total: number
+          description: string
+          due_at: string
+          due_is_date_only: boolean
+          ends_at: string
+          event_id: string
+          id: string
+          is_overdue: boolean
+          is_recurring: boolean
+          item_type: string
+          kind: Database["public"]["Enums"]["activity_kind"]
+          location: string
+          milestone_payment_id: string
+          priority: string
+          project_color: string
+          project_id: string
+          project_name: string
+          starts_at: string
+          status: string
+          title: string
+        }[]
+      }
+      fn_complete_task: {
+        Args: { p_task_id: string }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          description: string | null
+          due_at: string | null
+          due_is_date_only: boolean
+          estimate_minutes: number | null
+          id: string
+          kind: Database["public"]["Enums"]["activity_kind"]
+          milestone_payment_id: string | null
+          priority: Database["public"]["Enums"]["task_priority"]
+          project_id: string | null
+          sort_order: number
+          status: Database["public"]["Enums"]["task_status"]
+          tags: string[]
+          title: string
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       fn_confirm_draft: {
         Args: {
           p_account_id?: string
@@ -1236,6 +1550,25 @@ export type Database = {
         Args: { p_transaction_id: string }
         Returns: undefined
       }
+      fn_detect_conflicts: {
+        Args: {
+          p_end_date?: string
+          p_start_date: string
+          p_workspace_id: string
+        }
+        Returns: {
+          conflict_date: string
+          event1_ends_at: string
+          event1_id: string
+          event1_starts_at: string
+          event1_title: string
+          event2_ends_at: string
+          event2_id: string
+          event2_starts_at: string
+          event2_title: string
+          is_heavy_day: boolean
+        }[]
+      }
       fn_log_sync_conflict: {
         Args: {
           p_payload: Json
@@ -1244,6 +1577,15 @@ export type Database = {
           p_workspace_id: string
         }
         Returns: undefined
+      }
+      fn_mark_payment_paid: {
+        Args: {
+          p_account_id?: string
+          p_fee?: number
+          p_paid_at?: string
+          p_payment_id: string
+        }
+        Returns: string
       }
       fn_my_sessions: {
         Args: never
@@ -1502,15 +1844,16 @@ export const Constants = {
       workspace_type: ["personal", "shared"],
     },
   },
-} as const;
+} as const
 
-export type AccountType = Database["public"]["Enums"]["account_type"];
-export type AccountVisibility = Database["public"]["Enums"]["account_visibility"];
-export type TransactionSource = Database["public"]["Enums"]["transaction_source"];
-export type CategoryType = Database["public"]["Enums"]["category_type"];
 export type TransactionType = Database["public"]["Enums"]["transaction_type"];
+export type TransactionSource = Database["public"]["Enums"]["transaction_source"];
 export type ActivityKind = Database["public"]["Enums"]["activity_kind"];
 export type TaskPriority = Database["public"]["Enums"]["task_priority"];
 export type TaskStatus = Database["public"]["Enums"]["task_status"];
 export type ProjectStatus = Database["public"]["Enums"]["project_status"];
-
+export type FeeMode = Database["public"]["Enums"]["fee_mode"];
+export type ExceptionAction = Database["public"]["Enums"]["exception_action"];
+export type AccountType = Database["public"]["Enums"]["account_type"];
+export type AccountVisibility = Database["public"]["Enums"]["account_visibility"];
+export type CategoryType = Database["public"]["Enums"]["category_type"];

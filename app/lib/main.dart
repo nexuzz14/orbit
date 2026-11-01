@@ -3,9 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:orbit_app/features/auth/login_screen.dart';
 import 'package:orbit_app/features/home/home_screen.dart';
+import 'package:orbit_app/core/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inisialisasi notifikasi lokal
+  try {
+    await NotificationService.initialize();
+  } catch (_) {}
 
   // Inisialisasi Supabase client (URL dan Anon Key dapat disesuaikan lewat environment)
   await Supabase.initialize(

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:orbit_app/features/today/today_screen.dart';
+import 'package:orbit_app/features/schedule/schedule_screen.dart';
+import 'package:orbit_app/features/tasks/tasks_screen.dart';
+import 'package:orbit_app/features/projects/projects_screen.dart';
 import 'package:orbit_app/features/transactions/transactions_screen.dart';
-import 'package:orbit_app/features/accounts/accounts_screen.dart';
-import 'package:orbit_app/features/inbox/inbox_screen.dart';
-import 'package:orbit_app/features/transactions/add_transaction_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,9 +16,11 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   final _screens = const [
+    TodayScreen(),
+    ScheduleScreen(),
+    TasksScreen(),
+    ProjectsScreen(),
     TransactionsScreen(),
-    AccountsScreen(),
-    InboxScreen(),
   ];
 
   @override
@@ -36,32 +39,32 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long),
-            label: 'Transaksi',
+            icon: Icon(Icons.today_outlined),
+            selectedIcon: Icon(Icons.today),
+            label: 'Hari Ini',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_month_outlined),
+            selectedIcon: Icon(Icons.calendar_month),
+            label: 'Jadwal',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.check_box_outlined),
+            selectedIcon: Icon(Icons.check_box),
+            label: 'Tugas',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.business_center_outlined),
+            selectedIcon: Icon(Icons.business_center),
+            label: 'Proyek',
           ),
           NavigationDestination(
             icon: Icon(Icons.account_balance_wallet_outlined),
             selectedIcon: Icon(Icons.account_balance_wallet),
-            label: 'Akun',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.inbox_outlined),
-            selectedIcon: Icon(Icons.inbox),
-            label: 'Inbox',
+            label: 'Keuangan',
           ),
         ],
       ),
-      floatingActionButton: _currentIndex == 0
-          ? FloatingActionButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AddTransactionScreen()),
-                );
-              },
-              child: const Icon(Icons.add),
-            )
-          : null,
     );
   }
 }

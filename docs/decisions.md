@@ -98,3 +98,21 @@ Dokumen ini mencatat keputusan teknis, arsitektur, dan keamanan yang diambil sel
   4. File mentah tanpa enkripsi segera dihapus dari runner. File dump terenkripsi disimpan sebagai artefak GitHub Actions privat dengan retensi 30 hari.
   5. Disediakan skrip pemulihan `supabase/scripts/restore.sh` yang terdokumentasi di `docs/runbook-insiden.md`.
 - **Konsekuensi**: Salinan data selalu aman di luar Supabase, terenkripsi end-to-end, dan dapat dipulihkan kapan saja ke database mana pun.
+
+---
+
+## ADR-010: Arsitektur Kerja, Jadwal Berulang, dan Milestone Freelance (Fase 2)
+- **Status**: Diterima (Fase 2)
+- **Konteks**: PRD v5.1 M10a, M10b, M10c menetapkan fitur inti fase 2:
+  1. Pengelolaan kegiatan lintas jenis (`intern`, `freelance`, `kuliah`, `pribadi`) dengan constraint database ketat (field khusus jenis dilarang terisi untuk jenis lain).
+  2. Jadwal dan aturan berulang (harian, mingguan dengan `byweekday`, bulanan) yang diekspansi secara eksklusif oleh fungsi database (`fn_agenda`), bukan di client, dengan dukungan pengecualian per tanggal (`event_exceptions`: skip atau override).
+  3. Deteksi benturan waktu overlap antar dua event (`fn_detect_conflicts`) dan penanda hari padat (durasi terjadwal >= 8 jam).
+  4. Penyelesaian tugas milestone (`fn_complete_task`) menawarkan pencatatan pembayaran termin freelance secara atomik (`fn_mark_payment_paid`).
+  5. Metrik keuntungan proyek freelance (`v_project_profit`) dan daftar piutang jatuh tempo (`v_receivables`) dengan `security_invoker = true`.
+- **Keputusan**:
+  1. **Database-First Expansion**: Seluruh ekspansi jadwal berulang, penanganan pengecualian skip/override, dan agregasi agenda dilakukan di dalam fungsi PostgreSQL `fn_agenda`. Client web dan Flutter tidak menghitung logika ekspansi sendiri, menjamin hasil 100% identik di semua platform.
+  2. **Milestone Pembayaran Atomik (`fn_mark_payment_paid`)**: Menandai lunas pembayaran membuat transaksi pemasukan (confirmed, source 'freelance') dan otomatis menghitung serta mencatat potongan platform (jika `fee_mode = 'expense_transaction'`). Pembatalan status lunas secara atomik menghapus lunak transaksi terkait.
+  3. **Layar Hari Ini**: Menggantikan beranda lama di web Next.js dan Flutter mobile app, memanggil `fn_agenda` satu kali per filter jenis, didukung cache lokal di Drift SQLCipher untuk ketersediaan offline di mobile.
+  4. **Deteksi Benturan & Hari Padat**: `fn_detect_conflicts` mendeteksi irisan waktu event non-all-day dan menandai hari dengan total durasi >= 8 jam, yang divisualisasikan dengan indikator perhatian di web dan mobile.
+  5. **Pengingat Lokal Mobile**: Menggunakan `flutter_local_notifications` untuk pengingat jadwal mendekati waktu dan ringkasan pagi tanpa judul sesuai spesifikasi PRD.
+- **Konsekuensi**: Logika hitung dan keamanan data terlindungi di level database PostgreSQL, integritas finansial proyek freelance terjaga secara atomik, dan pengalaman pengguna konsisten lintas web dan Android.

@@ -80,12 +80,174 @@ class SyncOutbox extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [LocalAccounts, LocalCategories, LocalTransactions, SyncOutbox])
+// -----------------------------------------------------------------------------
+// Tabel Fase 2: Kerja, Tugas, Jadwal, & Milestone Pembayaran
+// -----------------------------------------------------------------------------
+
+// Tabel Proyek Lokal
+class LocalProjects extends Table {
+  TextColumn get id => text()();
+  TextColumn get workspaceId => text()();
+  TextColumn get kind => text()(); // intern / freelance / kuliah / pribadi
+  TextColumn get name => text()();
+  TextColumn get description => text().nullable()();
+  TextColumn get status => text().withDefault(const Constant('berjalan'))();
+  DateTimeColumn get startedOn => dateTime().nullable()();
+  DateTimeColumn get deadline => dateTime().nullable()();
+  TextColumn get color => text().nullable()();
+  TextColumn get clientName => text().nullable()();
+  RealColumn get contractValue => real().nullable()();
+  TextColumn get currency => text().nullable()();
+  RealColumn get platformFeePercent => real().nullable()();
+  TextColumn get feeMode => text().nullable()();
+  IntColumn get semester => integer().nullable()();
+  TextColumn get courseCode => text().nullable()();
+  IntColumn get credits => integer().nullable()();
+  RealColumn get stipendAmount => real().nullable()();
+  IntColumn get stipendDay => integer().nullable()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// Tabel Tugas Lokal
+class LocalTasks extends Table {
+  TextColumn get id => text()();
+  TextColumn get workspaceId => text()();
+  TextColumn get projectId => text().nullable()();
+  TextColumn get kind => text()();
+  TextColumn get title => text()();
+  TextColumn get description => text().nullable()();
+  TextColumn get status => text().withDefault(const Constant('todo'))();
+  TextColumn get priority => text().withDefault(const Constant('sedang'))();
+  DateTimeColumn get dueAt => dateTime().nullable()();
+  BoolColumn get dueIsDateOnly => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get completedAt => dateTime().nullable()();
+  TextColumn get milestonePaymentId => text().nullable()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// Tabel Checklist Item Tugas Lokal
+class LocalTaskChecklistItems extends Table {
+  TextColumn get id => text()();
+  TextColumn get taskId => text()();
+  TextColumn get textContent => text()();
+  BoolColumn get done => boolean().withDefault(const Constant(false))();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// Tabel Event Jadwal Lokal
+class LocalEvents extends Table {
+  TextColumn get id => text()();
+  TextColumn get workspaceId => text()();
+  TextColumn get projectId => text().nullable()();
+  TextColumn get kind => text()();
+  TextColumn get title => text()();
+  TextColumn get description => text().nullable()();
+  TextColumn get location => text().nullable()();
+  DateTimeColumn get startsAt => dateTime()();
+  DateTimeColumn get endsAt => dateTime()();
+  BoolColumn get allDay => boolean().withDefault(const Constant(false))();
+  TextColumn get timezone => text().withDefault(const Constant('Asia/Jakarta'))();
+  TextColumn get recurrence => text().nullable()(); // JSON string
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// Tabel Milestone Pembayaran Lokal
+class LocalProjectPayments extends Table {
+  TextColumn get id => text()();
+  TextColumn get workspaceId => text()();
+  TextColumn get projectId => text()();
+  TextColumn get label => text()();
+  RealColumn get amount => real()();
+  DateTimeColumn get dueDate => dateTime().nullable()();
+  TextColumn get status => text().withDefault(const Constant('pending'))();
+  RealColumn get paidAmount => real().withDefault(const Constant(0.0))();
+  DateTimeColumn get paidAt => dateTime().nullable()();
+  TextColumn get accountId => text().nullable()();
+  TextColumn get transactionId => text().nullable()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// Tabel Cache Agenda Lokal (Untuk Layar Hari Ini Offline, PRD M10c)
+class LocalAgendaCache extends Table {
+  TextColumn get id => text()();
+  TextColumn get workspaceId => text()();
+  TextColumn get itemType => text()(); // event / task
+  TextColumn get kind => text()();
+  TextColumn get title => text()();
+  TextColumn get description => text().nullable()();
+  TextColumn get projectId => text().nullable()();
+  TextColumn get projectName => text().nullable()();
+  DateTimeColumn get startsAt => dateTime().nullable()();
+  DateTimeColumn get endsAt => dateTime().nullable()();
+  BoolColumn get allDay => boolean().withDefault(const Constant(false))();
+  TextColumn get location => text().nullable()();
+  TextColumn get status => text()();
+  TextColumn get priority => text().nullable()();
+  DateTimeColumn get dueAt => dateTime().nullable()();
+  BoolColumn get dueIsDateOnly => boolean().withDefault(const Constant(false))();
+  BoolColumn get isOverdue => boolean().withDefault(const Constant(false))();
+  IntColumn get checklistTotal => integer().withDefault(const Constant(0))();
+  IntColumn get checklistDone => integer().withDefault(const Constant(0))();
+  TextColumn get eventId => text().nullable()();
+  BoolColumn get isRecurring => boolean().withDefault(const Constant(false))();
+  TextColumn get milestonePaymentId => text().nullable()();
+  TextColumn get cachedDate => text()(); // YYYY-MM-DD
+
+  @override
+  Set<Column> get primaryKey => {id, cachedDate};
+}
+
+@DriftDatabase(tables: [
+  LocalAccounts,
+  LocalCategories,
+  LocalTransactions,
+  SyncOutbox,
+  LocalProjects,
+  LocalTasks,
+  LocalTaskChecklistItems,
+  LocalEvents,
+  LocalProjectPayments,
+  LocalAgendaCache,
+])
 class AppDatabase extends _$AppDatabase {
+  static final AppDatabase shared = AppDatabase();
+
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (Migrator m) async {
+      await m.createAll();
+    },
+    onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 2) {
+        await m.createTable(localProjects);
+        await m.createTable(localTasks);
+        await m.createTable(localTaskChecklistItems);
+        await m.createTable(localEvents);
+        await m.createTable(localProjectPayments);
+        await m.createTable(localAgendaCache);
+      }
+    },
+  );
 }
 
 LazyDatabase _openConnection() {

@@ -3,15 +3,19 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  LayoutDashboard,
+  Sun,
+  Moon,
+  LogOut,
+  Calendar,
+  CalendarDays,
+  CheckSquare,
+  Briefcase,
   Receipt,
   Wallet,
   Tags,
+  LayoutDashboard,
   Inbox,
-  Shield,
-  LogOut,
-  Moon,
-  Sun
+  Shield
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -52,10 +56,14 @@ export function Navigation() {
   };
 
   const navItems = [
-    { href: '/ringkasan', label: 'Ringkasan', icon: LayoutDashboard },
+    { href: '/hari-ini', label: 'Hari Ini', icon: Calendar },
+    { href: '/jadwal', label: 'Jadwal', icon: CalendarDays },
+    { href: '/tugas', label: 'Tugas', icon: CheckSquare },
+    { href: '/proyek', label: 'Proyek & Kerja', icon: Briefcase },
     { href: '/transaksi', label: 'Transaksi', icon: Receipt },
     { href: '/akun', label: 'Akun', icon: Wallet },
     { href: '/kategori', label: 'Kategori', icon: Tags },
+    { href: '/ringkasan', label: 'Ringkasan', icon: LayoutDashboard },
     { href: '/inbox', label: 'Inbox', icon: Inbox },
     { href: '/pengaturan', label: 'Keamanan & Sesi', icon: Shield },
   ];
@@ -64,10 +72,10 @@ export function Navigation() {
     <aside className="w-64 border-r border-border bg-card flex flex-col justify-between min-h-screen">
       <div>
         <div className="p-6 border-b border-border">
-          <Link href="/ringkasan" className="font-semibold text-lg tracking-tight">
+          <Link href="/hari-ini" className="font-semibold text-lg tracking-tight">
             Orbit
           </Link>
-          <div className="text-xs text-muted-foreground mt-1">Pusat Kendali Keuangan</div>
+          <div className="text-xs text-muted-foreground mt-1">Pusat Kendali Keuangan & Kerja</div>
         </div>
 
         <nav className="p-4 space-y-1">
