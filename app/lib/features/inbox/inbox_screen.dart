@@ -96,14 +96,74 @@ class _InboxScreenState extends State<InboxScreen> {
     String selectedSource = draft['source'] ?? (draft['type'] == 'expense' ? 'personal' : 'intern');
     final availableCats = _categories.where((c) => c['type'] == draft['type']).toList();
 
-    final result = await showDialog<bool>(
+    // Cek apakah ada pencocokan expected income untuk pemasukan
+    Map<String, dynamic>? matchedIncome;
+    if (draft['type'] == 'income') {
+      try {
+        final matches = await _supabase.rpc('fn_match_expected_income', params: {
+          'p_draft_id': draft['id'],
+        });
+        if (matches is List && matches.isNotEmpty) {
+          matchedIncome = Map<String, dynamic>.from(matches.first);
+          if (matchedIncome['source'] != null) {
+            selectedSource = matchedIncome['source'];
+          }
+        }
+      } catch (e) {
+        debugPrint('Error matching expected income: $e');
+      }
+    }
+
+    if (!mounted) return;
+
+    final result = await showDialog<String>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Lengkapi Draft'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (matchedIncome != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withAlpha(20),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.blue.withAlpha(60)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.auto_awesome, size: 14, color: Colors.blue),
+                          SizedBox(width: 4),
+                          Text(
+                            'Rekomendasi Rencana Pemasukan',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${matchedIncome['title']} (${_currencyFormat.format(matchedIncome['expected_amount'])})',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        'Tingkat keyakinan: ${(matchedIncome['confidence'] as String? ?? '').toUpperCase()}',
+                        style: const TextStyle(fontSize: 10, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               DropdownButtonFormField<String>(
                 value: selectedCat,
                 decoration: const InputDecoration(labelText: 'Kategori'),
@@ -135,19 +195,44 @@ class _InboxScreenState extends State<InboxScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
+              onPressed: () => Navigator.pop(ctx, 'cancel'),
               child: const Text('Batal'),
             ),
+            if (matchedIncome != null)
+              ElevatedButton.icon(
+                onPressed: () => Navigator.pop(ctx, 'link_expected'),
+                icon: const Icon(Icons.link, size: 14),
+                label: const Text('Tautkan Rencana'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade700,
+                  foregroundColor: Colors.white,
+                ),
+              ),
             TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Konfirmasi'),
+              onPressed: () => Navigator.pop(ctx, 'confirm_standard'),
+              child: const Text('Konfirmasi Standar'),
             ),
           ],
         ),
       ),
     );
 
-    if (result == true && selectedCat != null) {
+    if (result == 'link_expected' && matchedIncome != null) {
+      try {
+        await _supabase.rpc('fn_confirm_expected_income', params: {
+          'p_expected_income_id': matchedIncome['expected_income_id'],
+          'p_draft_id': draft['id'],
+          'p_account_id': draft['account_id'],
+        });
+        _loadDrafts();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal menautkan rencana: $e')),
+          );
+        }
+      }
+    } else if (result == 'confirm_standard' && selectedCat != null) {
       try {
         await _supabase.rpc('fn_confirm_draft', params: {
           'p_transaction_id': draft['id'],

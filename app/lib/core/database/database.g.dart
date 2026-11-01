@@ -6477,6 +6477,2013 @@ class LocalAgendaCacheCompanion extends UpdateCompanion<LocalAgendaCacheData> {
   }
 }
 
+class $LocalBudgetsTable extends LocalBudgets
+    with TableInfo<$LocalBudgetsTable, LocalBudget> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalBudgetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _workspaceIdMeta =
+      const VerificationMeta('workspaceId');
+  @override
+  late final GeneratedColumn<String> workspaceId = GeneratedColumn<String>(
+      'workspace_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _categoryIdMeta =
+      const VerificationMeta('categoryId');
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+      'category_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+      'amount', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _periodMeta = const VerificationMeta('period');
+  @override
+  late final GeneratedColumn<String> period = GeneratedColumn<String>(
+      'period', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('monthly'));
+  static const VerificationMeta _rolloverMeta =
+      const VerificationMeta('rollover');
+  @override
+  late final GeneratedColumn<bool> rollover = GeneratedColumn<bool>(
+      'rollover', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("rollover" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _notifyAtPercentMeta =
+      const VerificationMeta('notifyAtPercent');
+  @override
+  late final GeneratedColumn<double> notifyAtPercent = GeneratedColumn<double>(
+      'notify_at_percent', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(80.0));
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        workspaceId,
+        categoryId,
+        amount,
+        period,
+        rollover,
+        notifyAtPercent,
+        deletedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_budgets';
+  @override
+  VerificationContext validateIntegrity(Insertable<LocalBudget> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('workspace_id')) {
+      context.handle(
+          _workspaceIdMeta,
+          workspaceId.isAcceptableOrUnknown(
+              data['workspace_id']!, _workspaceIdMeta));
+    } else if (isInserting) {
+      context.missing(_workspaceIdMeta);
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(
+          _categoryIdMeta,
+          categoryId.isAcceptableOrUnknown(
+              data['category_id']!, _categoryIdMeta));
+    } else if (isInserting) {
+      context.missing(_categoryIdMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(_amountMeta,
+          amount.isAcceptableOrUnknown(data['amount']!, _amountMeta));
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('period')) {
+      context.handle(_periodMeta,
+          period.isAcceptableOrUnknown(data['period']!, _periodMeta));
+    }
+    if (data.containsKey('rollover')) {
+      context.handle(_rolloverMeta,
+          rollover.isAcceptableOrUnknown(data['rollover']!, _rolloverMeta));
+    }
+    if (data.containsKey('notify_at_percent')) {
+      context.handle(
+          _notifyAtPercentMeta,
+          notifyAtPercent.isAcceptableOrUnknown(
+              data['notify_at_percent']!, _notifyAtPercentMeta));
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalBudget map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalBudget(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      workspaceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}workspace_id'])!,
+      categoryId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}category_id'])!,
+      amount: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}amount'])!,
+      period: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}period'])!,
+      rollover: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}rollover'])!,
+      notifyAtPercent: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}notify_at_percent'])!,
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+    );
+  }
+
+  @override
+  $LocalBudgetsTable createAlias(String alias) {
+    return $LocalBudgetsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalBudget extends DataClass implements Insertable<LocalBudget> {
+  final String id;
+  final String workspaceId;
+  final String categoryId;
+  final double amount;
+  final String period;
+  final bool rollover;
+  final double notifyAtPercent;
+  final DateTime? deletedAt;
+  const LocalBudget(
+      {required this.id,
+      required this.workspaceId,
+      required this.categoryId,
+      required this.amount,
+      required this.period,
+      required this.rollover,
+      required this.notifyAtPercent,
+      this.deletedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['workspace_id'] = Variable<String>(workspaceId);
+    map['category_id'] = Variable<String>(categoryId);
+    map['amount'] = Variable<double>(amount);
+    map['period'] = Variable<String>(period);
+    map['rollover'] = Variable<bool>(rollover);
+    map['notify_at_percent'] = Variable<double>(notifyAtPercent);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  LocalBudgetsCompanion toCompanion(bool nullToAbsent) {
+    return LocalBudgetsCompanion(
+      id: Value(id),
+      workspaceId: Value(workspaceId),
+      categoryId: Value(categoryId),
+      amount: Value(amount),
+      period: Value(period),
+      rollover: Value(rollover),
+      notifyAtPercent: Value(notifyAtPercent),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory LocalBudget.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalBudget(
+      id: serializer.fromJson<String>(json['id']),
+      workspaceId: serializer.fromJson<String>(json['workspaceId']),
+      categoryId: serializer.fromJson<String>(json['categoryId']),
+      amount: serializer.fromJson<double>(json['amount']),
+      period: serializer.fromJson<String>(json['period']),
+      rollover: serializer.fromJson<bool>(json['rollover']),
+      notifyAtPercent: serializer.fromJson<double>(json['notifyAtPercent']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'workspaceId': serializer.toJson<String>(workspaceId),
+      'categoryId': serializer.toJson<String>(categoryId),
+      'amount': serializer.toJson<double>(amount),
+      'period': serializer.toJson<String>(period),
+      'rollover': serializer.toJson<bool>(rollover),
+      'notifyAtPercent': serializer.toJson<double>(notifyAtPercent),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  LocalBudget copyWith(
+          {String? id,
+          String? workspaceId,
+          String? categoryId,
+          double? amount,
+          String? period,
+          bool? rollover,
+          double? notifyAtPercent,
+          Value<DateTime?> deletedAt = const Value.absent()}) =>
+      LocalBudget(
+        id: id ?? this.id,
+        workspaceId: workspaceId ?? this.workspaceId,
+        categoryId: categoryId ?? this.categoryId,
+        amount: amount ?? this.amount,
+        period: period ?? this.period,
+        rollover: rollover ?? this.rollover,
+        notifyAtPercent: notifyAtPercent ?? this.notifyAtPercent,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+      );
+  LocalBudget copyWithCompanion(LocalBudgetsCompanion data) {
+    return LocalBudget(
+      id: data.id.present ? data.id.value : this.id,
+      workspaceId:
+          data.workspaceId.present ? data.workspaceId.value : this.workspaceId,
+      categoryId:
+          data.categoryId.present ? data.categoryId.value : this.categoryId,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      period: data.period.present ? data.period.value : this.period,
+      rollover: data.rollover.present ? data.rollover.value : this.rollover,
+      notifyAtPercent: data.notifyAtPercent.present
+          ? data.notifyAtPercent.value
+          : this.notifyAtPercent,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalBudget(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('amount: $amount, ')
+          ..write('period: $period, ')
+          ..write('rollover: $rollover, ')
+          ..write('notifyAtPercent: $notifyAtPercent, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, workspaceId, categoryId, amount, period,
+      rollover, notifyAtPercent, deletedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalBudget &&
+          other.id == this.id &&
+          other.workspaceId == this.workspaceId &&
+          other.categoryId == this.categoryId &&
+          other.amount == this.amount &&
+          other.period == this.period &&
+          other.rollover == this.rollover &&
+          other.notifyAtPercent == this.notifyAtPercent &&
+          other.deletedAt == this.deletedAt);
+}
+
+class LocalBudgetsCompanion extends UpdateCompanion<LocalBudget> {
+  final Value<String> id;
+  final Value<String> workspaceId;
+  final Value<String> categoryId;
+  final Value<double> amount;
+  final Value<String> period;
+  final Value<bool> rollover;
+  final Value<double> notifyAtPercent;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const LocalBudgetsCompanion({
+    this.id = const Value.absent(),
+    this.workspaceId = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.period = const Value.absent(),
+    this.rollover = const Value.absent(),
+    this.notifyAtPercent = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalBudgetsCompanion.insert({
+    required String id,
+    required String workspaceId,
+    required String categoryId,
+    required double amount,
+    this.period = const Value.absent(),
+    this.rollover = const Value.absent(),
+    this.notifyAtPercent = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        workspaceId = Value(workspaceId),
+        categoryId = Value(categoryId),
+        amount = Value(amount);
+  static Insertable<LocalBudget> custom({
+    Expression<String>? id,
+    Expression<String>? workspaceId,
+    Expression<String>? categoryId,
+    Expression<double>? amount,
+    Expression<String>? period,
+    Expression<bool>? rollover,
+    Expression<double>? notifyAtPercent,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (workspaceId != null) 'workspace_id': workspaceId,
+      if (categoryId != null) 'category_id': categoryId,
+      if (amount != null) 'amount': amount,
+      if (period != null) 'period': period,
+      if (rollover != null) 'rollover': rollover,
+      if (notifyAtPercent != null) 'notify_at_percent': notifyAtPercent,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalBudgetsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? workspaceId,
+      Value<String>? categoryId,
+      Value<double>? amount,
+      Value<String>? period,
+      Value<bool>? rollover,
+      Value<double>? notifyAtPercent,
+      Value<DateTime?>? deletedAt,
+      Value<int>? rowid}) {
+    return LocalBudgetsCompanion(
+      id: id ?? this.id,
+      workspaceId: workspaceId ?? this.workspaceId,
+      categoryId: categoryId ?? this.categoryId,
+      amount: amount ?? this.amount,
+      period: period ?? this.period,
+      rollover: rollover ?? this.rollover,
+      notifyAtPercent: notifyAtPercent ?? this.notifyAtPercent,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (workspaceId.present) {
+      map['workspace_id'] = Variable<String>(workspaceId.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (period.present) {
+      map['period'] = Variable<String>(period.value);
+    }
+    if (rollover.present) {
+      map['rollover'] = Variable<bool>(rollover.value);
+    }
+    if (notifyAtPercent.present) {
+      map['notify_at_percent'] = Variable<double>(notifyAtPercent.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalBudgetsCompanion(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('amount: $amount, ')
+          ..write('period: $period, ')
+          ..write('rollover: $rollover, ')
+          ..write('notifyAtPercent: $notifyAtPercent, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalRecurringBillsTable extends LocalRecurringBills
+    with TableInfo<$LocalRecurringBillsTable, LocalRecurringBill> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalRecurringBillsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _workspaceIdMeta =
+      const VerificationMeta('workspaceId');
+  @override
+  late final GeneratedColumn<String> workspaceId = GeneratedColumn<String>(
+      'workspace_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+      'amount', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _categoryIdMeta =
+      const VerificationMeta('categoryId');
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+      'category_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _accountIdMeta =
+      const VerificationMeta('accountId');
+  @override
+  late final GeneratedColumn<String> accountId = GeneratedColumn<String>(
+      'account_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _scheduleTypeMeta =
+      const VerificationMeta('scheduleType');
+  @override
+  late final GeneratedColumn<String> scheduleType = GeneratedColumn<String>(
+      'schedule_type', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('monthly'));
+  static const VerificationMeta _scheduleValueMeta =
+      const VerificationMeta('scheduleValue');
+  @override
+  late final GeneratedColumn<int> scheduleValue = GeneratedColumn<int>(
+      'schedule_value', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1));
+  static const VerificationMeta _remindDaysBeforeMeta =
+      const VerificationMeta('remindDaysBefore');
+  @override
+  late final GeneratedColumn<String> remindDaysBefore = GeneratedColumn<String>(
+      'remind_days_before', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('[3, 0]'));
+  static const VerificationMeta _activeMeta = const VerificationMeta('active');
+  @override
+  late final GeneratedColumn<bool> active = GeneratedColumn<bool>(
+      'active', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("active" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _autoCreateDraftMeta =
+      const VerificationMeta('autoCreateDraft');
+  @override
+  late final GeneratedColumn<bool> autoCreateDraft = GeneratedColumn<bool>(
+      'auto_create_draft', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("auto_create_draft" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        workspaceId,
+        name,
+        amount,
+        categoryId,
+        accountId,
+        scheduleType,
+        scheduleValue,
+        remindDaysBefore,
+        active,
+        autoCreateDraft,
+        deletedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_recurring_bills';
+  @override
+  VerificationContext validateIntegrity(Insertable<LocalRecurringBill> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('workspace_id')) {
+      context.handle(
+          _workspaceIdMeta,
+          workspaceId.isAcceptableOrUnknown(
+              data['workspace_id']!, _workspaceIdMeta));
+    } else if (isInserting) {
+      context.missing(_workspaceIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(_amountMeta,
+          amount.isAcceptableOrUnknown(data['amount']!, _amountMeta));
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(
+          _categoryIdMeta,
+          categoryId.isAcceptableOrUnknown(
+              data['category_id']!, _categoryIdMeta));
+    } else if (isInserting) {
+      context.missing(_categoryIdMeta);
+    }
+    if (data.containsKey('account_id')) {
+      context.handle(_accountIdMeta,
+          accountId.isAcceptableOrUnknown(data['account_id']!, _accountIdMeta));
+    } else if (isInserting) {
+      context.missing(_accountIdMeta);
+    }
+    if (data.containsKey('schedule_type')) {
+      context.handle(
+          _scheduleTypeMeta,
+          scheduleType.isAcceptableOrUnknown(
+              data['schedule_type']!, _scheduleTypeMeta));
+    }
+    if (data.containsKey('schedule_value')) {
+      context.handle(
+          _scheduleValueMeta,
+          scheduleValue.isAcceptableOrUnknown(
+              data['schedule_value']!, _scheduleValueMeta));
+    }
+    if (data.containsKey('remind_days_before')) {
+      context.handle(
+          _remindDaysBeforeMeta,
+          remindDaysBefore.isAcceptableOrUnknown(
+              data['remind_days_before']!, _remindDaysBeforeMeta));
+    }
+    if (data.containsKey('active')) {
+      context.handle(_activeMeta,
+          active.isAcceptableOrUnknown(data['active']!, _activeMeta));
+    }
+    if (data.containsKey('auto_create_draft')) {
+      context.handle(
+          _autoCreateDraftMeta,
+          autoCreateDraft.isAcceptableOrUnknown(
+              data['auto_create_draft']!, _autoCreateDraftMeta));
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalRecurringBill map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalRecurringBill(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      workspaceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}workspace_id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      amount: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}amount'])!,
+      categoryId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}category_id'])!,
+      accountId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}account_id'])!,
+      scheduleType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}schedule_type'])!,
+      scheduleValue: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}schedule_value'])!,
+      remindDaysBefore: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}remind_days_before'])!,
+      active: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}active'])!,
+      autoCreateDraft: attachedDatabase.typeMapping.read(
+          DriftSqlType.bool, data['${effectivePrefix}auto_create_draft'])!,
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+    );
+  }
+
+  @override
+  $LocalRecurringBillsTable createAlias(String alias) {
+    return $LocalRecurringBillsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalRecurringBill extends DataClass
+    implements Insertable<LocalRecurringBill> {
+  final String id;
+  final String workspaceId;
+  final String name;
+  final double amount;
+  final String categoryId;
+  final String accountId;
+  final String scheduleType;
+  final int scheduleValue;
+  final String remindDaysBefore;
+  final bool active;
+  final bool autoCreateDraft;
+  final DateTime? deletedAt;
+  const LocalRecurringBill(
+      {required this.id,
+      required this.workspaceId,
+      required this.name,
+      required this.amount,
+      required this.categoryId,
+      required this.accountId,
+      required this.scheduleType,
+      required this.scheduleValue,
+      required this.remindDaysBefore,
+      required this.active,
+      required this.autoCreateDraft,
+      this.deletedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['workspace_id'] = Variable<String>(workspaceId);
+    map['name'] = Variable<String>(name);
+    map['amount'] = Variable<double>(amount);
+    map['category_id'] = Variable<String>(categoryId);
+    map['account_id'] = Variable<String>(accountId);
+    map['schedule_type'] = Variable<String>(scheduleType);
+    map['schedule_value'] = Variable<int>(scheduleValue);
+    map['remind_days_before'] = Variable<String>(remindDaysBefore);
+    map['active'] = Variable<bool>(active);
+    map['auto_create_draft'] = Variable<bool>(autoCreateDraft);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  LocalRecurringBillsCompanion toCompanion(bool nullToAbsent) {
+    return LocalRecurringBillsCompanion(
+      id: Value(id),
+      workspaceId: Value(workspaceId),
+      name: Value(name),
+      amount: Value(amount),
+      categoryId: Value(categoryId),
+      accountId: Value(accountId),
+      scheduleType: Value(scheduleType),
+      scheduleValue: Value(scheduleValue),
+      remindDaysBefore: Value(remindDaysBefore),
+      active: Value(active),
+      autoCreateDraft: Value(autoCreateDraft),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory LocalRecurringBill.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalRecurringBill(
+      id: serializer.fromJson<String>(json['id']),
+      workspaceId: serializer.fromJson<String>(json['workspaceId']),
+      name: serializer.fromJson<String>(json['name']),
+      amount: serializer.fromJson<double>(json['amount']),
+      categoryId: serializer.fromJson<String>(json['categoryId']),
+      accountId: serializer.fromJson<String>(json['accountId']),
+      scheduleType: serializer.fromJson<String>(json['scheduleType']),
+      scheduleValue: serializer.fromJson<int>(json['scheduleValue']),
+      remindDaysBefore: serializer.fromJson<String>(json['remindDaysBefore']),
+      active: serializer.fromJson<bool>(json['active']),
+      autoCreateDraft: serializer.fromJson<bool>(json['autoCreateDraft']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'workspaceId': serializer.toJson<String>(workspaceId),
+      'name': serializer.toJson<String>(name),
+      'amount': serializer.toJson<double>(amount),
+      'categoryId': serializer.toJson<String>(categoryId),
+      'accountId': serializer.toJson<String>(accountId),
+      'scheduleType': serializer.toJson<String>(scheduleType),
+      'scheduleValue': serializer.toJson<int>(scheduleValue),
+      'remindDaysBefore': serializer.toJson<String>(remindDaysBefore),
+      'active': serializer.toJson<bool>(active),
+      'autoCreateDraft': serializer.toJson<bool>(autoCreateDraft),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  LocalRecurringBill copyWith(
+          {String? id,
+          String? workspaceId,
+          String? name,
+          double? amount,
+          String? categoryId,
+          String? accountId,
+          String? scheduleType,
+          int? scheduleValue,
+          String? remindDaysBefore,
+          bool? active,
+          bool? autoCreateDraft,
+          Value<DateTime?> deletedAt = const Value.absent()}) =>
+      LocalRecurringBill(
+        id: id ?? this.id,
+        workspaceId: workspaceId ?? this.workspaceId,
+        name: name ?? this.name,
+        amount: amount ?? this.amount,
+        categoryId: categoryId ?? this.categoryId,
+        accountId: accountId ?? this.accountId,
+        scheduleType: scheduleType ?? this.scheduleType,
+        scheduleValue: scheduleValue ?? this.scheduleValue,
+        remindDaysBefore: remindDaysBefore ?? this.remindDaysBefore,
+        active: active ?? this.active,
+        autoCreateDraft: autoCreateDraft ?? this.autoCreateDraft,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+      );
+  LocalRecurringBill copyWithCompanion(LocalRecurringBillsCompanion data) {
+    return LocalRecurringBill(
+      id: data.id.present ? data.id.value : this.id,
+      workspaceId:
+          data.workspaceId.present ? data.workspaceId.value : this.workspaceId,
+      name: data.name.present ? data.name.value : this.name,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      categoryId:
+          data.categoryId.present ? data.categoryId.value : this.categoryId,
+      accountId: data.accountId.present ? data.accountId.value : this.accountId,
+      scheduleType: data.scheduleType.present
+          ? data.scheduleType.value
+          : this.scheduleType,
+      scheduleValue: data.scheduleValue.present
+          ? data.scheduleValue.value
+          : this.scheduleValue,
+      remindDaysBefore: data.remindDaysBefore.present
+          ? data.remindDaysBefore.value
+          : this.remindDaysBefore,
+      active: data.active.present ? data.active.value : this.active,
+      autoCreateDraft: data.autoCreateDraft.present
+          ? data.autoCreateDraft.value
+          : this.autoCreateDraft,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalRecurringBill(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('name: $name, ')
+          ..write('amount: $amount, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('accountId: $accountId, ')
+          ..write('scheduleType: $scheduleType, ')
+          ..write('scheduleValue: $scheduleValue, ')
+          ..write('remindDaysBefore: $remindDaysBefore, ')
+          ..write('active: $active, ')
+          ..write('autoCreateDraft: $autoCreateDraft, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      workspaceId,
+      name,
+      amount,
+      categoryId,
+      accountId,
+      scheduleType,
+      scheduleValue,
+      remindDaysBefore,
+      active,
+      autoCreateDraft,
+      deletedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalRecurringBill &&
+          other.id == this.id &&
+          other.workspaceId == this.workspaceId &&
+          other.name == this.name &&
+          other.amount == this.amount &&
+          other.categoryId == this.categoryId &&
+          other.accountId == this.accountId &&
+          other.scheduleType == this.scheduleType &&
+          other.scheduleValue == this.scheduleValue &&
+          other.remindDaysBefore == this.remindDaysBefore &&
+          other.active == this.active &&
+          other.autoCreateDraft == this.autoCreateDraft &&
+          other.deletedAt == this.deletedAt);
+}
+
+class LocalRecurringBillsCompanion extends UpdateCompanion<LocalRecurringBill> {
+  final Value<String> id;
+  final Value<String> workspaceId;
+  final Value<String> name;
+  final Value<double> amount;
+  final Value<String> categoryId;
+  final Value<String> accountId;
+  final Value<String> scheduleType;
+  final Value<int> scheduleValue;
+  final Value<String> remindDaysBefore;
+  final Value<bool> active;
+  final Value<bool> autoCreateDraft;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const LocalRecurringBillsCompanion({
+    this.id = const Value.absent(),
+    this.workspaceId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.accountId = const Value.absent(),
+    this.scheduleType = const Value.absent(),
+    this.scheduleValue = const Value.absent(),
+    this.remindDaysBefore = const Value.absent(),
+    this.active = const Value.absent(),
+    this.autoCreateDraft = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalRecurringBillsCompanion.insert({
+    required String id,
+    required String workspaceId,
+    required String name,
+    required double amount,
+    required String categoryId,
+    required String accountId,
+    this.scheduleType = const Value.absent(),
+    this.scheduleValue = const Value.absent(),
+    this.remindDaysBefore = const Value.absent(),
+    this.active = const Value.absent(),
+    this.autoCreateDraft = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        workspaceId = Value(workspaceId),
+        name = Value(name),
+        amount = Value(amount),
+        categoryId = Value(categoryId),
+        accountId = Value(accountId);
+  static Insertable<LocalRecurringBill> custom({
+    Expression<String>? id,
+    Expression<String>? workspaceId,
+    Expression<String>? name,
+    Expression<double>? amount,
+    Expression<String>? categoryId,
+    Expression<String>? accountId,
+    Expression<String>? scheduleType,
+    Expression<int>? scheduleValue,
+    Expression<String>? remindDaysBefore,
+    Expression<bool>? active,
+    Expression<bool>? autoCreateDraft,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (workspaceId != null) 'workspace_id': workspaceId,
+      if (name != null) 'name': name,
+      if (amount != null) 'amount': amount,
+      if (categoryId != null) 'category_id': categoryId,
+      if (accountId != null) 'account_id': accountId,
+      if (scheduleType != null) 'schedule_type': scheduleType,
+      if (scheduleValue != null) 'schedule_value': scheduleValue,
+      if (remindDaysBefore != null) 'remind_days_before': remindDaysBefore,
+      if (active != null) 'active': active,
+      if (autoCreateDraft != null) 'auto_create_draft': autoCreateDraft,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalRecurringBillsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? workspaceId,
+      Value<String>? name,
+      Value<double>? amount,
+      Value<String>? categoryId,
+      Value<String>? accountId,
+      Value<String>? scheduleType,
+      Value<int>? scheduleValue,
+      Value<String>? remindDaysBefore,
+      Value<bool>? active,
+      Value<bool>? autoCreateDraft,
+      Value<DateTime?>? deletedAt,
+      Value<int>? rowid}) {
+    return LocalRecurringBillsCompanion(
+      id: id ?? this.id,
+      workspaceId: workspaceId ?? this.workspaceId,
+      name: name ?? this.name,
+      amount: amount ?? this.amount,
+      categoryId: categoryId ?? this.categoryId,
+      accountId: accountId ?? this.accountId,
+      scheduleType: scheduleType ?? this.scheduleType,
+      scheduleValue: scheduleValue ?? this.scheduleValue,
+      remindDaysBefore: remindDaysBefore ?? this.remindDaysBefore,
+      active: active ?? this.active,
+      autoCreateDraft: autoCreateDraft ?? this.autoCreateDraft,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (workspaceId.present) {
+      map['workspace_id'] = Variable<String>(workspaceId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (accountId.present) {
+      map['account_id'] = Variable<String>(accountId.value);
+    }
+    if (scheduleType.present) {
+      map['schedule_type'] = Variable<String>(scheduleType.value);
+    }
+    if (scheduleValue.present) {
+      map['schedule_value'] = Variable<int>(scheduleValue.value);
+    }
+    if (remindDaysBefore.present) {
+      map['remind_days_before'] = Variable<String>(remindDaysBefore.value);
+    }
+    if (active.present) {
+      map['active'] = Variable<bool>(active.value);
+    }
+    if (autoCreateDraft.present) {
+      map['auto_create_draft'] = Variable<bool>(autoCreateDraft.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalRecurringBillsCompanion(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('name: $name, ')
+          ..write('amount: $amount, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('accountId: $accountId, ')
+          ..write('scheduleType: $scheduleType, ')
+          ..write('scheduleValue: $scheduleValue, ')
+          ..write('remindDaysBefore: $remindDaysBefore, ')
+          ..write('active: $active, ')
+          ..write('autoCreateDraft: $autoCreateDraft, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalSavingsGoalsTable extends LocalSavingsGoals
+    with TableInfo<$LocalSavingsGoalsTable, LocalSavingsGoal> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalSavingsGoalsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _workspaceIdMeta =
+      const VerificationMeta('workspaceId');
+  @override
+  late final GeneratedColumn<String> workspaceId = GeneratedColumn<String>(
+      'workspace_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _targetAmountMeta =
+      const VerificationMeta('targetAmount');
+  @override
+  late final GeneratedColumn<double> targetAmount = GeneratedColumn<double>(
+      'target_amount', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _currentAmountMeta =
+      const VerificationMeta('currentAmount');
+  @override
+  late final GeneratedColumn<double> currentAmount = GeneratedColumn<double>(
+      'current_amount', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0.0));
+  static const VerificationMeta _targetDateMeta =
+      const VerificationMeta('targetDate');
+  @override
+  late final GeneratedColumn<DateTime> targetDate = GeneratedColumn<DateTime>(
+      'target_date', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _isCompletedMeta =
+      const VerificationMeta('isCompleted');
+  @override
+  late final GeneratedColumn<bool> isCompleted = GeneratedColumn<bool>(
+      'is_completed', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("is_completed" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+      'notes', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        workspaceId,
+        name,
+        targetAmount,
+        currentAmount,
+        targetDate,
+        isCompleted,
+        notes,
+        deletedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_savings_goals';
+  @override
+  VerificationContext validateIntegrity(Insertable<LocalSavingsGoal> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('workspace_id')) {
+      context.handle(
+          _workspaceIdMeta,
+          workspaceId.isAcceptableOrUnknown(
+              data['workspace_id']!, _workspaceIdMeta));
+    } else if (isInserting) {
+      context.missing(_workspaceIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('target_amount')) {
+      context.handle(
+          _targetAmountMeta,
+          targetAmount.isAcceptableOrUnknown(
+              data['target_amount']!, _targetAmountMeta));
+    } else if (isInserting) {
+      context.missing(_targetAmountMeta);
+    }
+    if (data.containsKey('current_amount')) {
+      context.handle(
+          _currentAmountMeta,
+          currentAmount.isAcceptableOrUnknown(
+              data['current_amount']!, _currentAmountMeta));
+    }
+    if (data.containsKey('target_date')) {
+      context.handle(
+          _targetDateMeta,
+          targetDate.isAcceptableOrUnknown(
+              data['target_date']!, _targetDateMeta));
+    }
+    if (data.containsKey('is_completed')) {
+      context.handle(
+          _isCompletedMeta,
+          isCompleted.isAcceptableOrUnknown(
+              data['is_completed']!, _isCompletedMeta));
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+          _notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalSavingsGoal map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalSavingsGoal(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      workspaceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}workspace_id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      targetAmount: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}target_amount'])!,
+      currentAmount: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}current_amount'])!,
+      targetDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}target_date']),
+      isCompleted: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_completed'])!,
+      notes: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}notes']),
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+    );
+  }
+
+  @override
+  $LocalSavingsGoalsTable createAlias(String alias) {
+    return $LocalSavingsGoalsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalSavingsGoal extends DataClass
+    implements Insertable<LocalSavingsGoal> {
+  final String id;
+  final String workspaceId;
+  final String name;
+  final double targetAmount;
+  final double currentAmount;
+  final DateTime? targetDate;
+  final bool isCompleted;
+  final String? notes;
+  final DateTime? deletedAt;
+  const LocalSavingsGoal(
+      {required this.id,
+      required this.workspaceId,
+      required this.name,
+      required this.targetAmount,
+      required this.currentAmount,
+      this.targetDate,
+      required this.isCompleted,
+      this.notes,
+      this.deletedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['workspace_id'] = Variable<String>(workspaceId);
+    map['name'] = Variable<String>(name);
+    map['target_amount'] = Variable<double>(targetAmount);
+    map['current_amount'] = Variable<double>(currentAmount);
+    if (!nullToAbsent || targetDate != null) {
+      map['target_date'] = Variable<DateTime>(targetDate);
+    }
+    map['is_completed'] = Variable<bool>(isCompleted);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  LocalSavingsGoalsCompanion toCompanion(bool nullToAbsent) {
+    return LocalSavingsGoalsCompanion(
+      id: Value(id),
+      workspaceId: Value(workspaceId),
+      name: Value(name),
+      targetAmount: Value(targetAmount),
+      currentAmount: Value(currentAmount),
+      targetDate: targetDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(targetDate),
+      isCompleted: Value(isCompleted),
+      notes:
+          notes == null && nullToAbsent ? const Value.absent() : Value(notes),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory LocalSavingsGoal.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalSavingsGoal(
+      id: serializer.fromJson<String>(json['id']),
+      workspaceId: serializer.fromJson<String>(json['workspaceId']),
+      name: serializer.fromJson<String>(json['name']),
+      targetAmount: serializer.fromJson<double>(json['targetAmount']),
+      currentAmount: serializer.fromJson<double>(json['currentAmount']),
+      targetDate: serializer.fromJson<DateTime?>(json['targetDate']),
+      isCompleted: serializer.fromJson<bool>(json['isCompleted']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'workspaceId': serializer.toJson<String>(workspaceId),
+      'name': serializer.toJson<String>(name),
+      'targetAmount': serializer.toJson<double>(targetAmount),
+      'currentAmount': serializer.toJson<double>(currentAmount),
+      'targetDate': serializer.toJson<DateTime?>(targetDate),
+      'isCompleted': serializer.toJson<bool>(isCompleted),
+      'notes': serializer.toJson<String?>(notes),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  LocalSavingsGoal copyWith(
+          {String? id,
+          String? workspaceId,
+          String? name,
+          double? targetAmount,
+          double? currentAmount,
+          Value<DateTime?> targetDate = const Value.absent(),
+          bool? isCompleted,
+          Value<String?> notes = const Value.absent(),
+          Value<DateTime?> deletedAt = const Value.absent()}) =>
+      LocalSavingsGoal(
+        id: id ?? this.id,
+        workspaceId: workspaceId ?? this.workspaceId,
+        name: name ?? this.name,
+        targetAmount: targetAmount ?? this.targetAmount,
+        currentAmount: currentAmount ?? this.currentAmount,
+        targetDate: targetDate.present ? targetDate.value : this.targetDate,
+        isCompleted: isCompleted ?? this.isCompleted,
+        notes: notes.present ? notes.value : this.notes,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+      );
+  LocalSavingsGoal copyWithCompanion(LocalSavingsGoalsCompanion data) {
+    return LocalSavingsGoal(
+      id: data.id.present ? data.id.value : this.id,
+      workspaceId:
+          data.workspaceId.present ? data.workspaceId.value : this.workspaceId,
+      name: data.name.present ? data.name.value : this.name,
+      targetAmount: data.targetAmount.present
+          ? data.targetAmount.value
+          : this.targetAmount,
+      currentAmount: data.currentAmount.present
+          ? data.currentAmount.value
+          : this.currentAmount,
+      targetDate:
+          data.targetDate.present ? data.targetDate.value : this.targetDate,
+      isCompleted:
+          data.isCompleted.present ? data.isCompleted.value : this.isCompleted,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalSavingsGoal(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('name: $name, ')
+          ..write('targetAmount: $targetAmount, ')
+          ..write('currentAmount: $currentAmount, ')
+          ..write('targetDate: $targetDate, ')
+          ..write('isCompleted: $isCompleted, ')
+          ..write('notes: $notes, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, workspaceId, name, targetAmount,
+      currentAmount, targetDate, isCompleted, notes, deletedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalSavingsGoal &&
+          other.id == this.id &&
+          other.workspaceId == this.workspaceId &&
+          other.name == this.name &&
+          other.targetAmount == this.targetAmount &&
+          other.currentAmount == this.currentAmount &&
+          other.targetDate == this.targetDate &&
+          other.isCompleted == this.isCompleted &&
+          other.notes == this.notes &&
+          other.deletedAt == this.deletedAt);
+}
+
+class LocalSavingsGoalsCompanion extends UpdateCompanion<LocalSavingsGoal> {
+  final Value<String> id;
+  final Value<String> workspaceId;
+  final Value<String> name;
+  final Value<double> targetAmount;
+  final Value<double> currentAmount;
+  final Value<DateTime?> targetDate;
+  final Value<bool> isCompleted;
+  final Value<String?> notes;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const LocalSavingsGoalsCompanion({
+    this.id = const Value.absent(),
+    this.workspaceId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.targetAmount = const Value.absent(),
+    this.currentAmount = const Value.absent(),
+    this.targetDate = const Value.absent(),
+    this.isCompleted = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalSavingsGoalsCompanion.insert({
+    required String id,
+    required String workspaceId,
+    required String name,
+    required double targetAmount,
+    this.currentAmount = const Value.absent(),
+    this.targetDate = const Value.absent(),
+    this.isCompleted = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        workspaceId = Value(workspaceId),
+        name = Value(name),
+        targetAmount = Value(targetAmount);
+  static Insertable<LocalSavingsGoal> custom({
+    Expression<String>? id,
+    Expression<String>? workspaceId,
+    Expression<String>? name,
+    Expression<double>? targetAmount,
+    Expression<double>? currentAmount,
+    Expression<DateTime>? targetDate,
+    Expression<bool>? isCompleted,
+    Expression<String>? notes,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (workspaceId != null) 'workspace_id': workspaceId,
+      if (name != null) 'name': name,
+      if (targetAmount != null) 'target_amount': targetAmount,
+      if (currentAmount != null) 'current_amount': currentAmount,
+      if (targetDate != null) 'target_date': targetDate,
+      if (isCompleted != null) 'is_completed': isCompleted,
+      if (notes != null) 'notes': notes,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalSavingsGoalsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? workspaceId,
+      Value<String>? name,
+      Value<double>? targetAmount,
+      Value<double>? currentAmount,
+      Value<DateTime?>? targetDate,
+      Value<bool>? isCompleted,
+      Value<String?>? notes,
+      Value<DateTime?>? deletedAt,
+      Value<int>? rowid}) {
+    return LocalSavingsGoalsCompanion(
+      id: id ?? this.id,
+      workspaceId: workspaceId ?? this.workspaceId,
+      name: name ?? this.name,
+      targetAmount: targetAmount ?? this.targetAmount,
+      currentAmount: currentAmount ?? this.currentAmount,
+      targetDate: targetDate ?? this.targetDate,
+      isCompleted: isCompleted ?? this.isCompleted,
+      notes: notes ?? this.notes,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (workspaceId.present) {
+      map['workspace_id'] = Variable<String>(workspaceId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (targetAmount.present) {
+      map['target_amount'] = Variable<double>(targetAmount.value);
+    }
+    if (currentAmount.present) {
+      map['current_amount'] = Variable<double>(currentAmount.value);
+    }
+    if (targetDate.present) {
+      map['target_date'] = Variable<DateTime>(targetDate.value);
+    }
+    if (isCompleted.present) {
+      map['is_completed'] = Variable<bool>(isCompleted.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalSavingsGoalsCompanion(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('name: $name, ')
+          ..write('targetAmount: $targetAmount, ')
+          ..write('currentAmount: $currentAmount, ')
+          ..write('targetDate: $targetDate, ')
+          ..write('isCompleted: $isCompleted, ')
+          ..write('notes: $notes, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalIncomeSplitRulesTable extends LocalIncomeSplitRules
+    with TableInfo<$LocalIncomeSplitRulesTable, LocalIncomeSplitRule> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalIncomeSplitRulesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _workspaceIdMeta =
+      const VerificationMeta('workspaceId');
+  @override
+  late final GeneratedColumn<String> workspaceId = GeneratedColumn<String>(
+      'workspace_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+      'source', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _goalIdMeta = const VerificationMeta('goalId');
+  @override
+  late final GeneratedColumn<String> goalId = GeneratedColumn<String>(
+      'goal_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _splitTypeMeta =
+      const VerificationMeta('splitType');
+  @override
+  late final GeneratedColumn<String> splitType = GeneratedColumn<String>(
+      'split_type', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('percentage'));
+  static const VerificationMeta _splitValueMeta =
+      const VerificationMeta('splitValue');
+  @override
+  late final GeneratedColumn<double> splitValue = GeneratedColumn<double>(
+      'split_value', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _priorityMeta =
+      const VerificationMeta('priority');
+  @override
+  late final GeneratedColumn<int> priority = GeneratedColumn<int>(
+      'priority', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1));
+  static const VerificationMeta _activeMeta = const VerificationMeta('active');
+  @override
+  late final GeneratedColumn<bool> active = GeneratedColumn<bool>(
+      'active', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("active" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        workspaceId,
+        source,
+        goalId,
+        splitType,
+        splitValue,
+        priority,
+        active,
+        deletedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_income_split_rules';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<LocalIncomeSplitRule> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('workspace_id')) {
+      context.handle(
+          _workspaceIdMeta,
+          workspaceId.isAcceptableOrUnknown(
+              data['workspace_id']!, _workspaceIdMeta));
+    } else if (isInserting) {
+      context.missing(_workspaceIdMeta);
+    }
+    if (data.containsKey('source')) {
+      context.handle(_sourceMeta,
+          source.isAcceptableOrUnknown(data['source']!, _sourceMeta));
+    } else if (isInserting) {
+      context.missing(_sourceMeta);
+    }
+    if (data.containsKey('goal_id')) {
+      context.handle(_goalIdMeta,
+          goalId.isAcceptableOrUnknown(data['goal_id']!, _goalIdMeta));
+    } else if (isInserting) {
+      context.missing(_goalIdMeta);
+    }
+    if (data.containsKey('split_type')) {
+      context.handle(_splitTypeMeta,
+          splitType.isAcceptableOrUnknown(data['split_type']!, _splitTypeMeta));
+    }
+    if (data.containsKey('split_value')) {
+      context.handle(
+          _splitValueMeta,
+          splitValue.isAcceptableOrUnknown(
+              data['split_value']!, _splitValueMeta));
+    } else if (isInserting) {
+      context.missing(_splitValueMeta);
+    }
+    if (data.containsKey('priority')) {
+      context.handle(_priorityMeta,
+          priority.isAcceptableOrUnknown(data['priority']!, _priorityMeta));
+    }
+    if (data.containsKey('active')) {
+      context.handle(_activeMeta,
+          active.isAcceptableOrUnknown(data['active']!, _activeMeta));
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalIncomeSplitRule map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalIncomeSplitRule(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      workspaceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}workspace_id'])!,
+      source: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}source'])!,
+      goalId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}goal_id'])!,
+      splitType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}split_type'])!,
+      splitValue: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}split_value'])!,
+      priority: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}priority'])!,
+      active: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}active'])!,
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+    );
+  }
+
+  @override
+  $LocalIncomeSplitRulesTable createAlias(String alias) {
+    return $LocalIncomeSplitRulesTable(attachedDatabase, alias);
+  }
+}
+
+class LocalIncomeSplitRule extends DataClass
+    implements Insertable<LocalIncomeSplitRule> {
+  final String id;
+  final String workspaceId;
+  final String source;
+  final String goalId;
+  final String splitType;
+  final double splitValue;
+  final int priority;
+  final bool active;
+  final DateTime? deletedAt;
+  const LocalIncomeSplitRule(
+      {required this.id,
+      required this.workspaceId,
+      required this.source,
+      required this.goalId,
+      required this.splitType,
+      required this.splitValue,
+      required this.priority,
+      required this.active,
+      this.deletedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['workspace_id'] = Variable<String>(workspaceId);
+    map['source'] = Variable<String>(source);
+    map['goal_id'] = Variable<String>(goalId);
+    map['split_type'] = Variable<String>(splitType);
+    map['split_value'] = Variable<double>(splitValue);
+    map['priority'] = Variable<int>(priority);
+    map['active'] = Variable<bool>(active);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  LocalIncomeSplitRulesCompanion toCompanion(bool nullToAbsent) {
+    return LocalIncomeSplitRulesCompanion(
+      id: Value(id),
+      workspaceId: Value(workspaceId),
+      source: Value(source),
+      goalId: Value(goalId),
+      splitType: Value(splitType),
+      splitValue: Value(splitValue),
+      priority: Value(priority),
+      active: Value(active),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory LocalIncomeSplitRule.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalIncomeSplitRule(
+      id: serializer.fromJson<String>(json['id']),
+      workspaceId: serializer.fromJson<String>(json['workspaceId']),
+      source: serializer.fromJson<String>(json['source']),
+      goalId: serializer.fromJson<String>(json['goalId']),
+      splitType: serializer.fromJson<String>(json['splitType']),
+      splitValue: serializer.fromJson<double>(json['splitValue']),
+      priority: serializer.fromJson<int>(json['priority']),
+      active: serializer.fromJson<bool>(json['active']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'workspaceId': serializer.toJson<String>(workspaceId),
+      'source': serializer.toJson<String>(source),
+      'goalId': serializer.toJson<String>(goalId),
+      'splitType': serializer.toJson<String>(splitType),
+      'splitValue': serializer.toJson<double>(splitValue),
+      'priority': serializer.toJson<int>(priority),
+      'active': serializer.toJson<bool>(active),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  LocalIncomeSplitRule copyWith(
+          {String? id,
+          String? workspaceId,
+          String? source,
+          String? goalId,
+          String? splitType,
+          double? splitValue,
+          int? priority,
+          bool? active,
+          Value<DateTime?> deletedAt = const Value.absent()}) =>
+      LocalIncomeSplitRule(
+        id: id ?? this.id,
+        workspaceId: workspaceId ?? this.workspaceId,
+        source: source ?? this.source,
+        goalId: goalId ?? this.goalId,
+        splitType: splitType ?? this.splitType,
+        splitValue: splitValue ?? this.splitValue,
+        priority: priority ?? this.priority,
+        active: active ?? this.active,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+      );
+  LocalIncomeSplitRule copyWithCompanion(LocalIncomeSplitRulesCompanion data) {
+    return LocalIncomeSplitRule(
+      id: data.id.present ? data.id.value : this.id,
+      workspaceId:
+          data.workspaceId.present ? data.workspaceId.value : this.workspaceId,
+      source: data.source.present ? data.source.value : this.source,
+      goalId: data.goalId.present ? data.goalId.value : this.goalId,
+      splitType: data.splitType.present ? data.splitType.value : this.splitType,
+      splitValue:
+          data.splitValue.present ? data.splitValue.value : this.splitValue,
+      priority: data.priority.present ? data.priority.value : this.priority,
+      active: data.active.present ? data.active.value : this.active,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalIncomeSplitRule(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('source: $source, ')
+          ..write('goalId: $goalId, ')
+          ..write('splitType: $splitType, ')
+          ..write('splitValue: $splitValue, ')
+          ..write('priority: $priority, ')
+          ..write('active: $active, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, workspaceId, source, goalId, splitType,
+      splitValue, priority, active, deletedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalIncomeSplitRule &&
+          other.id == this.id &&
+          other.workspaceId == this.workspaceId &&
+          other.source == this.source &&
+          other.goalId == this.goalId &&
+          other.splitType == this.splitType &&
+          other.splitValue == this.splitValue &&
+          other.priority == this.priority &&
+          other.active == this.active &&
+          other.deletedAt == this.deletedAt);
+}
+
+class LocalIncomeSplitRulesCompanion
+    extends UpdateCompanion<LocalIncomeSplitRule> {
+  final Value<String> id;
+  final Value<String> workspaceId;
+  final Value<String> source;
+  final Value<String> goalId;
+  final Value<String> splitType;
+  final Value<double> splitValue;
+  final Value<int> priority;
+  final Value<bool> active;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const LocalIncomeSplitRulesCompanion({
+    this.id = const Value.absent(),
+    this.workspaceId = const Value.absent(),
+    this.source = const Value.absent(),
+    this.goalId = const Value.absent(),
+    this.splitType = const Value.absent(),
+    this.splitValue = const Value.absent(),
+    this.priority = const Value.absent(),
+    this.active = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalIncomeSplitRulesCompanion.insert({
+    required String id,
+    required String workspaceId,
+    required String source,
+    required String goalId,
+    this.splitType = const Value.absent(),
+    required double splitValue,
+    this.priority = const Value.absent(),
+    this.active = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        workspaceId = Value(workspaceId),
+        source = Value(source),
+        goalId = Value(goalId),
+        splitValue = Value(splitValue);
+  static Insertable<LocalIncomeSplitRule> custom({
+    Expression<String>? id,
+    Expression<String>? workspaceId,
+    Expression<String>? source,
+    Expression<String>? goalId,
+    Expression<String>? splitType,
+    Expression<double>? splitValue,
+    Expression<int>? priority,
+    Expression<bool>? active,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (workspaceId != null) 'workspace_id': workspaceId,
+      if (source != null) 'source': source,
+      if (goalId != null) 'goal_id': goalId,
+      if (splitType != null) 'split_type': splitType,
+      if (splitValue != null) 'split_value': splitValue,
+      if (priority != null) 'priority': priority,
+      if (active != null) 'active': active,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalIncomeSplitRulesCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? workspaceId,
+      Value<String>? source,
+      Value<String>? goalId,
+      Value<String>? splitType,
+      Value<double>? splitValue,
+      Value<int>? priority,
+      Value<bool>? active,
+      Value<DateTime?>? deletedAt,
+      Value<int>? rowid}) {
+    return LocalIncomeSplitRulesCompanion(
+      id: id ?? this.id,
+      workspaceId: workspaceId ?? this.workspaceId,
+      source: source ?? this.source,
+      goalId: goalId ?? this.goalId,
+      splitType: splitType ?? this.splitType,
+      splitValue: splitValue ?? this.splitValue,
+      priority: priority ?? this.priority,
+      active: active ?? this.active,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (workspaceId.present) {
+      map['workspace_id'] = Variable<String>(workspaceId.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (goalId.present) {
+      map['goal_id'] = Variable<String>(goalId.value);
+    }
+    if (splitType.present) {
+      map['split_type'] = Variable<String>(splitType.value);
+    }
+    if (splitValue.present) {
+      map['split_value'] = Variable<double>(splitValue.value);
+    }
+    if (priority.present) {
+      map['priority'] = Variable<int>(priority.value);
+    }
+    if (active.present) {
+      map['active'] = Variable<bool>(active.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalIncomeSplitRulesCompanion(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('source: $source, ')
+          ..write('goalId: $goalId, ')
+          ..write('splitType: $splitType, ')
+          ..write('splitValue: $splitValue, ')
+          ..write('priority: $priority, ')
+          ..write('active: $active, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6495,6 +8502,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $LocalProjectPaymentsTable(this);
   late final $LocalAgendaCacheTable localAgendaCache =
       $LocalAgendaCacheTable(this);
+  late final $LocalBudgetsTable localBudgets = $LocalBudgetsTable(this);
+  late final $LocalRecurringBillsTable localRecurringBills =
+      $LocalRecurringBillsTable(this);
+  late final $LocalSavingsGoalsTable localSavingsGoals =
+      $LocalSavingsGoalsTable(this);
+  late final $LocalIncomeSplitRulesTable localIncomeSplitRules =
+      $LocalIncomeSplitRulesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6509,7 +8523,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         localTaskChecklistItems,
         localEvents,
         localProjectPayments,
-        localAgendaCache
+        localAgendaCache,
+        localBudgets,
+        localRecurringBills,
+        localSavingsGoals,
+        localIncomeSplitRules
       ];
 }
 
@@ -9483,6 +11501,992 @@ typedef $$LocalAgendaCacheTableProcessedTableManager = ProcessedTableManager<
     ),
     LocalAgendaCacheData,
     PrefetchHooks Function()>;
+typedef $$LocalBudgetsTableCreateCompanionBuilder = LocalBudgetsCompanion
+    Function({
+  required String id,
+  required String workspaceId,
+  required String categoryId,
+  required double amount,
+  Value<String> period,
+  Value<bool> rollover,
+  Value<double> notifyAtPercent,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+typedef $$LocalBudgetsTableUpdateCompanionBuilder = LocalBudgetsCompanion
+    Function({
+  Value<String> id,
+  Value<String> workspaceId,
+  Value<String> categoryId,
+  Value<double> amount,
+  Value<String> period,
+  Value<bool> rollover,
+  Value<double> notifyAtPercent,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+
+class $$LocalBudgetsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalBudgetsTable> {
+  $$LocalBudgetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get categoryId => $composableBuilder(
+      column: $table.categoryId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get amount => $composableBuilder(
+      column: $table.amount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get period => $composableBuilder(
+      column: $table.period, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get rollover => $composableBuilder(
+      column: $table.rollover, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get notifyAtPercent => $composableBuilder(
+      column: $table.notifyAtPercent,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$LocalBudgetsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalBudgetsTable> {
+  $$LocalBudgetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get categoryId => $composableBuilder(
+      column: $table.categoryId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+      column: $table.amount, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get period => $composableBuilder(
+      column: $table.period, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get rollover => $composableBuilder(
+      column: $table.rollover, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get notifyAtPercent => $composableBuilder(
+      column: $table.notifyAtPercent,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$LocalBudgetsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalBudgetsTable> {
+  $$LocalBudgetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => column);
+
+  GeneratedColumn<String> get categoryId => $composableBuilder(
+      column: $table.categoryId, builder: (column) => column);
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get period =>
+      $composableBuilder(column: $table.period, builder: (column) => column);
+
+  GeneratedColumn<bool> get rollover =>
+      $composableBuilder(column: $table.rollover, builder: (column) => column);
+
+  GeneratedColumn<double> get notifyAtPercent => $composableBuilder(
+      column: $table.notifyAtPercent, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$LocalBudgetsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LocalBudgetsTable,
+    LocalBudget,
+    $$LocalBudgetsTableFilterComposer,
+    $$LocalBudgetsTableOrderingComposer,
+    $$LocalBudgetsTableAnnotationComposer,
+    $$LocalBudgetsTableCreateCompanionBuilder,
+    $$LocalBudgetsTableUpdateCompanionBuilder,
+    (
+      LocalBudget,
+      BaseReferences<_$AppDatabase, $LocalBudgetsTable, LocalBudget>
+    ),
+    LocalBudget,
+    PrefetchHooks Function()> {
+  $$LocalBudgetsTableTableManager(_$AppDatabase db, $LocalBudgetsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalBudgetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalBudgetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalBudgetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> workspaceId = const Value.absent(),
+            Value<String> categoryId = const Value.absent(),
+            Value<double> amount = const Value.absent(),
+            Value<String> period = const Value.absent(),
+            Value<bool> rollover = const Value.absent(),
+            Value<double> notifyAtPercent = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalBudgetsCompanion(
+            id: id,
+            workspaceId: workspaceId,
+            categoryId: categoryId,
+            amount: amount,
+            period: period,
+            rollover: rollover,
+            notifyAtPercent: notifyAtPercent,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String workspaceId,
+            required String categoryId,
+            required double amount,
+            Value<String> period = const Value.absent(),
+            Value<bool> rollover = const Value.absent(),
+            Value<double> notifyAtPercent = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalBudgetsCompanion.insert(
+            id: id,
+            workspaceId: workspaceId,
+            categoryId: categoryId,
+            amount: amount,
+            period: period,
+            rollover: rollover,
+            notifyAtPercent: notifyAtPercent,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$LocalBudgetsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $LocalBudgetsTable,
+    LocalBudget,
+    $$LocalBudgetsTableFilterComposer,
+    $$LocalBudgetsTableOrderingComposer,
+    $$LocalBudgetsTableAnnotationComposer,
+    $$LocalBudgetsTableCreateCompanionBuilder,
+    $$LocalBudgetsTableUpdateCompanionBuilder,
+    (
+      LocalBudget,
+      BaseReferences<_$AppDatabase, $LocalBudgetsTable, LocalBudget>
+    ),
+    LocalBudget,
+    PrefetchHooks Function()>;
+typedef $$LocalRecurringBillsTableCreateCompanionBuilder
+    = LocalRecurringBillsCompanion Function({
+  required String id,
+  required String workspaceId,
+  required String name,
+  required double amount,
+  required String categoryId,
+  required String accountId,
+  Value<String> scheduleType,
+  Value<int> scheduleValue,
+  Value<String> remindDaysBefore,
+  Value<bool> active,
+  Value<bool> autoCreateDraft,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+typedef $$LocalRecurringBillsTableUpdateCompanionBuilder
+    = LocalRecurringBillsCompanion Function({
+  Value<String> id,
+  Value<String> workspaceId,
+  Value<String> name,
+  Value<double> amount,
+  Value<String> categoryId,
+  Value<String> accountId,
+  Value<String> scheduleType,
+  Value<int> scheduleValue,
+  Value<String> remindDaysBefore,
+  Value<bool> active,
+  Value<bool> autoCreateDraft,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+
+class $$LocalRecurringBillsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalRecurringBillsTable> {
+  $$LocalRecurringBillsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get amount => $composableBuilder(
+      column: $table.amount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get categoryId => $composableBuilder(
+      column: $table.categoryId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get accountId => $composableBuilder(
+      column: $table.accountId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get scheduleType => $composableBuilder(
+      column: $table.scheduleType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get scheduleValue => $composableBuilder(
+      column: $table.scheduleValue, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get remindDaysBefore => $composableBuilder(
+      column: $table.remindDaysBefore,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get active => $composableBuilder(
+      column: $table.active, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get autoCreateDraft => $composableBuilder(
+      column: $table.autoCreateDraft,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$LocalRecurringBillsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalRecurringBillsTable> {
+  $$LocalRecurringBillsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+      column: $table.amount, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get categoryId => $composableBuilder(
+      column: $table.categoryId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get accountId => $composableBuilder(
+      column: $table.accountId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get scheduleType => $composableBuilder(
+      column: $table.scheduleType,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get scheduleValue => $composableBuilder(
+      column: $table.scheduleValue,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get remindDaysBefore => $composableBuilder(
+      column: $table.remindDaysBefore,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get active => $composableBuilder(
+      column: $table.active, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get autoCreateDraft => $composableBuilder(
+      column: $table.autoCreateDraft,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$LocalRecurringBillsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalRecurringBillsTable> {
+  $$LocalRecurringBillsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get categoryId => $composableBuilder(
+      column: $table.categoryId, builder: (column) => column);
+
+  GeneratedColumn<String> get accountId =>
+      $composableBuilder(column: $table.accountId, builder: (column) => column);
+
+  GeneratedColumn<String> get scheduleType => $composableBuilder(
+      column: $table.scheduleType, builder: (column) => column);
+
+  GeneratedColumn<int> get scheduleValue => $composableBuilder(
+      column: $table.scheduleValue, builder: (column) => column);
+
+  GeneratedColumn<String> get remindDaysBefore => $composableBuilder(
+      column: $table.remindDaysBefore, builder: (column) => column);
+
+  GeneratedColumn<bool> get active =>
+      $composableBuilder(column: $table.active, builder: (column) => column);
+
+  GeneratedColumn<bool> get autoCreateDraft => $composableBuilder(
+      column: $table.autoCreateDraft, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$LocalRecurringBillsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LocalRecurringBillsTable,
+    LocalRecurringBill,
+    $$LocalRecurringBillsTableFilterComposer,
+    $$LocalRecurringBillsTableOrderingComposer,
+    $$LocalRecurringBillsTableAnnotationComposer,
+    $$LocalRecurringBillsTableCreateCompanionBuilder,
+    $$LocalRecurringBillsTableUpdateCompanionBuilder,
+    (
+      LocalRecurringBill,
+      BaseReferences<_$AppDatabase, $LocalRecurringBillsTable,
+          LocalRecurringBill>
+    ),
+    LocalRecurringBill,
+    PrefetchHooks Function()> {
+  $$LocalRecurringBillsTableTableManager(
+      _$AppDatabase db, $LocalRecurringBillsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalRecurringBillsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalRecurringBillsTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalRecurringBillsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> workspaceId = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<double> amount = const Value.absent(),
+            Value<String> categoryId = const Value.absent(),
+            Value<String> accountId = const Value.absent(),
+            Value<String> scheduleType = const Value.absent(),
+            Value<int> scheduleValue = const Value.absent(),
+            Value<String> remindDaysBefore = const Value.absent(),
+            Value<bool> active = const Value.absent(),
+            Value<bool> autoCreateDraft = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalRecurringBillsCompanion(
+            id: id,
+            workspaceId: workspaceId,
+            name: name,
+            amount: amount,
+            categoryId: categoryId,
+            accountId: accountId,
+            scheduleType: scheduleType,
+            scheduleValue: scheduleValue,
+            remindDaysBefore: remindDaysBefore,
+            active: active,
+            autoCreateDraft: autoCreateDraft,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String workspaceId,
+            required String name,
+            required double amount,
+            required String categoryId,
+            required String accountId,
+            Value<String> scheduleType = const Value.absent(),
+            Value<int> scheduleValue = const Value.absent(),
+            Value<String> remindDaysBefore = const Value.absent(),
+            Value<bool> active = const Value.absent(),
+            Value<bool> autoCreateDraft = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalRecurringBillsCompanion.insert(
+            id: id,
+            workspaceId: workspaceId,
+            name: name,
+            amount: amount,
+            categoryId: categoryId,
+            accountId: accountId,
+            scheduleType: scheduleType,
+            scheduleValue: scheduleValue,
+            remindDaysBefore: remindDaysBefore,
+            active: active,
+            autoCreateDraft: autoCreateDraft,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$LocalRecurringBillsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $LocalRecurringBillsTable,
+    LocalRecurringBill,
+    $$LocalRecurringBillsTableFilterComposer,
+    $$LocalRecurringBillsTableOrderingComposer,
+    $$LocalRecurringBillsTableAnnotationComposer,
+    $$LocalRecurringBillsTableCreateCompanionBuilder,
+    $$LocalRecurringBillsTableUpdateCompanionBuilder,
+    (
+      LocalRecurringBill,
+      BaseReferences<_$AppDatabase, $LocalRecurringBillsTable,
+          LocalRecurringBill>
+    ),
+    LocalRecurringBill,
+    PrefetchHooks Function()>;
+typedef $$LocalSavingsGoalsTableCreateCompanionBuilder
+    = LocalSavingsGoalsCompanion Function({
+  required String id,
+  required String workspaceId,
+  required String name,
+  required double targetAmount,
+  Value<double> currentAmount,
+  Value<DateTime?> targetDate,
+  Value<bool> isCompleted,
+  Value<String?> notes,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+typedef $$LocalSavingsGoalsTableUpdateCompanionBuilder
+    = LocalSavingsGoalsCompanion Function({
+  Value<String> id,
+  Value<String> workspaceId,
+  Value<String> name,
+  Value<double> targetAmount,
+  Value<double> currentAmount,
+  Value<DateTime?> targetDate,
+  Value<bool> isCompleted,
+  Value<String?> notes,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+
+class $$LocalSavingsGoalsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalSavingsGoalsTable> {
+  $$LocalSavingsGoalsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get targetAmount => $composableBuilder(
+      column: $table.targetAmount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get currentAmount => $composableBuilder(
+      column: $table.currentAmount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get targetDate => $composableBuilder(
+      column: $table.targetDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isCompleted => $composableBuilder(
+      column: $table.isCompleted, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$LocalSavingsGoalsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalSavingsGoalsTable> {
+  $$LocalSavingsGoalsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get targetAmount => $composableBuilder(
+      column: $table.targetAmount,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get currentAmount => $composableBuilder(
+      column: $table.currentAmount,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get targetDate => $composableBuilder(
+      column: $table.targetDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isCompleted => $composableBuilder(
+      column: $table.isCompleted, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$LocalSavingsGoalsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalSavingsGoalsTable> {
+  $$LocalSavingsGoalsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<double> get targetAmount => $composableBuilder(
+      column: $table.targetAmount, builder: (column) => column);
+
+  GeneratedColumn<double> get currentAmount => $composableBuilder(
+      column: $table.currentAmount, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get targetDate => $composableBuilder(
+      column: $table.targetDate, builder: (column) => column);
+
+  GeneratedColumn<bool> get isCompleted => $composableBuilder(
+      column: $table.isCompleted, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$LocalSavingsGoalsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LocalSavingsGoalsTable,
+    LocalSavingsGoal,
+    $$LocalSavingsGoalsTableFilterComposer,
+    $$LocalSavingsGoalsTableOrderingComposer,
+    $$LocalSavingsGoalsTableAnnotationComposer,
+    $$LocalSavingsGoalsTableCreateCompanionBuilder,
+    $$LocalSavingsGoalsTableUpdateCompanionBuilder,
+    (
+      LocalSavingsGoal,
+      BaseReferences<_$AppDatabase, $LocalSavingsGoalsTable, LocalSavingsGoal>
+    ),
+    LocalSavingsGoal,
+    PrefetchHooks Function()> {
+  $$LocalSavingsGoalsTableTableManager(
+      _$AppDatabase db, $LocalSavingsGoalsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalSavingsGoalsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalSavingsGoalsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalSavingsGoalsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> workspaceId = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<double> targetAmount = const Value.absent(),
+            Value<double> currentAmount = const Value.absent(),
+            Value<DateTime?> targetDate = const Value.absent(),
+            Value<bool> isCompleted = const Value.absent(),
+            Value<String?> notes = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalSavingsGoalsCompanion(
+            id: id,
+            workspaceId: workspaceId,
+            name: name,
+            targetAmount: targetAmount,
+            currentAmount: currentAmount,
+            targetDate: targetDate,
+            isCompleted: isCompleted,
+            notes: notes,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String workspaceId,
+            required String name,
+            required double targetAmount,
+            Value<double> currentAmount = const Value.absent(),
+            Value<DateTime?> targetDate = const Value.absent(),
+            Value<bool> isCompleted = const Value.absent(),
+            Value<String?> notes = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalSavingsGoalsCompanion.insert(
+            id: id,
+            workspaceId: workspaceId,
+            name: name,
+            targetAmount: targetAmount,
+            currentAmount: currentAmount,
+            targetDate: targetDate,
+            isCompleted: isCompleted,
+            notes: notes,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$LocalSavingsGoalsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $LocalSavingsGoalsTable,
+    LocalSavingsGoal,
+    $$LocalSavingsGoalsTableFilterComposer,
+    $$LocalSavingsGoalsTableOrderingComposer,
+    $$LocalSavingsGoalsTableAnnotationComposer,
+    $$LocalSavingsGoalsTableCreateCompanionBuilder,
+    $$LocalSavingsGoalsTableUpdateCompanionBuilder,
+    (
+      LocalSavingsGoal,
+      BaseReferences<_$AppDatabase, $LocalSavingsGoalsTable, LocalSavingsGoal>
+    ),
+    LocalSavingsGoal,
+    PrefetchHooks Function()>;
+typedef $$LocalIncomeSplitRulesTableCreateCompanionBuilder
+    = LocalIncomeSplitRulesCompanion Function({
+  required String id,
+  required String workspaceId,
+  required String source,
+  required String goalId,
+  Value<String> splitType,
+  required double splitValue,
+  Value<int> priority,
+  Value<bool> active,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+typedef $$LocalIncomeSplitRulesTableUpdateCompanionBuilder
+    = LocalIncomeSplitRulesCompanion Function({
+  Value<String> id,
+  Value<String> workspaceId,
+  Value<String> source,
+  Value<String> goalId,
+  Value<String> splitType,
+  Value<double> splitValue,
+  Value<int> priority,
+  Value<bool> active,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+
+class $$LocalIncomeSplitRulesTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalIncomeSplitRulesTable> {
+  $$LocalIncomeSplitRulesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get source => $composableBuilder(
+      column: $table.source, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get goalId => $composableBuilder(
+      column: $table.goalId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get splitType => $composableBuilder(
+      column: $table.splitType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get splitValue => $composableBuilder(
+      column: $table.splitValue, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get priority => $composableBuilder(
+      column: $table.priority, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get active => $composableBuilder(
+      column: $table.active, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$LocalIncomeSplitRulesTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalIncomeSplitRulesTable> {
+  $$LocalIncomeSplitRulesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get source => $composableBuilder(
+      column: $table.source, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get goalId => $composableBuilder(
+      column: $table.goalId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get splitType => $composableBuilder(
+      column: $table.splitType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get splitValue => $composableBuilder(
+      column: $table.splitValue, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get priority => $composableBuilder(
+      column: $table.priority, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get active => $composableBuilder(
+      column: $table.active, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$LocalIncomeSplitRulesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalIncomeSplitRulesTable> {
+  $$LocalIncomeSplitRulesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => column);
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<String> get goalId =>
+      $composableBuilder(column: $table.goalId, builder: (column) => column);
+
+  GeneratedColumn<String> get splitType =>
+      $composableBuilder(column: $table.splitType, builder: (column) => column);
+
+  GeneratedColumn<double> get splitValue => $composableBuilder(
+      column: $table.splitValue, builder: (column) => column);
+
+  GeneratedColumn<int> get priority =>
+      $composableBuilder(column: $table.priority, builder: (column) => column);
+
+  GeneratedColumn<bool> get active =>
+      $composableBuilder(column: $table.active, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$LocalIncomeSplitRulesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LocalIncomeSplitRulesTable,
+    LocalIncomeSplitRule,
+    $$LocalIncomeSplitRulesTableFilterComposer,
+    $$LocalIncomeSplitRulesTableOrderingComposer,
+    $$LocalIncomeSplitRulesTableAnnotationComposer,
+    $$LocalIncomeSplitRulesTableCreateCompanionBuilder,
+    $$LocalIncomeSplitRulesTableUpdateCompanionBuilder,
+    (
+      LocalIncomeSplitRule,
+      BaseReferences<_$AppDatabase, $LocalIncomeSplitRulesTable,
+          LocalIncomeSplitRule>
+    ),
+    LocalIncomeSplitRule,
+    PrefetchHooks Function()> {
+  $$LocalIncomeSplitRulesTableTableManager(
+      _$AppDatabase db, $LocalIncomeSplitRulesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalIncomeSplitRulesTableFilterComposer(
+                  $db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalIncomeSplitRulesTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalIncomeSplitRulesTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> workspaceId = const Value.absent(),
+            Value<String> source = const Value.absent(),
+            Value<String> goalId = const Value.absent(),
+            Value<String> splitType = const Value.absent(),
+            Value<double> splitValue = const Value.absent(),
+            Value<int> priority = const Value.absent(),
+            Value<bool> active = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalIncomeSplitRulesCompanion(
+            id: id,
+            workspaceId: workspaceId,
+            source: source,
+            goalId: goalId,
+            splitType: splitType,
+            splitValue: splitValue,
+            priority: priority,
+            active: active,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String workspaceId,
+            required String source,
+            required String goalId,
+            Value<String> splitType = const Value.absent(),
+            required double splitValue,
+            Value<int> priority = const Value.absent(),
+            Value<bool> active = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalIncomeSplitRulesCompanion.insert(
+            id: id,
+            workspaceId: workspaceId,
+            source: source,
+            goalId: goalId,
+            splitType: splitType,
+            splitValue: splitValue,
+            priority: priority,
+            active: active,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$LocalIncomeSplitRulesTableProcessedTableManager
+    = ProcessedTableManager<
+        _$AppDatabase,
+        $LocalIncomeSplitRulesTable,
+        LocalIncomeSplitRule,
+        $$LocalIncomeSplitRulesTableFilterComposer,
+        $$LocalIncomeSplitRulesTableOrderingComposer,
+        $$LocalIncomeSplitRulesTableAnnotationComposer,
+        $$LocalIncomeSplitRulesTableCreateCompanionBuilder,
+        $$LocalIncomeSplitRulesTableUpdateCompanionBuilder,
+        (
+          LocalIncomeSplitRule,
+          BaseReferences<_$AppDatabase, $LocalIncomeSplitRulesTable,
+              LocalIncomeSplitRule>
+        ),
+        LocalIncomeSplitRule,
+        PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -9508,4 +12512,12 @@ class $AppDatabaseManager {
       $$LocalProjectPaymentsTableTableManager(_db, _db.localProjectPayments);
   $$LocalAgendaCacheTableTableManager get localAgendaCache =>
       $$LocalAgendaCacheTableTableManager(_db, _db.localAgendaCache);
+  $$LocalBudgetsTableTableManager get localBudgets =>
+      $$LocalBudgetsTableTableManager(_db, _db.localBudgets);
+  $$LocalRecurringBillsTableTableManager get localRecurringBills =>
+      $$LocalRecurringBillsTableTableManager(_db, _db.localRecurringBills);
+  $$LocalSavingsGoalsTableTableManager get localSavingsGoals =>
+      $$LocalSavingsGoalsTableTableManager(_db, _db.localSavingsGoals);
+  $$LocalIncomeSplitRulesTableTableManager get localIncomeSplitRules =>
+      $$LocalIncomeSplitRulesTableTableManager(_db, _db.localIncomeSplitRules);
 }

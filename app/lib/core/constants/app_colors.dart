@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
+  // Warna utama
+  static const Color primary = Color(0xFF0284C7);
+
   // Warna semantik keuangan
   static const Color income = Color(0xFF15803D);
   static const Color expense = Color(0xFFDC2626);

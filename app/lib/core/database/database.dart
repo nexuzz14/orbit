@@ -212,6 +212,76 @@ class LocalAgendaCache extends Table {
   Set<Column> get primaryKey => {id, cachedDate};
 }
 
+// -----------------------------------------------------------------------------
+// Tabel Fase 3: Perencanaan Keuangan (Budget, Tagihan, Tabungan, Split)
+// -----------------------------------------------------------------------------
+
+// Tabel Anggaran Lokal
+class LocalBudgets extends Table {
+  TextColumn get id => text()();
+  TextColumn get workspaceId => text()();
+  TextColumn get categoryId => text()();
+  RealColumn get amount => real()();
+  TextColumn get period => text().withDefault(const Constant('monthly'))();
+  BoolColumn get rollover => boolean().withDefault(const Constant(false))();
+  RealColumn get notifyAtPercent => real().withDefault(const Constant(80.0))();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// Tabel Tagihan Rutin Lokal
+class LocalRecurringBills extends Table {
+  TextColumn get id => text()();
+  TextColumn get workspaceId => text()();
+  TextColumn get name => text()();
+  RealColumn get amount => real()();
+  TextColumn get categoryId => text()();
+  TextColumn get accountId => text()();
+  TextColumn get scheduleType => text().withDefault(const Constant('monthly'))();
+  IntColumn get scheduleValue => integer().withDefault(const Constant(1))();
+  TextColumn get remindDaysBefore => text().withDefault(const Constant('[3, 0]'))(); // JSON array
+  BoolColumn get active => boolean().withDefault(const Constant(true))();
+  BoolColumn get autoCreateDraft => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// Tabel Target Tabungan Lokal
+class LocalSavingsGoals extends Table {
+  TextColumn get id => text()();
+  TextColumn get workspaceId => text()();
+  TextColumn get name => text()();
+  RealColumn get targetAmount => real()();
+  RealColumn get currentAmount => real().withDefault(const Constant(0.0))();
+  DateTimeColumn get targetDate => dateTime().nullable()();
+  BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
+  TextColumn get notes => text().nullable()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// Tabel Aturan Auto-Split Lokal
+class LocalIncomeSplitRules extends Table {
+  TextColumn get id => text()();
+  TextColumn get workspaceId => text()();
+  TextColumn get source => text()();
+  TextColumn get goalId => text()();
+  TextColumn get splitType => text().withDefault(const Constant('percentage'))();
+  RealColumn get splitValue => real()();
+  IntColumn get priority => integer().withDefault(const Constant(1))();
+  BoolColumn get active => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(tables: [
   LocalAccounts,
   LocalCategories,
@@ -223,6 +293,10 @@ class LocalAgendaCache extends Table {
   LocalEvents,
   LocalProjectPayments,
   LocalAgendaCache,
+  LocalBudgets,
+  LocalRecurringBills,
+  LocalSavingsGoals,
+  LocalIncomeSplitRules,
 ])
 class AppDatabase extends _$AppDatabase {
   static final AppDatabase shared = AppDatabase();
@@ -230,7 +304,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -245,6 +319,12 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(localEvents);
         await m.createTable(localProjectPayments);
         await m.createTable(localAgendaCache);
+      }
+      if (from < 3) {
+        await m.createTable(localBudgets);
+        await m.createTable(localRecurringBills);
+        await m.createTable(localSavingsGoals);
+        await m.createTable(localIncomeSplitRules);
       }
     },
   );

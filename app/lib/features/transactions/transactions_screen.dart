@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
+import 'package:orbit_app/features/planning/planning_screen.dart';
+import 'package:orbit_app/features/inbox/inbox_screen.dart';
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({super.key});
@@ -107,6 +109,26 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       appBar: AppBar(
         title: const Text('Transaksi'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.pie_chart_outline),
+            tooltip: 'Perencanaan Keuangan',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PlanningScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.inbox_outlined),
+            tooltip: 'Inbox Draft',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const InboxScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: Icon(_showDeleted ? Icons.delete : Icons.delete_outline),
             tooltip: _showDeleted ? 'Sembunyikan Terhapus' : 'Tampilkan Terhapus',
