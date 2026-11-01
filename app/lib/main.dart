@@ -33,6 +33,7 @@ class OrbitApp extends StatelessWidget {
       brightness: Brightness.light,
       primary: AppColors.brandIndigo,
       secondary: AppColors.brandCyan,
+      tertiary: AppColors.brandViolet,
       surface: AppColors.lightSurface,
     );
 
@@ -41,6 +42,7 @@ class OrbitApp extends StatelessWidget {
       brightness: Brightness.dark,
       primary: AppColors.brandIndigo,
       secondary: AppColors.brandCyan,
+      tertiary: AppColors.brandViolet,
       surface: AppColors.darkSurface,
     );
 
@@ -59,6 +61,38 @@ class OrbitApp extends StatelessWidget {
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           centerTitle: false,
+        ),
+        cardTheme: CardThemeData(
+          color: AppColors.lightSurface,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: AppColors.lightBorder),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.brandIndigo,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: AppColors.brandIndigo,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        chipTheme: ChipThemeData(
+          selectedColor: AppColors.brandIndigo.withValues(alpha: 0.16),
+          checkmarkColor: AppColors.brandIndigo,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
@@ -88,6 +122,38 @@ class OrbitApp extends StatelessWidget {
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           centerTitle: false,
+        ),
+        cardTheme: CardThemeData(
+          color: AppColors.darkSurface,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: AppColors.darkBorder),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.brandIndigo,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: AppColors.brandIndigo,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        chipTheme: ChipThemeData(
+          selectedColor: AppColors.brandIndigo.withValues(alpha: 0.25),
+          checkmarkColor: AppColors.brandCyan,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,

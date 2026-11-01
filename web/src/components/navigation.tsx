@@ -87,10 +87,10 @@ export function Navigation() {
           <img
             src="/orbit-icon.png"
             alt="Orbit"
-            className="w-8 h-8 rounded-lg shadow-sm object-cover"
+            className="w-8 h-8 rounded-lg shadow-md object-cover"
           />
           <div>
-            <div className="font-bold text-sm tracking-tight leading-none">
+            <div className="font-extrabold text-sm tracking-wider leading-none">
               <span className="orbit-gradient-text">ORBIT</span>
             </div>
             <div className="text-[10px] text-muted-foreground mt-0.5">
@@ -105,7 +105,7 @@ export function Navigation() {
             aria-label="Ganti Tema"
             className="p-2 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
           >
-            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-500" />}
           </button>
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -142,22 +142,22 @@ export function Navigation() {
         }}
       >
         {/* Top Orbit Brand Header */}
-        <div className="h-16 px-4 border-b border-border flex items-center justify-between shrink-0">
+        <div className="h-16 px-4 border-b border-border/80 flex items-center justify-between shrink-0 bg-gradient-to-r from-sky-500/10 via-indigo-500/10 to-purple-500/10">
           <Link href="/hari-ini" className="flex items-center gap-3 group">
             <div className="relative">
-              <div className="absolute inset-0 rounded-xl bg-indigo-500/25 blur-sm group-hover:bg-indigo-500/40 transition-all" />
+              <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-sky-400 via-indigo-500 to-purple-500 opacity-70 blur-sm group-hover:opacity-100 transition-opacity" />
               <img
                 src="/orbit-icon.png"
                 alt="Orbit"
-                className="relative w-9 h-9 rounded-xl shadow-md object-cover border border-white/10"
+                className="relative w-9 h-9 rounded-xl shadow-md object-cover border border-white/20"
               />
             </div>
             <div>
-              <span className="font-bold text-base tracking-tight block leading-none">
+              <span className="font-extrabold text-base tracking-wider block leading-none">
                 <span className="orbit-gradient-text">ORBIT</span>
               </span>
-              <span className="text-[10px] font-medium text-muted-foreground tracking-wide block mt-1">
-                Productivity &amp; Finance
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground block mt-1">
+                Control Center
               </span>
             </div>
           </Link>
@@ -180,29 +180,34 @@ export function Navigation() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-2.5 px-3 py-1.5 text-xs rounded-lg transition-all ${
+                className={`flex items-center justify-between px-3 py-1.5 text-xs rounded-xl transition-all ${
                   active
-                    ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-semibold border border-indigo-500/30 shadow-sm'
-                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground border border-transparent'
+                    ? 'orbit-gradient-bg text-white font-semibold shadow-md shadow-indigo-500/25'
+                    : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'
                 }`}
               >
-                <Icon
-                  className={`w-3.5 h-3.5 shrink-0 ${
-                    active ? 'text-indigo-500 dark:text-sky-400' : ''
-                  }`}
-                />
-                <span className="truncate">{item.label}</span>
+                <span className="flex items-center gap-2.5 truncate">
+                  <Icon
+                    className={`w-3.5 h-3.5 shrink-0 ${
+                      active ? 'text-white' : 'text-muted-foreground'
+                    }`}
+                  />
+                  <span className="truncate">{item.label}</span>
+                </span>
+                {active && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />
+                )}
               </Link>
             );
           })}
         </nav>
 
         {/* Bottom Actions (Always pinned at the bottom) */}
-        <div className="p-3 border-t border-border space-y-1 shrink-0 bg-muted/20">
+        <div className="p-3 border-t border-border/80 space-y-1 shrink-0 bg-muted/20">
           <button
             onClick={toggleTheme}
             type="button"
-            className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted/60 hover:text-foreground rounded-lg transition-colors"
+            className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/70 hover:text-foreground rounded-xl transition-colors"
           >
             <span className="flex items-center gap-2">
               {isDark ? (
@@ -217,7 +222,7 @@ export function Navigation() {
           <button
             onClick={handleSignOut}
             type="button"
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-expense hover:bg-expense/10 rounded-lg transition-colors font-medium"
+            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10 rounded-xl transition-colors font-semibold"
           >
             <LogOut className="w-3.5 h-3.5 shrink-0" />
             <span>Keluar</span>
