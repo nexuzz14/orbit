@@ -35,7 +35,7 @@ end;
 $f$;
 
 create function pg_temp.classify(p text) returns text language sql immutable as $f$
-  select case when p ~ '^ok:[1-9]' then 'allow' when p in ('ok:0', 'err:42501') then 'deny' else p end
+  select case when p ~ '^ok:[1-9]' then 'allow' when p in ('ok:0', 'err:42501', 'err:23503') then 'deny' else p end
 $f$;
 
 -- Pengguna uji.
@@ -248,7 +248,7 @@ select is(pg_temp.classify(pg_temp.run_as('a0000000-0000-0000-0000-000000000001'
 -- IDOR: pengguna di luar workspace.
 select is(pg_temp.run_as('a0000000-0000-0000-0000-000000000004', pg_temp.expand($q$select 1 from public.transactions where id = '{T}'$q$)), 'ok:0', 'IDOR: outsider tidak membaca transaksi workspace lain berdasarkan id');
 select is(pg_temp.run_as('a0000000-0000-0000-0000-000000000004', pg_temp.expand($q$update public.transactions set note = 'diretas' where id = '{T}'$q$)), 'ok:0', 'IDOR: outsider tidak mengubah transaksi workspace lain');
-select is(pg_temp.run_as('a0000000-0000-0000-0000-000000000004', pg_temp.expand($q$insert into public.transactions (workspace_id, account_id, category_id, type, amount, currency, source) values ('{S}', '{A}', '{C}', 'expense', 1, 'IDR', 'personal')$q$)), 'err:42501', 'IDOR: outsider tidak menulis ke workspace lain');
+select is(pg_temp.classify(pg_temp.run_as('a0000000-0000-0000-0000-000000000004', pg_temp.expand($q$insert into public.transactions (workspace_id, account_id, category_id, type, amount, currency, source) values ('{S}', '{A}', '{C}', 'expense', 1, 'IDR', 'personal')$q$))), 'deny', 'IDOR: outsider tidak menulis ke workspace lain');
 
 -- IDOR: referensi lintas workspace dari dalam workspace sendiri ditolak foreign key komposit.
 create temp table xws as select id as ws from public.workspaces where owner_id = 'a0000000-0000-0000-0000-000000000004' and type = 'personal';
@@ -269,8 +269,8 @@ select is(pg_temp.run_as('a0000000-0000-0000-0000-000000000004', pg_temp.expand(
 select is(pg_temp.run_as('a0000000-0000-0000-0000-000000000004', format($q$update public.accounts set workspace_id = %L where workspace_id = %L$q$, 'b0000000-0000-0000-0000-000000000001', (select ws from xws))), 'err:42501', 'IDOR: workspace_id tidak dapat diubah');
 
 -- Eskalasi peran.
-select is(pg_temp.run_as('a0000000-0000-0000-0000-000000000003', pg_temp.expand($q$update public.workspace_members set role = 'owner' where user_id = '{V}'$q$)), 'ok:0', 'eskalasi: viewer tidak menaikkan perannya');
-select is(pg_temp.run_as('a0000000-0000-0000-0000-000000000002', pg_temp.expand($q$update public.workspace_members set role = 'owner' where user_id = '{E}'$q$)), 'ok:0', 'eskalasi: editor tidak menaikkan perannya');
+select is(pg_temp.run_as('a0000000-0000-0000-0000-000000000003', pg_temp.expand($q$update public.workspace_members set role = 'owner' where workspace_id = '{S}' and user_id = '{V}'$q$)), 'ok:0', 'eskalasi: viewer tidak menaikkan perannya');
+select is(pg_temp.run_as('a0000000-0000-0000-0000-000000000002', pg_temp.expand($q$update public.workspace_members set role = 'owner' where workspace_id = '{S}' and user_id = '{E}'$q$)), 'ok:0', 'eskalasi: editor tidak menaikkan perannya');
 select is(pg_temp.run_as('a0000000-0000-0000-0000-000000000001', pg_temp.expand($q$update public.workspace_members set role = 'editor' where user_id = '{O}'$q$)), 'err:42501', 'eskalasi: peran owner hanya milik pemilik workspace');
 select is(pg_temp.run_as('a0000000-0000-0000-0000-000000000001', pg_temp.expand($q$delete from public.workspace_members where user_id = '{O}' and workspace_id = '{S}'$q$)), 'err:42501', 'pemilik workspace tidak dapat dikeluarkan');
 select is(pg_temp.run_as('a0000000-0000-0000-0000-000000000001', pg_temp.expand($q$insert into public.workspace_members (workspace_id, user_id, role) values ('{S}', '{X}', 'owner')$q$)), 'err:42501', 'eskalasi: owner kedua tidak dapat dibuat');
@@ -303,8 +303,10 @@ select is(pg_temp.run_as('anon', $q$select 1 from public.v_account_balances$q$),
 
 -- Storage: objek lampiran mengikuti keanggotaan workspace.
 insert into storage.objects (id, bucket_id, name, owner)
-values ('c1000000-0000-0000-0000-000000000001', 'attachments', 'b0000000-0000-0000-0000-000000000001/a.png', 'a0000000-0000-0000-0000-000000000001')
-on conflict (id) do nothing;
+select 'c1000000-0000-0000-0000-000000000001', 'attachments', 'b0000000-0000-0000-0000-000000000001/a.png', 'a0000000-0000-0000-0000-000000000001'
+where not exists (
+  select 1 from storage.objects where bucket_id = 'attachments' and name = 'b0000000-0000-0000-0000-000000000001/a.png'
+);
 select is(pg_temp.classify(pg_temp.run_as('a0000000-0000-0000-0000-000000000003', $q$select 1 from storage.objects where bucket_id = 'attachments'$q$)), 'allow', 'storage: viewer membaca objek workspace sendiri');
 select is(pg_temp.run_as('a0000000-0000-0000-0000-000000000004', $q$select 1 from storage.objects where bucket_id = 'attachments'$q$), 'ok:0', 'storage: outsider tidak melihat objek workspace lain');
 select is(pg_temp.run_as('a0000000-0000-0000-0000-000000000003', pg_temp.expand($q$insert into storage.objects (bucket_id, name) values ('attachments', '{S}/viewer.png')$q$)), 'err:42501', 'storage: viewer tidak mengunggah');
