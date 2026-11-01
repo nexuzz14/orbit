@@ -24,16 +24,15 @@ Setelah Anda membuat akun pertama Anda (sebagai pemilik/administrator utama):
 ---
 
 ## 3. Konfigurasi Site URL dan Redirect URLs
-1. Buka menu **Authentication** > **URL Configuration**.
+1. Buka menu **Authentication** > **URL Configuration** di Supabase Dashboard (`kpsfdqswoerzkicocvre`).
 2. Pada kolom **Site URL**:
-   - Untuk lingkungan lokal: `http://localhost:3000` (atau `http://127.0.0.1:3000`)
-   - Untuk lingkungan produksi: Masukkan URL domain web Anda (misal `https://orbit.yourdomain.com`).
+   - Masukkan: `https://orbit-neo-df21.vercel.app`
 3. Pada bagian **Redirect URLs**, tambahkan URL callback berikut:
    - `http://localhost:3000/**`
    - `http://localhost:3000/auth/callback`
    - `http://127.0.0.1:3000/**`
-   - `https://your-production-domain.vercel.app/**`
-   - `https://your-production-domain.vercel.app/auth/callback`
+   - `https://orbit-neo-df21.vercel.app/**`
+   - `https://orbit-neo-df21.vercel.app/auth/callback`
    - Skema callback mobile: `io.supabase.orbit://login-callback/`
 4. Klik **Save**.
 
