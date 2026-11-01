@@ -116,3 +116,34 @@ Dokumen ini mencatat keputusan teknis, arsitektur, dan keamanan yang diambil sel
   4. **Deteksi Benturan & Hari Padat**: `fn_detect_conflicts` mendeteksi irisan waktu event non-all-day dan menandai hari dengan total durasi >= 8 jam, yang divisualisasikan dengan indikator perhatian di web dan mobile.
   5. **Pengingat Lokal Mobile**: Menggunakan `flutter_local_notifications` untuk pengingat jadwal mendekati waktu dan ringkasan pagi tanpa judul sesuai spesifikasi PRD.
 - **Konsekuensi**: Logika hitung dan keamanan data terlindungi di level database PostgreSQL, integritas finansial proyek freelance terjaga secara atomik, dan pengalaman pengguna konsisten lintas web dan Android.
+
+---
+
+## ADR-011: Paritas Skema, Batasan Lingkungan Lokal, Audit Dependensi, & Penundaan Notifikasi Web
+- **Status**: Diterima (Fase 2 Verifikasi & Fondasi Fase 3)
+- **Konteks**:
+  1. CLI Supabase lokal tidak dapat melakukan link (`supabase link`) dan Docker tidak terpasang/tersedia di mesin lokal pengembang.
+  2. Paritas skema antara lingkungan CI Supabase dan lingkungan Cloud Supabase harus diverifikasi secara matematis dengan selisih nol.
+  3. Terdapat 14 temuan moderate pada `npm audit` yang berasal dari dependensi linter pengembangan (`minimatch` melalui rantai `@typescript-eslint`).
+  4. Pengingat jadwal dan notifikasi di web (push browser VAPID / email) memerlukan infrastruktur eksternal (Service Worker Push API / gateway email).
+- **Keputusan**:
+  1. **Disiplin Paritas Skema**: Verifikasi skema dilakukan menggunakan skrip `supabase/scripts/schema_signature.sql` yang menghasilkan hash agregat kolom, fungsi (`md5(prosrc)`), RLS policies, triggers, dan views. Penerapan migrasi ke Cloud Supabase dilakukan secara linear dan eksklusif via MCP `apply_migration`.
+  2. **Audit Dependensi**: 14 temuan moderate diisolasi sepenuhnya pada `devDependencies` paket Next.js linter (`eslint-config-next` -> `@typescript-eslint` -> `minimatch`). Paket-paket ini tidak pernah disertakan dalam bundle produksi web Next.js (`npm run build`). Rencana penanganan: memperbarui saat tim Next.js merilis patch non-breaking untuk ESLint 9 plugin chain.
+  3. **Penundaan Pengingat Web**: Pengingat berbasis Web Push API dan email transaksional secara eksplisit ditunda ke Fase 4/6 untuk dikembangkan bersamaan dengan Supabase Edge Functions (`send-reminders`). Pada Fase 2 & 3, web menyajikan indikator peringatan visual langsung di Layar Hari Ini (kartu perhatian benturan jadwal, hari padat, dan peringatan budget/tagihan).
+- **Konsekuensi**: Keamanan dan konsistensi skema terjaga tanpa bergantung pada Docker lokal; surface attack bundle runtime produksi tetap nol.
+
+---
+
+## ADR-012: Desain Model Perencanaan Keuangan: Budget Rollover, Auto-Split Virtual, & Expected Income (Fase 3)
+- **Status**: Diterima (Fase 3)
+- **Konteks**: PRD v5.1 bagian 8 dan modul M4, M5, M7e, M8 mengatur:
+  1. `budgets` bulanan per kategori yang mengikuti siklus gajian/awal bulan (`workspaces.month_start_day`) dan rollover saldo sisa.
+  2. `recurring_bills` dengan pembuatan draft otomatis dan idempoten via `pg_cron`.
+  3. `savings_goals` dan aturan alokasi otomatis `income_split_rules` dari setiap pemasukan yang dikonfirmasi.
+  4. Pencocokan `expected_incomes` (uang saku magang, termin freelance, entri manual) dengan draft transaksi masuk tanpa risiko transaksi ganda.
+- **Keputusan**:
+  1. **Auto-Split Virtual (`savings_allocations`)**: Alokasi auto-split dari pemasukan ke target tabungan dicatat pada tabel `savings_allocations` sebagai alokasi virtual (porsi pembagian target tabungan yang dapat diedit pengguna), BUKAN transfer uang fisik antar-rekening perbankan. Ini mencegah distorsi saldo rekening riil dan menyederhanakan pelacakan target tabungan.
+  2. **Budget Siklus Kustom & Rollover**: View `v_budget_progress` menghitung tanggal awal dan akhir periode budget secara dinamis berdasarkan `month_start_day` workspace. Bila `rollover = true`, sisa budget positif/negatif dari siklus bulan sebelumnya diakumulasikan ke kapasitas budget siklus berjalan.
+  3. **Idempotensi Tagihan Rutin**: `fn_generate_due_bill_drafts` mencatat draft ke `transactions` (status `draft`, origin `recurring`) dengan constraint unik idempoten berbasis `(recurring_bill_id, due_date)`.
+  4. **Pencegahan Transaksi Ganda pada Expected Income**: Konfirmasi draft pemasukan yang terikat pada pembayaran freelance (`project_payment_id`) memanggil `fn_mark_payment_paid` dengan menyertakan draft ID tersebut sehingga transaksi tidak dibuat ulang dua kali.
+- **Konsekuensi**: Integritas data keuangan terjaga ketat di database PostgreSQL, tidak ada transaksi phantom atau alokasi ganda, dan klien web serta mobile memiliki kontrak data yang bersih dan deterministik.

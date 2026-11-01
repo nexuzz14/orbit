@@ -74,3 +74,15 @@ Untuk mengaktifkan workflow backup database otomatis `.github/workflows/backup.y
 3. Tambahkan dua Secret baru:
    - `DATABASE_URL`: Connection string PostgreSQL Supabase Anda (ambil dari Dashboard > Project Settings > Database > Connection string > URI). Format: `postgres://postgres:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require`.
    - `BACKUP_ENCRYPTION_KEY`: Kunci sandi acak yang panjang (minimal 32 karakter) untuk enkripsi GPG AES-256. Simpan kunci ini juga di password manager pribadi Anda agar backup dapat didekripsi jika terjadi insiden.
+
+4. **Instruksi Menjalankan Backup Manual Pertama Kali**:
+   - Buka tab **Actions** di repositori GitHub `nexuzz14/orbit`.
+   - Pada daftar workflow di sebelah kiri, pilih **Database Backup (Daily Encrypted)**.
+   - Klik tombol dropdown **Run workflow**, pilih branch `main`, lalu klik tombol hijau **Run workflow**.
+   - Atau jalankan lewat GitHub CLI di terminal Anda:
+     ```bash
+     gh workflow run backup.yml --ref main
+     ```
+   - Tunggu run selesai hingga hijau dan periksa artefak `orbit-db-backup-*.dump.gpg` yang dihasilkan.
+
+> **Catatan Status Checklist Keamanan PRD 9.16**: Item backup di checklist gerbang rilis keamanan berstatus **"Menunggu secret dari pengguna"** hingga Anda selesai menyetel kedua secret di atas dan workflow berhasil dijalankan.

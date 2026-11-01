@@ -1,0 +1,113 @@
+{
+  "test_range": {
+    "start_date": "2026-11-01",
+    "end_date": "2026-11-16"
+  },
+  "events": [
+    {
+      "id": "c4000000-0000-0000-0000-000000000001",
+      "kind": "intern",
+      "title": "Sprint Planning Magang",
+      "starts_at": "2026-11-04T10:00:00+07:00",
+      "ends_at": "2026-11-04T12:00:00+07:00",
+      "timezone": "Asia/Jakarta",
+      "recurrence": null
+    },
+    {
+      "id": "c4000000-0000-0000-0000-000000000002",
+      "kind": "kuliah",
+      "title": "Kuliah Basis Data",
+      "starts_at": "2026-11-02T08:00:00+07:00",
+      "ends_at": "2026-11-02T10:00:00+07:00",
+      "timezone": "Asia/Jakarta",
+      "recurrence": {
+        "freq": "weekly",
+        "byweekday": [1]
+      }
+    },
+    {
+      "id": "c4000000-0000-0000-0000-000000000003",
+      "kind": "pribadi",
+      "title": "Olahraga Pagi Harian",
+      "starts_at": "2026-11-01T06:00:00+07:00",
+      "ends_at": "2026-11-01T07:00:00+07:00",
+      "timezone": "Asia/Jakarta",
+      "recurrence": {
+        "freq": "daily",
+        "until": "2026-11-03"
+      }
+    },
+    {
+      "id": "c4000000-0000-0000-0000-000000000004",
+      "kind": "freelance",
+      "title": "Evaluasi Bulanan Klien",
+      "starts_at": "2026-11-05T14:00:00+07:00",
+      "ends_at": "2026-11-05T15:00:00+07:00",
+      "timezone": "Asia/Jakarta",
+      "recurrence": {
+        "freq": "monthly"
+      }
+    }
+  ],
+  "exceptions": [
+    {
+      "event_id": "c4000000-0000-0000-0000-000000000002",
+      "original_date": "2026-11-09",
+      "action": "skip"
+    },
+    {
+      "event_id": "c4000000-0000-0000-0000-000000000002",
+      "original_date": "2026-11-16",
+      "action": "override",
+      "override_title": "Ujian Tengah Semester Basis Data",
+      "override_starts_at": "2026-11-16T09:00:00+07:00",
+      "override_ends_at": "2026-11-16T11:30:00+07:00",
+      "override_location": "Lab Komputer 3"
+    }
+  ],
+  "expected_occurrences": [
+    {
+      "event_id": "c4000000-0000-0000-0000-000000000003",
+      "date": "2026-11-01",
+      "title": "Olahraga Pagi Harian",
+      "kind": "pribadi"
+    },
+    {
+      "event_id": "c4000000-0000-0000-0000-000000000003",
+      "date": "2026-11-02",
+      "title": "Olahraga Pagi Harian",
+      "kind": "pribadi"
+    },
+    {
+      "event_id": "c4000000-0000-0000-0000-000000000002",
+      "date": "2026-11-02",
+      "title": "Kuliah Basis Data",
+      "kind": "kuliah"
+    },
+    {
+      "event_id": "c4000000-0000-0000-0000-000000000003",
+      "date": "2026-11-03",
+      "title": "Olahraga Pagi Harian",
+      "kind": "pribadi"
+    },
+    {
+      "event_id": "c4000000-0000-0000-0000-000000000001",
+      "date": "2026-11-04",
+      "title": "Sprint Planning Magang",
+      "kind": "intern"
+    },
+    {
+      "event_id": "c4000000-0000-0000-0000-000000000004",
+      "date": "2026-11-05",
+      "title": "Evaluasi Bulanan Klien",
+      "kind": "freelance"
+    },
+    {
+      "event_id": "c4000000-0000-0000-0000-000000000002",
+      "date": "2026-11-16",
+      "title": "Ujian Tengah Semester Basis Data",
+      "kind": "kuliah",
+      "location": "Lab Komputer 3"
+    }
+  ]
+}
