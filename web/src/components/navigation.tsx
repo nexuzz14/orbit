@@ -117,19 +117,19 @@ export function Navigation() {
         />
       )}
 
-      {/* Permanent Fixed Sidebar for Desktop (and slide-over for Mobile) */}
+      {/* Locked Fixed Sidebar (Completely non-scrollable on desktop) */}
       <aside
         className={`
           fixed inset-y-0 left-0 z-50 w-64 border-r border-border bg-card
-          flex flex-col justify-between select-none
+          flex flex-col justify-between select-none overflow-hidden overscroll-none h-screen
           transition-transform duration-200 ease-in-out
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >
-        {/* Top Orbit Brand Header (Always pinned, never scrolls away) */}
+        {/* Top Orbit Brand Header */}
         <div className="h-14 px-4 border-b border-border flex items-center justify-between shrink-0">
           <div>
-            <Link href="/hari-ini" className="font-semibold text-base tracking-tight block">
+            <Link href="/hari-ini" className="font-semibold text-sm tracking-tight block">
               Orbit
             </Link>
             <div className="text-[10px] text-muted-foreground -mt-0.5">
@@ -145,8 +145,8 @@ export function Navigation() {
           </button>
         </div>
 
-        {/* Scrollable Navigation List */}
-        <nav className="flex-1 overflow-y-auto py-2 px-2.5 space-y-0.5">
+        {/* Non-scrollable Navigation List (Compact and perfectly fits 100vh) */}
+        <nav className="flex-1 flex flex-col justify-center px-2 py-1 space-y-0.5 overflow-hidden">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = pathname.startsWith(item.href);
@@ -155,28 +155,28 @@ export function Navigation() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-2.5 px-3 py-1.5 text-xs md:text-sm rounded-md transition-colors ${
+                className={`flex items-center gap-2.5 px-3 py-1.5 text-xs rounded transition-colors ${
                   active
-                    ? 'bg-muted text-foreground font-medium'
+                    ? 'bg-muted text-foreground font-semibold'
                     : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                 }`}
               >
-                <Icon className="w-4 h-4 shrink-0" />
+                <Icon className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        {/* Bottom Actions (Always pinned at the bottom, never scrolls away) */}
-        <div className="p-3 border-t border-border space-y-1 shrink-0">
+        {/* Bottom Actions (Always pinned at the bottom) */}
+        <div className="p-2.5 border-t border-border space-y-1 shrink-0">
           <button
             onClick={toggleTheme}
             type="button"
-            className="w-full flex items-center justify-between px-3 py-1.5 text-xs md:text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-md transition-colors"
+            className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded transition-colors"
           >
             <span className="flex items-center gap-2">
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
               <span>{isDark ? 'Mode Terang' : 'Mode Gelap'}</span>
             </span>
           </button>
@@ -184,9 +184,9 @@ export function Navigation() {
           <button
             onClick={handleSignOut}
             type="button"
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs md:text-sm text-expense hover:bg-expense/10 rounded-md transition-colors"
+            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-expense hover:bg-expense/10 rounded transition-colors"
           >
-            <LogOut className="w-4 h-4 shrink-0" />
+            <LogOut className="w-3.5 h-3.5 shrink-0" />
             <span>Keluar</span>
           </button>
         </div>
