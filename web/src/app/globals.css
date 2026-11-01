@@ -37,3 +37,43 @@ body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* Sidebar Terkunci Permanen (Fixed Lock) */
+.orbit-sidebar-fixed {
+  position: fixed !important;
+  top: 0px !important;
+  bottom: 0px !important;
+  left: 0px !important;
+  width: 16rem !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  z-index: 40 !important;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  user-select: none !important;
+}
+
+@media (max-width: 767px) {
+  .orbit-sidebar-fixed {
+    transition: transform 0.2s ease-in-out !important;
+    z-index: 50 !important;
+  }
+  .orbit-sidebar-fixed.sidebar-closed {
+    transform: translateX(-100%) !important;
+  }
+  .orbit-sidebar-fixed.sidebar-open {
+    transform: translateX(0) !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .orbit-sidebar-fixed {
+    transform: none !important;
+  }
+  .orbit-content-wrapper {
+    padding-left: 16rem !important;
+  }
+}

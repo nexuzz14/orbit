@@ -117,14 +117,20 @@ export function Navigation() {
         />
       )}
 
-      {/* Locked Fixed Sidebar (Completely non-scrollable on desktop) */}
+      {/* Locked Fixed Sidebar */}
       <aside
-        className={`
-          fixed inset-y-0 left-0 z-50 w-64 border-r border-border bg-card
-          flex flex-col justify-between select-none overflow-hidden overscroll-none h-screen
-          transition-transform duration-200 ease-in-out
-          ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        `}
+        className={`orbit-sidebar-fixed border-r border-border bg-card ${
+          mobileOpen ? 'sidebar-open' : 'sidebar-closed'
+        }`}
+        style={{
+          position: 'fixed',
+          top: 0,
+          bottom: 0,
+          left: 0,
+          width: '16rem',
+          height: '100vh',
+          zIndex: 40,
+        }}
       >
         {/* Top Orbit Brand Header */}
         <div className="h-14 px-4 border-b border-border flex items-center justify-between shrink-0">
@@ -145,7 +151,7 @@ export function Navigation() {
           </button>
         </div>
 
-        {/* Non-scrollable Navigation List (Compact and perfectly fits 100vh) */}
+        {/* Non-scrollable Navigation List (Compact and fits 100vh) */}
         <nav className="flex-1 flex flex-col justify-center px-2 py-1 space-y-0.5 overflow-hidden">
           {navItems.map((item) => {
             const Icon = item.icon;
