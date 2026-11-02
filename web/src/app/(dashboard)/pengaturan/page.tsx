@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { formatDateIndo } from '@/lib/format';
-import type { Database, NotificationSettings } from '@/types/database';
+import type { Database } from '@/types/database';
 import {
   ShieldCheck,
   Smartphone,
@@ -12,8 +12,20 @@ import {
   User,
   Check,
   AlertCircle,
-  Bell
+  Bell,
 } from 'lucide-react';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  Button,
+  Input,
+  StatusBadge,
+  Skeleton,
+  ErrorState,
+  LainnyaSubNav,
+} from '@/components/ui';
 
 type SessionItem = {
   id: string;
@@ -32,15 +44,13 @@ export default function PengaturanPage() {
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Profile Form state
   const [displayName, setDisplayName] = useState('');
   const [monthStartDay, setMonthStartDay] = useState(1);
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
 
-  // Notification Settings state
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
-  const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
   const [budgetWarning, setBudgetWarning] = useState(true);
   const [budgetExceeded, setBudgetExceeded] = useState(true);
   const [billsReminder, setBillsReminder] = useState(true);
@@ -49,7 +59,6 @@ export default function PengaturanPage() {
   const [notifMsg, setNotifMsg] = useState<string | null>(null);
   const [savingNotif, setSavingNotif] = useState(false);
 
-  // 2FA state
   const [hasMfa, setHasMfa] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
   const [qrCodeSvg, setQrCodeSvg] = useState<string | null>(null);
@@ -58,7 +67,6 @@ export default function PengaturanPage() {
   const [pendingFactorId, setPendingFactorId] = useState<string | null>(null);
   const [mfaError, setMfaError] = useState<string | null>(null);
 
-  // Change Password state
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordMsg, setPasswordMsg] = useState<string | null>(null);
@@ -67,66 +75,66 @@ export default function PengaturanPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    // Ambil profil
-    const { data: profData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    if (profData) {
-      setProfile(profData);
-      setDisplayName(profData.display_name || '');
-      setMonthStartDay(profData.month_start_day || 1);
-    }
-
-    // Ambil workspace_id
-    const { data: memberData } = await supabase
-      .from('workspace_members')
-      .select('workspace_id')
-      .limit(1)
-      .single();
-
-    if (memberData?.workspace_id) {
-      setWorkspaceId(memberData.workspace_id);
-      // Ambil preferensi notifikasi
-      const { data: notifData } = await supabase
-        .from('notification_settings')
-        .select('*')
-        .eq('workspace_id', memberData.workspace_id)
-        .maybeSingle();
-
-      if (notifData) {
-        setNotifSettings(notifData);
-        setBudgetWarning(notifData.budget_warning_enabled);
-        setBudgetExceeded(notifData.budget_exceeded_enabled);
-        setBillsReminder(notifData.bills_reminder_enabled);
-        setReceivablesReminder(notifData.receivables_reminder_enabled);
-        setDailySummaryTime(notifData.daily_summary_time || '08:00');
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
       }
+
+      const { data: profData, error: profErr } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profErr) throw profErr;
+      if (profData) {
+        setProfile(profData);
+        setDisplayName(profData.display_name || '');
+        setMonthStartDay(profData.month_start_day || 1);
+      }
+
+      const { data: memberData } = await supabase
+        .from('workspace_members')
+        .select('workspace_id')
+        .limit(1)
+        .single();
+
+      if (memberData?.workspace_id) {
+        setWorkspaceId(memberData.workspace_id);
+        const { data: notifData } = await supabase
+          .from('notification_settings')
+          .select('*')
+          .eq('workspace_id', memberData.workspace_id)
+          .maybeSingle();
+
+        if (notifData) {
+          setBudgetWarning(notifData.budget_warning_enabled);
+          setBudgetExceeded(notifData.budget_exceeded_enabled);
+          setBillsReminder(notifData.bills_reminder_enabled);
+          setReceivablesReminder(notifData.receivables_reminder_enabled);
+          setDailySummaryTime(notifData.daily_summary_time || '08:00');
+        }
+      }
+
+      const { data: sessionData } = await supabase.rpc('fn_my_sessions');
+      if (sessionData) {
+        setSessions(sessionData);
+      }
+
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+      const verifiedTotp = factors?.totp?.find((f) => f.status === 'verified');
+      setHasMfa(!!verifiedTotp);
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : 'Gagal memuat pengaturan akun.');
+    } finally {
+      setLoading(false);
     }
-
-    // Ambil daftar sesi
-    const { data: sessionData } = await supabase.rpc('fn_my_sessions');
-    if (sessionData) {
-      setSessions(sessionData);
-    }
-
-    // Ambil faktor MFA
-    const { data: factors } = await supabase.auth.mfa.listFactors();
-    const verifiedTotp = factors?.totp?.find((f) => f.status === 'verified');
-    setHasMfa(!!verifiedTotp);
-
-    setLoading(false);
   }, [supabase]);
 
   useEffect(() => {
@@ -247,7 +255,7 @@ export default function PengaturanPage() {
   };
 
   const handleLogoutAll = async () => {
-    if (!confirm('Keluar dari semua perangkat? Anda akan dialihkan ke halaman login.')) return;
+    if (!confirm('Keluar dari semua perangkat? Anda akan dialihkan ke halaman masuk.')) return;
 
     await supabase.auth.signOut({ scope: 'global' });
     window.location.href = '/login';
@@ -283,378 +291,370 @@ export default function PengaturanPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Keamanan & Pengaturan</h1>
-        <p className="text-sm text-muted-foreground">
-          Kelola profil, preferensi notifikasi finansial, TOTP 2FA, dan sesi aktif
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Lainnya</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Kelola profil, preferensi notifikasi finansial, autentikasi 2FA, dan sesi perangkat
         </p>
       </div>
 
-      {loading ? (
-        <div className="p-8 text-center text-sm text-muted-foreground">Memuat data pengaturan...</div>
+      <LainnyaSubNav />
+
+      {loadError ? (
+        <ErrorState message={loadError} onRetry={loadData} />
+      ) : loading ? (
+        <div className="space-y-4" aria-busy="true">
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </div>
       ) : (
-        <>
+        <div className="space-y-6">
           {/* Bagian Profil */}
-          <div className="p-6 border border-border bg-card rounded-lg space-y-4">
-            <div className="flex items-center gap-3 border-b border-border pb-3">
-              <User className="w-5 h-5 text-muted-foreground" />
-              <h2 className="text-base font-semibold">Pengaturan Profil</h2>
-            </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2.5">
+                <User className="w-4 h-4 text-primary" />
+                <span>Pengaturan Profil</span>
+              </CardTitle>
+            </CardHeader>
 
-            {profileMsg && (
-              <div className="p-3 text-xs rounded bg-muted text-foreground flex items-center gap-2">
-                <Check className="w-4 h-4 text-income" />
-                <span>{profileMsg}</span>
-              </div>
-            )}
+            <CardContent className="space-y-4">
+              {profileMsg && (
+                <div className="p-3 text-xs rounded-lg bg-income/10 text-income border border-income/20 flex items-center gap-2">
+                  <Check className="w-4 h-4" />
+                  <span>{profileMsg}</span>
+                </div>
+              )}
 
-            <form onSubmit={handleUpdateProfile} className="space-y-4 max-w-md">
-              <div>
-                <label className="block text-xs font-medium mb-1">Nama Tampilan</label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Nama Anda"
-                  className="w-full px-3 py-2 text-sm border border-border rounded bg-background focus:outline-none focus:ring-1 focus:ring-foreground"
-                />
-              </div>
+              <form onSubmit={handleUpdateProfile} className="space-y-4 max-w-md">
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1.5">
+                    Nama Tampilan
+                  </label>
+                  <Input
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Nama Anda"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-xs font-medium mb-1">
-                  Tanggal Mulai Siklus Bulanan (1-28)
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={28}
-                  value={monthStartDay}
-                  onChange={(e) => setMonthStartDay(Number(e.target.value))}
-                  className="w-full px-3 py-2 text-sm border border-border rounded bg-background focus:outline-none"
-                />
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  Digunakan untuk menghitung laporan bulanan dan anggaran sesuai tanggal gajian.
-                </p>
-              </div>
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1.5">
+                    Tanggal Mulai Siklus Bulanan (1-28)
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={28}
+                    value={monthStartDay}
+                    onChange={(e) => setMonthStartDay(Number(e.target.value))}
+                    className="tabular-nums"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Digunakan untuk menghitung laporan bulanan dan anggaran sesuai tanggal gajian.
+                  </p>
+                </div>
 
-              <button
-                type="submit"
-                className="px-4 py-2 text-xs font-semibold orbit-btn-primary rounded-xl"
-              >
-                Simpan Profil
-              </button>
-            </form>
-          </div>
+                <Button type="submit">Simpan Profil</Button>
+              </form>
+            </CardContent>
+          </Card>
 
           {/* Bagian Ubah Kata Sandi */}
-          <div className="p-6 border border-border bg-card rounded-xl space-y-4 shadow-sm">
-            <div className="flex items-center gap-3 border-b border-border pb-3">
-              <Key className="w-5 h-5 text-indigo-500" />
-              <div>
-                <h2 className="text-base font-semibold">Kata Sandi Akun</h2>
-                <p className="text-xs text-muted-foreground">
-                  Perbarui kata sandi akun Anda atau atur kata sandi baru setelah pemulihan email
-                </p>
-              </div>
-            </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2.5">
+                <Key className="w-4 h-4 text-primary" />
+                <span>Kata Sandi Akun</span>
+              </CardTitle>
+            </CardHeader>
 
-            {passwordMsg && (
-              <div className="p-3 text-xs rounded-xl bg-income/10 text-income border border-income/20 flex items-center gap-2">
-                <Check className="w-4 h-4" />
-                <span>{passwordMsg}</span>
-              </div>
-            )}
+            <CardContent className="space-y-4">
+              {passwordMsg && (
+                <div className="p-3 text-xs rounded-lg bg-income/10 text-income border border-income/20 flex items-center gap-2">
+                  <Check className="w-4 h-4" />
+                  <span>{passwordMsg}</span>
+                </div>
+              )}
 
-            {passwordErr && (
-              <div className="p-3 text-xs rounded-xl bg-expense/10 text-expense border border-expense/20 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4" />
-                <span>{passwordErr}</span>
-              </div>
-            )}
+              {passwordErr && (
+                <div className="p-3 text-xs rounded-lg bg-expense/10 text-expense border border-expense/20 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{passwordErr}</span>
+                </div>
+              )}
 
-            <form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">
-              <div>
-                <label className="block text-xs font-medium mb-1">Kata Sandi Baru</label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Minimal 6 karakter"
-                  className="w-full px-3.5 py-2 text-sm border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
+              <form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1.5">
+                    Kata Sandi Baru
+                  </label>
+                  <Input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Minimal 6 karakter"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-xs font-medium mb-1">Konfirmasi Kata Sandi Baru</label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Ulangi kata sandi baru"
-                  className="w-full px-3.5 py-2 text-sm border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1.5">
+                    Konfirmasi Kata Sandi Baru
+                  </label>
+                  <Input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Ulangi kata sandi baru"
+                  />
+                </div>
 
-              <button
-                type="submit"
-                disabled={savingPassword}
-                className="px-4 py-2 text-xs font-semibold orbit-btn-primary rounded-xl disabled:opacity-50"
-              >
-                {savingPassword ? 'Menyimpan...' : 'Perbarui Kata Sandi'}
-              </button>
-            </form>
-          </div>
+                <Button type="submit" disabled={savingPassword}>
+                  {savingPassword ? 'Menyimpan...' : 'Perbarui Kata Sandi'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
 
           {/* Bagian Preferensi Notifikasi Finansial */}
-          <div className="p-6 border border-border bg-card rounded-lg space-y-4">
-            <div className="flex items-center gap-3 border-b border-border pb-3">
-              <Bell className="w-5 h-5 text-muted-foreground" />
-              <div>
-                <h2 className="text-base font-semibold">Preferensi Notifikasi & Peringatan</h2>
-                <p className="text-xs text-muted-foreground">
-                  Atur ambang batas peringatan anggaran, jadwal tagihan, dan ringkasan harian
-                </p>
-              </div>
-            </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2.5">
+                <Bell className="w-4 h-4 text-primary" />
+                <span>Preferensi Notifikasi & Peringatan</span>
+              </CardTitle>
+            </CardHeader>
 
-            {notifMsg && (
-              <div className="p-3 text-xs rounded bg-muted text-foreground flex items-center gap-2">
-                <Check className="w-4 h-4 text-income" />
-                <span>{notifMsg}</span>
-              </div>
-            )}
+            <CardContent className="space-y-4">
+              {notifMsg && (
+                <div className="p-3 text-xs rounded-lg bg-income/10 text-income border border-income/20 flex items-center gap-2">
+                  <Check className="w-4 h-4" />
+                  <span>{notifMsg}</span>
+                </div>
+              )}
 
-            <form onSubmit={handleSaveNotifications} className="space-y-3 max-w-md">
-              <label className="flex items-center gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={budgetWarning}
-                  onChange={(e) => setBudgetWarning(e.target.checked)}
-                  className="rounded border-input text-primary focus:ring-ring"
-                />
-                <span className="text-xs font-medium">Peringatan Anggaran 80% (Waspada)</span>
-              </label>
+              <form onSubmit={handleSaveNotifications} className="space-y-3 max-w-md">
+                <label className="flex items-center gap-2.5 cursor-pointer min-h-11">
+                  <input
+                    type="checkbox"
+                    checked={budgetWarning}
+                    onChange={(e) => setBudgetWarning(e.target.checked)}
+                    className="w-4 h-4 rounded border-border text-primary"
+                  />
+                  <span className="text-xs font-medium text-foreground">
+                    Peringatan Anggaran 80% (Waspada)
+                  </span>
+                </label>
 
-              <label className="flex items-center gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={budgetExceeded}
-                  onChange={(e) => setBudgetExceeded(e.target.checked)}
-                  className="rounded border-input text-primary focus:ring-ring"
-                />
-                <span className="text-xs font-medium">Peringatan Anggaran 100% (Over Budget)</span>
-              </label>
+                <label className="flex items-center gap-2.5 cursor-pointer min-h-11">
+                  <input
+                    type="checkbox"
+                    checked={budgetExceeded}
+                    onChange={(e) => setBudgetExceeded(e.target.checked)}
+                    className="w-4 h-4 rounded border-border text-primary"
+                  />
+                  <span className="text-xs font-medium text-foreground">
+                    Peringatan Anggaran 100% (Over Budget)
+                  </span>
+                </label>
 
-              <label className="flex items-center gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={billsReminder}
-                  onChange={(e) => setBillsReminder(e.target.checked)}
-                  className="rounded border-input text-primary focus:ring-ring"
-                />
-                <span className="text-xs font-medium">Pengingat Tagihan Jatuh Tempo (H-3 & Hari-H)</span>
-              </label>
+                <label className="flex items-center gap-2.5 cursor-pointer min-h-11">
+                  <input
+                    type="checkbox"
+                    checked={billsReminder}
+                    onChange={(e) => setBillsReminder(e.target.checked)}
+                    className="w-4 h-4 rounded border-border text-primary"
+                  />
+                  <span className="text-xs font-medium text-foreground">
+                    Pengingat Tagihan Jatuh Tempo (H-3 & Hari-H)
+                  </span>
+                </label>
 
-              <label className="flex items-center gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={receivablesReminder}
-                  onChange={(e) => setReceivablesReminder(e.target.checked)}
-                  className="rounded border-input text-primary focus:ring-ring"
-                />
-                <span className="text-xs font-medium">Pengingat Piutang & Komitmen Pembayaran</span>
-              </label>
+                <label className="flex items-center gap-2.5 cursor-pointer min-h-11">
+                  <input
+                    type="checkbox"
+                    checked={receivablesReminder}
+                    onChange={(e) => setReceivablesReminder(e.target.checked)}
+                    className="w-4 h-4 rounded border-border text-primary"
+                  />
+                  <span className="text-xs font-medium text-foreground">
+                    Pengingat Piutang & Komitmen Pembayaran
+                  </span>
+                </label>
 
-              <div className="pt-2">
-                <label className="block text-xs font-medium mb-1">Waktu Ringkasan Pagi</label>
-                <input
-                  type="time"
-                  value={dailySummaryTime}
-                  onChange={(e) => setDailySummaryTime(e.target.value)}
-                  className="px-3 py-1.5 text-sm border border-border rounded bg-background focus:outline-none"
-                />
-              </div>
+                <div className="pt-2">
+                  <label className="block text-xs font-medium text-foreground mb-1.5">
+                    Waktu Ringkasan Pagi
+                  </label>
+                  <Input
+                    type="time"
+                    value={dailySummaryTime}
+                    onChange={(e) => setDailySummaryTime(e.target.value)}
+                    className="w-40 tabular-nums"
+                  />
+                </div>
 
-              <div className="pt-3">
-                <button
-                  type="submit"
-                  disabled={savingNotif}
-                  className="px-4 py-2 text-sm font-medium bg-foreground text-background rounded hover:opacity-90 transition-opacity disabled:opacity-50"
-                >
-                  {savingNotif ? 'Menyimpan...' : 'Simpan Preferensi Notifikasi'}
-                </button>
-              </div>
-            </form>
-          </div>
+                <div className="pt-2">
+                  <Button type="submit" disabled={savingNotif}>
+                    {savingNotif ? 'Menyimpan...' : 'Simpan Preferensi Notifikasi'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
 
           {/* Bagian 2FA / TOTP */}
-          <div className="p-6 border border-border bg-card rounded-lg space-y-4">
-            <div className="flex items-center gap-3 border-b border-border pb-3">
-              <Key className="w-5 h-5 text-muted-foreground" />
-              <div>
-                <h2 className="text-base font-semibold">Autentikasi Dua Faktor (TOTP 2FA)</h2>
-                <p className="text-xs text-muted-foreground">
-                  Lapisan keamanan tambahan menggunakan aplikasi autentikator (Google Authenticator, Aegis, 1Password)
-                </p>
-              </div>
-            </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2.5">
+                <ShieldCheck className="w-4 h-4 text-primary" />
+                <span>Autentikasi Dua Faktor (TOTP 2FA)</span>
+              </CardTitle>
+            </CardHeader>
 
-            {mfaError && (
-              <div className="p-3 text-xs rounded bg-expense/10 text-expense border border-expense/20 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4" />
-                <span>{mfaError}</span>
-              </div>
-            )}
+            <CardContent className="space-y-4">
+              {mfaError && (
+                <div className="p-3 text-xs rounded-lg bg-expense/10 text-expense border border-expense/20 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{mfaError}</span>
+                </div>
+              )}
 
-            {hasMfa ? (
-              <div className="flex items-center justify-between p-4 border border-income/30 bg-income/5 rounded-md">
-                <div className="flex items-center gap-3">
-                  <ShieldCheck className="w-5 h-5 text-income" />
-                  <div>
-                    <div className="text-sm font-medium text-foreground">2FA Aktif</div>
-                    <div className="text-xs text-muted-foreground">
-                      Akun Anda terlindungi dengan kode autentikator saat login
+              {hasMfa ? (
+                <div className="flex items-center justify-between p-4 border border-income/30 bg-income/5 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck className="w-5 h-5 text-income" />
+                    <div>
+                      <div className="text-sm font-semibold text-foreground">2FA Aktif</div>
+                      <div className="text-xs text-muted-foreground">
+                        Akun Anda terlindungi dengan kode autentikator saat masuk
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ) : enrolling ? (
-              <div className="p-4 border border-border bg-muted/20 rounded-md space-y-4 max-w-md">
-                <div className="text-sm font-medium">Scan QR Code Berikut:</div>
-                {qrCodeSvg && (
-                  <div
-                    className="p-3 bg-white w-fit rounded border border-border"
-                    dangerouslySetInnerHTML={{ __html: qrCodeSvg }}
-                  />
-                )}
-                <div className="text-xs text-muted-foreground">
-                  Atau masukkan kunci rahasia ini secara manual:{' '}
-                  <code className="font-mono bg-muted px-1.5 py-0.5 rounded select-all font-semibold">
-                    {totpSecret}
-                  </code>
-                </div>
-
-                <form onSubmit={verifyAndActivateTotp} className="space-y-3 pt-2">
-                  <div>
-                    <label className="block text-xs font-medium mb-1">
-                      Masukkan 6 Digit Kode Konfirmasi
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      required
-                      value={verifyCode}
-                      onChange={(e) => setVerifyCode(e.target.value)}
-                      placeholder="000000"
-                      className="w-full px-3 py-2 text-center text-lg font-mono tracking-widest border border-border rounded bg-background focus:outline-none"
+              ) : enrolling ? (
+                <div className="p-4 border border-border bg-muted/20 rounded-lg space-y-4 max-w-md">
+                  <div className="text-sm font-semibold text-foreground">Scan QR Code Berikut:</div>
+                  {qrCodeSvg && (
+                    <div
+                      className="p-3 bg-white w-fit rounded-lg border border-border"
+                      dangerouslySetInnerHTML={{ __html: qrCodeSvg }}
                     />
+                  )}
+                  <div className="text-xs text-muted-foreground">
+                    Atau masukkan kunci rahasia ini secara manual:{' '}
+                    <code className="font-mono bg-muted px-1.5 py-0.5 rounded select-all font-semibold text-foreground">
+                      {totpSecret}
+                    </code>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="submit"
-                      className="px-4 py-2 text-xs font-medium bg-foreground text-background rounded hover:opacity-90"
-                    >
-                      Aktifkan 2FA
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEnrolling(false)}
-                      className="px-4 py-2 text-xs font-medium border border-border rounded hover:bg-muted"
-                    >
-                      Batal
-                    </button>
-                  </div>
-                </form>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-muted-foreground">
-                  2FA belum diaktifkan pada akun ini. Sangat disarankan untuk mengaktifkannya.
+
+                  <form onSubmit={verifyAndActivateTotp} className="space-y-3 pt-2">
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1.5">
+                        Masukkan 6 Digit Kode Konfirmasi
+                      </label>
+                      <Input
+                        type="text"
+                        maxLength={6}
+                        required
+                        value={verifyCode}
+                        onChange={(e) => setVerifyCode(e.target.value)}
+                        placeholder="000000"
+                        className="text-center text-lg font-mono tracking-widest tabular-nums"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button type="submit">Aktifkan 2FA</Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setEnrolling(false)}
+                      >
+                        Batal
+                      </Button>
+                    </div>
+                  </form>
                 </div>
-                <button
-                  onClick={startTotpEnrollment}
-                  type="button"
-                  className="px-4 py-2 text-xs font-medium bg-foreground text-background rounded hover:opacity-90 transition-opacity"
-                >
-                  Aktifkan 2FA Sekarang
-                </button>
-              </div>
-            )}
-          </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="text-xs text-muted-foreground">
+                    2FA belum diaktifkan pada akun ini. Sangat disarankan untuk mengaktifkannya.
+                  </div>
+                  <Button onClick={startTotpEnrollment} type="button">
+                    Aktifkan 2FA Sekarang
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Bagian Sesi Aktif */}
-          <div className="p-6 border border-border bg-card rounded-lg space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <div className="flex items-center gap-3">
-                <Smartphone className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <h2 className="text-base font-semibold">Daftar Sesi Aktif</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Perangkat yang saat ini memiliki akses ke akun Orbit Anda
-                  </p>
-                </div>
-              </div>
-
-              <button
+          <Card className="overflow-hidden">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2.5">
+                <Smartphone className="w-4 h-4 text-primary" />
+                <span>Daftar Sesi Aktif</span>
+              </CardTitle>
+              <Button
                 onClick={handleLogoutAll}
                 type="button"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-expense hover:bg-expense/10 rounded transition-colors"
+                variant="destructive"
+                size="sm"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Keluar dari Semua Perangkat</span>
-              </button>
-            </div>
+              </Button>
+            </CardHeader>
 
             <div className="divide-y divide-border">
               {sessions.length === 0 ? (
-                <div className="p-4 text-center text-xs text-muted-foreground">
+                <div className="p-6 text-center text-xs text-muted-foreground">
                   Tidak ada sesi aktif terdeteksi
                 </div>
               ) : (
                 sessions.map((s) => (
                   <div
                     key={s.id}
-                    className="py-3 flex items-center justify-between gap-4 text-sm"
+                    className="p-4 flex items-center justify-between gap-4 text-sm"
                   >
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-xs">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-xs text-foreground">
                           {s.user_agent ? s.user_agent.slice(0, 70) : 'Perangkat Tidak Dikenal'}
                         </span>
                         {s.is_current && (
-                          <span className="text-[10px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded bg-income/10 text-income">
-                            Sesi Ini
-                          </span>
+                          <StatusBadge variant="income">Sesi Ini</StatusBadge>
                         )}
-                        <span className="text-[10px] font-mono px-1 py-0.5 rounded bg-muted text-muted-foreground">
-                          {s.aal}
-                        </span>
+                        <StatusBadge variant="neutral">{s.aal}</StatusBadge>
                       </div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                      <div className="text-xs text-muted-foreground mt-1 tabular-nums">
                         Terakhir aktif: {formatDateIndo(s.updated_at || s.created_at)}
                       </div>
                     </div>
 
                     {!s.is_current && (
-                      <button
+                      <Button
                         onClick={() => handleRevokeSession(s.id)}
                         type="button"
-                        className="text-xs text-muted-foreground hover:text-expense px-2 py-1 rounded transition-colors"
+                        variant="ghost"
+                        size="sm"
                       >
                         Cabut Akses
-                      </button>
+                      </Button>
                     )}
                   </div>
                 ))
               )}
             </div>
-          </div>
-        </>
+          </Card>
+        </div>
       )}
     </div>
   );

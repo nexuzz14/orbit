@@ -299,9 +299,16 @@ class LocalIncomeSplitRules extends Table {
   LocalIncomeSplitRules,
 ])
 class AppDatabase extends _$AppDatabase {
-  static final AppDatabase shared = AppDatabase();
+  static final AppDatabase _instance = AppDatabase();
+  static AppDatabase? _override;
+  static AppDatabase get shared => _override ?? _instance;
+
+  static void overrideForTesting(AppDatabase? db) {
+    _override = db;
+  }
 
   AppDatabase() : super(_openConnection());
+  AppDatabase.forExecutor(super.e);
 
   @override
   int get schemaVersion => 3;

@@ -3,47 +3,95 @@
 @tailwind utilities;
 
 :root {
-  --background: #f1f5f9;
+  --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
-  --border: #cbd5e1;
-  --primary: #4f46e5;
+  --subtle: #f1f5f9;
+  --border: #e2e8f0;
+  --primary: #0284c7;
   --primary-foreground: #ffffff;
-  --muted: #e2e8f0;
+  --primary-subtle: #e0f2fe;
+  --muted: #f1f5f9;
   --muted-foreground: #475569;
+
+  --income: #15803d;
+  --income-subtle: #dcfce7;
+  --income-border: #bbf7d0;
+
+  --expense: #dc2626;
+  --expense-subtle: #fee2e2;
+  --expense-border: #fecaca;
+
+  --warning: #b45309;
+  --warning-subtle: #fef3c7;
+  --warning-border: #fde68a;
+
+  --kind-intern-fg: #0369a1;
+  --kind-intern-bg: #e0f2fe;
+  --kind-intern-border: #bae6fd;
+
+  --kind-freelance-fg: #6d28d9;
+  --kind-freelance-bg: #ede9fe;
+  --kind-freelance-border: #ddd6fe;
+
+  --kind-kuliah-fg: #b45309;
+  --kind-kuliah-bg: #fef3c7;
+  --kind-kuliah-border: #fde68a;
+
+  --kind-pribadi-fg: #334155;
+  --kind-pribadi-bg: #f1f5f9;
+  --kind-pribadi-border: #e2e8f0;
 }
 
 .dark {
-  --background: #050811;
+  --background: #0f172a;
   --foreground: #f8fafc;
-  --card: #0c1324;
+  --card: #1e293b;
   --card-foreground: #f8fafc;
-  --border: #1e2d4a;
-  --primary: #6366f1;
-  --primary-foreground: #ffffff;
-  --muted: #15203b;
-  --muted-foreground: #94a3b8;
+  --subtle: #334155;
+  --border: #334155;
+  --primary: #38bdf8;
+  --primary-foreground: #0f172a;
+  --primary-subtle: #0c4a6e;
+  --muted: #1e293b;
+  --muted-foreground: #cbd5e1;
+
+  --income: #4ade80;
+  --income-subtle: #052e16;
+  --income-border: #14532d;
+
+  --expense: #f87171;
+  --expense-subtle: #450a0a;
+  --expense-border: #7f1d1d;
+
+  --warning: #fbbf24;
+  --warning-subtle: #451a03;
+  --warning-border: #78350f;
+
+  --kind-intern-fg: #7dd3fc;
+  --kind-intern-bg: #0c4a6e;
+  --kind-intern-border: #075985;
+
+  --kind-freelance-fg: #c4b5fd;
+  --kind-freelance-bg: #2e1065;
+  --kind-freelance-border: #4c1d95;
+
+  --kind-kuliah-fg: #fcd34d;
+  --kind-kuliah-bg: #451a03;
+  --kind-kuliah-border: #78350f;
+
+  --kind-pribadi-fg: #cbd5e1;
+  --kind-pribadi-bg: #1e293b;
+  --kind-pribadi-border: #475569;
 }
 
 body {
   color: var(--foreground);
   background-color: var(--background);
-  background-image:
-    radial-gradient(ellipse 80% 50% at 50% -15%, rgba(99, 102, 241, 0.12), transparent),
-    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(14, 165, 233, 0.10), transparent);
-  background-attachment: fixed;
-  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   min-height: 100vh;
-}
-
-.dark body {
-  background-color: var(--background);
-  background-image:
-    radial-gradient(ellipse 80% 50% at 55% -10%, rgba(99, 102, 241, 0.24), transparent),
-    radial-gradient(ellipse 55% 45% at 95% 15%, rgba(14, 165, 233, 0.16), transparent),
-    radial-gradient(ellipse 50% 40% at 15% 90%, rgba(139, 92, 246, 0.12), transparent);
-  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Format angka uang tabular rata kanan */
@@ -51,130 +99,20 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Orbit Brand Utilities */
-.orbit-gradient-bg {
-  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #8b5cf6 100%);
+/* Fokus keyboard jelas (WCAG AA) */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
-.orbit-gradient-text {
-  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.orbit-btn-primary,
-button.bg-foreground.text-background,
-a.bg-foreground.text-background {
-  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 52%, #8b5cf6 100%) !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  border-radius: 0.75rem !important;
-  box-shadow: 0 4px 16px -2px rgba(99, 102, 241, 0.45) !important;
-  font-weight: 600 !important;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-
-.orbit-btn-primary:hover:not(:disabled),
-button.bg-foreground.text-background:hover:not(:disabled),
-a.bg-foreground.text-background:hover {
-  box-shadow: 0 8px 24px -2px rgba(14, 165, 233, 0.55) !important;
-  transform: translateY(-1px);
-  filter: brightness(1.06);
-}
-
-/* Modern Glassmorphic Cards Across All Pages */
-main .bg-card {
-  border-radius: 1rem !important;
-  box-shadow:
-    0 8px 24px -6px rgba(15, 23, 42, 0.06),
-    0 2px 6px -1px rgba(15, 23, 42, 0.04);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.dark main .bg-card {
-  background: linear-gradient(180deg, rgba(17, 26, 46, 0.92) 0%, rgba(11, 17, 32, 0.96) 100%) !important;
-  border-color: rgba(56, 189, 248, 0.16) !important;
-  box-shadow:
-    0 12px 32px -8px rgba(2, 6, 23, 0.65),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(12px);
-}
-
-/* Modernize Form Inputs, Selects & Textareas Globally */
-input[type='text'],
-input[type='email'],
-input[type='password'],
-input[type='number'],
-input[type='date'],
-input[type='time'],
-select,
-textarea {
-  border-radius: 0.75rem !important;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
-}
-
-input[type='text']:focus,
-input[type='email']:focus,
-input[type='password']:focus,
-input[type='number']:focus,
-input[type='date']:focus,
-input[type='time']:focus,
-select:focus,
-textarea:focus {
-  border-color: #6366f1 !important;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22) !important;
-  outline: none !important;
-}
-
-input[type='checkbox'] {
-  accent-color: #6366f1;
-  width: 1rem;
-  height: 1rem;
-  border-radius: 0.35rem;
-}
-
-/* Sidebar Terkunci Permanen (Fixed Lock) */
-.orbit-sidebar-fixed {
-  position: fixed !important;
-  top: 0px !important;
-  bottom: 0px !important;
-  left: 0px !important;
-  width: 16rem !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  z-index: 40 !important;
-  overflow: hidden !important;
-  overscroll-behavior: none !important;
-  display: flex !important;
-  flex-direction: column !important;
-  justify-content: space-between !important;
-  user-select: none !important;
-}
-
-.dark .orbit-sidebar-fixed {
-  background: linear-gradient(180deg, #0b1326 0%, #060a15 100%) !important;
-  border-right: 1px solid rgba(56, 189, 248, 0.18) !important;
-  box-shadow: 6px 0 28px -4px rgba(2, 6, 23, 0.7) !important;
-}
-
-@media (max-width: 767px) {
-  .orbit-sidebar-fixed {
-    transition: transform 0.2s ease-in-out !important;
-    z-index: 50 !important;
-  }
-  .orbit-sidebar-fixed.sidebar-closed {
-    transform: translateX(-100%) !important;
-  }
-  .orbit-sidebar-fixed.sidebar-open {
-    transform: translateX(0) !important;
-  }
-}
-
-@media (min-width: 768px) {
-  .orbit-sidebar-fixed {
-    transform: none !important;
-  }
-  .orbit-content-wrapper {
-    padding-left: 16rem !important;
+/* Hormati pengaturan kurangi gerakan */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

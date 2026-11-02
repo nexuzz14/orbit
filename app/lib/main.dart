@@ -9,12 +9,10 @@ import 'package:orbit_app/core/services/notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inisialisasi notifikasi lokal
   try {
     await NotificationService.initialize();
   } catch (_) {}
 
-  // Inisialisasi Supabase client (URL dan Anon Key disesuaikan lewat environment)
   await Supabase.initialize(
     url: const String.fromEnvironment('SUPABASE_URL', defaultValue: 'http://10.0.2.2:54321'),
     anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: 'sb-anon-key-placeholder'),
@@ -28,150 +26,12 @@ class OrbitApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lightScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.brandIndigo,
-      brightness: Brightness.light,
-      primary: AppColors.brandIndigo,
-      secondary: AppColors.brandCyan,
-      tertiary: AppColors.brandViolet,
-      surface: AppColors.lightSurface,
-    );
-
-    final darkScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.brandIndigo,
-      brightness: Brightness.dark,
-      primary: AppColors.brandIndigo,
-      secondary: AppColors.brandCyan,
-      tertiary: AppColors.brandViolet,
-      surface: AppColors.darkSurface,
-    );
-
     return MaterialApp(
       title: 'Orbit',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.system,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: lightScheme,
-        scaffoldBackgroundColor: AppColors.lightBackground,
-        cardColor: AppColors.lightSurface,
-        dividerColor: AppColors.lightBorder,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.lightSurface,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          centerTitle: false,
-        ),
-        cardTheme: CardThemeData(
-          color: AppColors.lightSurface,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: AppColors.lightBorder),
-          ),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.brandIndigo,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: AppColors.brandIndigo,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        chipTheme: ChipThemeData(
-          selectedColor: AppColors.brandIndigo.withValues(alpha: 0.16),
-          checkmarkColor: AppColors.brandIndigo,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: AppColors.lightBackground,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.lightBorder),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.lightBorder),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.brandIndigo, width: 1.5),
-          ),
-        ),
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorScheme: darkScheme,
-        scaffoldBackgroundColor: AppColors.darkBackground,
-        cardColor: AppColors.darkSurface,
-        dividerColor: AppColors.darkBorder,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.darkSurface,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          centerTitle: false,
-        ),
-        cardTheme: CardThemeData(
-          color: AppColors.darkSurface,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: AppColors.darkBorder),
-          ),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.brandIndigo,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: AppColors.brandIndigo,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        chipTheme: ChipThemeData(
-          selectedColor: AppColors.brandIndigo.withValues(alpha: 0.25),
-          checkmarkColor: AppColors.brandCyan,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: AppColors.darkBackground,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.darkBorder),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.darkBorder),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.brandIndigo, width: 1.5),
-          ),
-        ),
-      ),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
       home: StreamBuilder<AuthState>(
         stream: Supabase.instance.client.auth.onAuthStateChange,
         builder: (context, snapshot) {

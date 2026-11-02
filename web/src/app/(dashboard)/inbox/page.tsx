@@ -9,11 +9,22 @@ import {
   Check,
   Trash2,
   Edit3,
-  X,
   AlertCircle,
   Sparkles,
-  Link as LinkIcon
+  Link as LinkIcon,
 } from 'lucide-react';
+import {
+  Card,
+  Button,
+  Select,
+  Dialog,
+  KindBadge,
+  StatusBadge,
+  Skeleton,
+  EmptyState,
+  ErrorState,
+  MoneySubNav,
+} from '@/components/ui';
 
 type DraftRow = Database['public']['Tables']['transactions']['Row'] & {
   account_name?: string | null;
@@ -40,62 +51,70 @@ interface MatchedExpectedIncome {
 export default function InboxPage() {
   const supabase = createClient();
   const [drafts, setDrafts] = useState<DraftRow[]>([]);
-  const [accounts, setAccounts] = useState<Option[]>([]);
+  const [, setAccounts] = useState<Option[]>([]);
   const [categories, setCategories] = useState<Option[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Modal untuk melengkapi draft sebelum konfirmasi
   const [selectedDraft, setSelectedDraft] = useState<DraftRow | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSource, setSelectedSource] = useState<TransactionSource>('personal');
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
 
-  // Expected income match
   const [matchedIncome, setMatchedIncome] = useState<MatchedExpectedIncome | null>(null);
 
   const loadDrafts = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
 
-    const { data: memberData } = await supabase
-      .from('workspace_members')
-      .select('workspace_id')
-      .limit(1)
-      .single();
+    try {
+      const { data: memberData, error: memberErr } = await supabase
+        .from('workspace_members')
+        .select('workspace_id')
+        .limit(1)
+        .single();
 
-    if (!memberData) {
+      if (memberErr) throw memberErr;
+      if (!memberData) {
+        setLoading(false);
+        return;
+      }
+
+      const wsId = memberData.workspace_id;
+
+      const [accRes, catRes, draftRes] = await Promise.all([
+        supabase.from('accounts').select('id, name').eq('workspace_id', wsId).is('deleted_at', null),
+        supabase.from('categories').select('id, name, type').eq('workspace_id', wsId).is('deleted_at', null),
+        supabase
+          .from('transactions')
+          .select('*')
+          .eq('workspace_id', wsId)
+          .eq('status', 'draft')
+          .is('deleted_at', null)
+          .order('occurred_at', { ascending: false }),
+      ]);
+
+      if (draftRes.error) throw draftRes.error;
+
+      const accMap = new Map((accRes.data || []).map((a) => [a.id, a.name]));
+      const catMap = new Map((catRes.data || []).map((c) => [c.id, c.name]));
+
+      setAccounts(accRes.data || []);
+      setCategories(catRes.data || []);
+
+      const enriched: DraftRow[] = (draftRes.data || []).map((d) => ({
+        ...d,
+        account_name: accMap.get(d.account_id) || 'Akun',
+        category_name: d.category_id ? catMap.get(d.category_id) : null,
+      }));
+
+      setDrafts(enriched);
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : 'Gagal memuat antrean draft.');
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const wsId = memberData.workspace_id;
-
-    const [accRes, catRes, draftRes] = await Promise.all([
-      supabase.from('accounts').select('id, name').eq('workspace_id', wsId).is('deleted_at', null),
-      supabase.from('categories').select('id, name, type').eq('workspace_id', wsId).is('deleted_at', null),
-      supabase
-        .from('transactions')
-        .select('*')
-        .eq('workspace_id', wsId)
-        .eq('status', 'draft')
-        .is('deleted_at', null)
-        .order('occurred_at', { ascending: false }),
-    ]);
-
-    const accMap = new Map((accRes.data || []).map((a) => [a.id, a.name]));
-    const catMap = new Map((catRes.data || []).map((c) => [c.id, c.name]));
-
-    setAccounts(accRes.data || []);
-    setCategories(catRes.data || []);
-
-    const enriched: DraftRow[] = (draftRes.data || []).map((d) => ({
-      ...d,
-      account_name: accMap.get(d.account_id) || 'Akun',
-      category_name: d.category_id ? catMap.get(d.category_id) : null,
-    }));
-
-    setDrafts(enriched);
-    setLoading(false);
   }, [supabase]);
 
   useEffect(() => {
@@ -130,7 +149,6 @@ export default function InboxPage() {
     setConfirmError(null);
     setMatchedIncome(null);
 
-    // If it's an income draft, try matching with expected incomes
     if (draft.type === 'income') {
       const { data: matchData } = await supabase.rpc('fn_match_expected_income', {
         p_draft_id: draft.id,
@@ -217,221 +235,194 @@ export default function InboxPage() {
   const getDraftBadge = (state: string | null) => {
     switch (state) {
       case 'baru':
-        return (
-          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-foreground">
-            Baru
-          </span>
-        );
+        return <StatusBadge variant="neutral">Baru</StatusBadge>;
       case 'perlu_dilengkapi':
-        return (
-          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
-            Perlu Dilengkapi
-          </span>
-        );
+        return <StatusBadge variant="warning">Perlu Dilengkapi</StatusBadge>;
       case 'perlu_dicek':
-        return (
-          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-expense/10 text-expense border border-expense/20">
-            Perlu Dicek
-          </span>
-        );
+        return <StatusBadge variant="expense">Perlu Dicek</StatusBadge>;
       default:
-        return null;
+        return <StatusBadge variant="warning">Draft</StatusBadge>;
     }
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Inbox Draft</h1>
-        <p className="text-sm text-muted-foreground">
-          Transaksi dari jalur otomatis menunggu verifikasi dan konfirmasi Anda sebelum masuk ke saldo
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Uang</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Inbox draft dari jalur otomatis menunggu konfirmasi Anda sebelum masuk ke saldo riil
         </p>
       </div>
 
-      <div className="border border-border bg-card rounded-lg overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">Memuat antrean draft...</div>
-        ) : drafts.length === 0 ? (
-          <div className="p-12 text-center">
-            <InboxIcon className="w-8 h-8 mx-auto text-muted-foreground mb-3 opacity-50" />
-            <p className="text-sm font-medium">Kotak Masuk Bersih</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Tidak ada draft yang menunggu konfirmasi saat ini
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {drafts.map((d) => {
-              const isExpense = d.type === 'expense';
-              const isComplete = !!d.category_id && !!d.source;
+      <MoneySubNav draftCount={drafts.length} />
 
-              return (
-                <div
-                  key={d.id}
-                  className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/20 transition-colors"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">
-                        {d.merchant || d.product_name || 'Draft Transaksi'}
-                      </span>
-                      {getDraftBadge(d.draft_state)}
-                      <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                        {d.origin}
-                      </span>
-                      {d.bank_category && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20">
-                          {d.bank_category}
-                        </span>
-                      )}
-                    </div>
+      {loadError ? (
+        <ErrorState message={loadError} onRetry={loadDrafts} />
+      ) : loading ? (
+        <div className="space-y-3" aria-busy="true">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      ) : drafts.length === 0 ? (
+        <EmptyState
+          icon={<InboxIcon className="w-5 h-5" />}
+          title="Kotak masuk draft bersih"
+          description="Tidak ada draft transaksi otomatis yang menunggu konfirmasi saat ini."
+          actionLabel="Muat Ulang"
+          onAction={loadDrafts}
+        />
+      ) : (
+        <Card className="overflow-hidden divide-y divide-border">
+          {drafts.map((d) => {
+            const isExpense = d.type === 'expense';
+            const isComplete = !!d.category_id && !!d.source;
 
-                    <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
-                      <span>{formatDateIndo(d.occurred_at)}</span>
-                      <span>·</span>
-                      <span>{d.account_name}</span>
-                      {d.category_name && (
-                        <>
-                          <span>·</span>
-                          <span>{d.category_name}</span>
-                        </>
-                      )}
-                      {d.source && (
-                        <>
-                          <span>·</span>
-                          <span className="uppercase">{d.source}</span>
-                        </>
-                      )}
-                    </div>
+            return (
+              <div
+                key={d.id}
+                className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/20 transition-colors"
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-sm text-foreground">
+                      {d.merchant || d.product_name || 'Draft Transaksi'}
+                    </span>
+                    {getDraftBadge(d.draft_state)}
+                    <StatusBadge variant="neutral">{d.origin}</StatusBadge>
+                    {d.source && <KindBadge kind={d.source} />}
                   </div>
 
-                  <div className="flex items-center justify-between sm:justify-end gap-4">
-                    <div className="text-right">
-                      <div
-                        className={`text-sm font-semibold tabular-nums ${
-                          isExpense ? 'text-expense' : 'text-income'
-                        }`}
-                      >
-                        {isExpense ? '-' : '+'}
-                        {formatCurrency(Number(d.amount), d.currency)}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground uppercase">{d.type}</div>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      {isComplete ? (
-                        <button
-                          onClick={() => handleQuickConfirm(d)}
-                          disabled={processing}
-                          type="button"
-                          title="Konfirmasi Langsung"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-foreground text-background text-xs font-medium rounded hover:opacity-90 transition-opacity"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Konfirmasi</span>
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => openCompleteModal(d)}
-                          disabled={processing}
-                          type="button"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-border text-xs font-medium rounded hover:bg-muted transition-colors"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          <span>Lengkapi</span>
-                        </button>
-                      )}
-
-                      <button
-                        onClick={() => handleReject(d.id)}
-                        disabled={processing}
-                        type="button"
-                        title="Tolak Draft"
-                        className="p-1.5 text-muted-foreground hover:text-expense rounded transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap tabular-nums">
+                    <span>{formatDateIndo(d.occurred_at)}</span>
+                    <span>•</span>
+                    <span>{d.account_name}</span>
+                    {d.category_name && (
+                      <>
+                        <span>•</span>
+                        <span>{d.category_name}</span>
+                      </>
+                    )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+
+                <div className="flex items-center justify-between sm:justify-end gap-4">
+                  <div className="text-right">
+                    <div
+                      className={`text-sm font-bold tabular-nums ${
+                        isExpense ? 'text-expense' : 'text-income'
+                      }`}
+                    >
+                      {isExpense ? '-' : '+'}
+                      {formatCurrency(Number(d.amount), d.currency)}
+                    </div>
+                    <div className="text-xs text-muted-foreground uppercase">{d.type}</div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {isComplete ? (
+                      <Button
+                        onClick={() => handleQuickConfirm(d)}
+                        disabled={processing}
+                        type="button"
+                        size="sm"
+                      >
+                        <Check className="w-4 h-4" />
+                        <span>Konfirmasi</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => openCompleteModal(d)}
+                        disabled={processing}
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                        <span>Lengkapi</span>
+                      </Button>
+                    )}
+
+                    <Button
+                      onClick={() => handleReject(d.id)}
+                      disabled={processing}
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Tolak Draft"
+                    >
+                      <Trash2 className="w-4 h-4 text-muted-foreground hover:text-expense" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </Card>
+      )}
 
       {/* Modal Lengkapi Draft */}
-      {selectedDraft && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md border border-border bg-card rounded-lg shadow-lg p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <h2 className="text-lg font-semibold">Lengkapi & Konfirmasi Draft</h2>
-              <button
-                onClick={() => setSelectedDraft(null)}
-                type="button"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
+      <Dialog
+        open={!!selectedDraft}
+        onClose={() => setSelectedDraft(null)}
+        title="Lengkapi & Konfirmasi Draft"
+      >
+        {selectedDraft && (
+          <div className="space-y-4">
             {confirmError && (
-              <div className="p-3 text-sm rounded bg-expense/10 text-expense border border-expense/20 flex items-center gap-2">
+              <div className="p-3 text-xs rounded-lg bg-expense/10 text-expense border border-expense/20 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{confirmError}</span>
               </div>
             )}
 
-            <div className="p-3 bg-muted rounded-md text-xs space-y-1">
+            <div className="p-3.5 bg-muted/50 border border-border rounded-lg text-xs space-y-1 tabular-nums">
               <div>
-                Merchant/Keterangan:{' '}
-                <strong>{selectedDraft.merchant || selectedDraft.product_name || '-'}</strong>
+                Merchant / Keterangan:{' '}
+                <strong className="text-foreground">
+                  {selectedDraft.merchant || selectedDraft.product_name || '-'}
+                </strong>
               </div>
               <div>
                 Nominal:{' '}
-                <strong>{formatCurrency(Number(selectedDraft.amount), selectedDraft.currency)}</strong>
+                <strong className="text-foreground">
+                  {formatCurrency(Number(selectedDraft.amount), selectedDraft.currency)}
+                </strong>
               </div>
               <div>Waktu: {formatDateIndo(selectedDraft.occurred_at)}</div>
-              {selectedDraft.bank_category && (
-                <div>
-                  Kategori Bank: <strong>{selectedDraft.bank_category}</strong>
-                </div>
-              )}
             </div>
 
-            {/* Rekomendasi Expected Income */}
             {matchedIncome && (
               <div className="p-3.5 rounded-lg border border-primary/30 bg-primary/5 space-y-2">
                 <div className="flex items-center gap-2 text-xs font-semibold text-primary">
                   <Sparkles className="w-4 h-4" />
                   <span>Rekomendasi Pencocokan Rencana Ditemukan</span>
                 </div>
-                <div className="text-xs text-foreground space-y-0.5">
+                <div className="text-xs text-foreground space-y-0.5 tabular-nums">
                   <div className="font-medium">{matchedIncome.title}</div>
                   <div className="text-muted-foreground">
                     Target: {formatCurrency(matchedIncome.expected_amount)} | Keyakinan:{' '}
                     <span className="font-semibold uppercase">{matchedIncome.confidence}</span>
                   </div>
                 </div>
-                <button
+                <Button
                   onClick={handleConfirmWithExpectedIncome}
                   disabled={processing}
                   type="button"
-                  className="w-full mt-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  size="sm"
+                  className="w-full"
                 >
-                  <LinkIcon className="w-3.5 h-3.5" />
+                  <LinkIcon className="w-4 h-4" />
                   <span>Konfirmasi & Tautkan ke Rencana Ini</span>
-                </button>
+                </Button>
               </div>
             )}
 
             <form onSubmit={handleCompleteSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium mb-1">Pilih Kategori</label>
-                <select
+                <label className="block text-xs font-medium text-foreground mb-1.5">Pilih Kategori</label>
+                <Select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-border rounded bg-background focus:outline-none"
                 >
                   <option value="">Pilih Kategori...</option>
                   {categories
@@ -441,43 +432,38 @@ export default function InboxPage() {
                         {c.name}
                       </option>
                     ))}
-                </select>
+                </Select>
               </div>
 
               <div>
-                <label className="block text-xs font-medium mb-1">Sumber Kegiatan</label>
-                <select
+                <label className="block text-xs font-medium text-foreground mb-1.5">Sumber Kegiatan</label>
+                <Select
                   value={selectedSource}
                   onChange={(e) => setSelectedSource(e.target.value as TransactionSource)}
-                  className="w-full px-3 py-2 text-sm border border-border rounded bg-background focus:outline-none"
                 >
-                  <option value="personal">Personal</option>
-                  <option value="intern">Intern</option>
+                  <option value="personal">Pribadi</option>
+                  <option value="intern">Magang</option>
                   <option value="freelance">Freelance</option>
                   <option value="kuliah">Kuliah</option>
-                </select>
+                </Select>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
-                <button
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setSelectedDraft(null)}
-                  className="px-4 py-2 text-sm font-medium border border-border rounded hover:bg-muted transition-colors"
                 >
                   Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={processing}
-                  className="px-4 py-2 text-sm font-medium bg-foreground text-background rounded hover:opacity-90 transition-opacity disabled:opacity-50"
-                >
+                </Button>
+                <Button type="submit" disabled={processing}>
                   {processing ? 'Menyimpan...' : 'Konfirmasi Sekarang'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
+      </Dialog>
     </div>
   );
 }

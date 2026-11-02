@@ -1,72 +1,76 @@
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:orbit_app/core/constants/app_colors.dart';
+import 'package:orbit_app/core/database/database.dart';
+import 'package:orbit_app/core/widgets/orbit_widgets.dart';
+import 'package:uuid/uuid.dart';
 
 class TasksScreen extends StatefulWidget {
-  const TasksScreen({super.key});
+  final bool embedded;
+  final bool forceLoading;
+  final String? forceError;
+
+  const TasksScreen({
+    super.key,
+    this.embedded = false,
+    this.forceLoading = false,
+    this.forceError,
+  });
 
   @override
   State<TasksScreen> createState() => _TasksScreenState();
 }
 
 class _TasksScreenState extends State<TasksScreen> {
-  final _supabase = Supabase.instance.client;
+  AppDatabase get _db => AppDatabase.shared;
+  final _uuid = const Uuid();
 
   bool _loading = true;
-  String? _workspaceId;
-  List<Map<String, dynamic>> _tasks = [];
-  List<Map<String, dynamic>> _projects = [];
-  List<Map<String, dynamic>> _accounts = [];
+  String? _errorMessage;
+  String _selectedKind = 'all'; // all | intern | freelance | kuliah | pribadi
+  String _viewMode = 'daftar'; // daftar | papan
 
-  String _filterKind = 'all';
+  List<LocalTask> _tasks = [];
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    if (widget.forceLoading) {
+      _loading = true;
+    } else if (widget.forceError != null) {
+      _loading = false;
+      _errorMessage = widget.forceError;
+    } else {
+      _loadTasks();
+    }
   }
 
-  Future<void> _loadData() async {
-    setState(() => _loading = true);
+  Future<void> _loadTasks() async {
+    if (widget.forceLoading) return;
+    setState(() {
+      _loading = true;
+      _errorMessage = widget.forceError;
+    });
+
+    if (widget.forceError != null) {
+      setState(() => _loading = false);
+      return;
+    }
 
     try {
-      final member = await _supabase
-          .from('workspace_members')
-          .select('workspace_id')
-          .limit(1)
-          .maybeSingle();
+      final tasks = await (_db.select(_db.localTasks)
+            ..orderBy([(t) => OrderingTerm.asc(t.dueAt)]))
+          .get();
 
-      if (member == null) {
-        setState(() => _loading = false);
-        return;
+      if (mounted) {
+        setState(() {
+          _tasks = tasks.where((t) => t.deletedAt == null).toList();
+        });
       }
-
-      final wsId = member['workspace_id'] as String;
-      _workspaceId = wsId;
-
-      final accRes = await _supabase
-          .from('accounts')
-          .select('id, name')
-          .eq('workspace_id', wsId)
-          .filter('deleted_at', 'is', null)
-          .order('sort_order');
-      _accounts = List<Map<String, dynamic>>.from(accRes);
-
-      final projRes = await _supabase
-          .from('projects')
-          .select('id, name, kind')
-          .eq('workspace_id', wsId)
-          .filter('deleted_at', 'is', null);
-      _projects = List<Map<String, dynamic>>.from(projRes);
-
-      final taskRes = await _supabase
-          .from('tasks')
-          .select('*, projects(name), task_checklist_items(*)')
-          .eq('workspace_id', wsId)
-          .filter('deleted_at', 'is', null)
-          .order('created_at', ascending: false);
-
-      _tasks = List<Map<String, dynamic>>.from(taskRes);
-    } catch (_) {
+    } catch (e) {
+      if (mounted) {
+        setState(() => _errorMessage = 'Gagal memuat tugas: $e');
+      }
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -74,155 +78,127 @@ class _TasksScreenState extends State<TasksScreen> {
     }
   }
 
-  Future<void> _toggleTask(Map<String, dynamic> task) async {
-    final taskId = task['id'] as String;
-    final wasDone = task['status'] == 'done';
-
-    setState(() {
-      task['status'] = wasDone ? 'todo' : 'done';
-    });
-
-    try {
-      final res = await _supabase.rpc('fn_complete_task', params: {
-        'p_task_id': taskId,
-      });
-
-      if (!wasDone && res != null && res['milestone_payment_id'] != null) {
-        final milestoneId = res['milestone_payment_id'] as String;
-        _showMilestoneConfirmDialog(milestoneId, task['title'] as String);
-      }
-    } catch (_) {
-      _loadData();
-    }
-  }
-
-  void _showMilestoneConfirmDialog(String milestoneId, String taskTitle) {
-    String? selectedAcc = _accounts.isNotEmpty ? _accounts.first['id'] as String : null;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Milestone Selesai', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Tugas "$taskTitle" terhubung dengan pembayaran termin. Tandai sebagai lunas sekarang?'),
-              const SizedBox(height: 12),
-              const Text('Akun Penerima:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 4),
-              DropdownButtonFormField<String>(
-                value: selectedAcc,
-                items: _accounts
-                    .map((a) => DropdownMenuItem(value: a['id'] as String, child: Text(a['name'] as String)))
-                    .toList(),
-                onChanged: (val) => setDialogState(() => selectedAcc = val),
-                decoration: const InputDecoration(border: OutlineInputBorder()),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Nanti')),
-            FilledButton(
-              onPressed: () async {
-                if (selectedAcc == null) return;
-                Navigator.pop(ctx);
-                try {
-                  await _supabase.rpc('fn_mark_payment_paid', params: {
-                    'p_payment_id': milestoneId,
-                    'p_account_id': selectedAcc,
-                  });
-                  _loadData();
-                } catch (_) {}
-              },
-              child: const Text('Tandai Lunas'),
-            ),
-          ],
-        ),
+  Future<void> _toggleStatus(LocalTask task) async {
+    final nextStatus = task.status == 'done' ? 'todo' : 'done';
+    await (_db.update(_db.localTasks)..where((t) => t.id.equals(task.id)))
+        .write(
+      LocalTasksCompanion(
+        status: Value(nextStatus),
+        completedAt: Value(nextStatus == 'done' ? DateTime.now() : null),
       ),
     );
+    await _loadTasks();
   }
 
-  void _showAddTaskDialog() {
-    final titleCtrl = TextEditingController();
-    String selectedKind = 'pribadi';
-    String selectedPriority = 'sedang';
-    String? selectedProject;
+  Future<void> _deleteTask(String id) async {
+    await (_db.update(_db.localTasks)..where((t) => t.id.equals(id)))
+        .write(LocalTasksCompanion(deletedAt: Value(DateTime.now())));
+    await _loadTasks();
+  }
 
-    showDialog(
+  void _showAddTaskSheet() {
+    final titleCtrl = TextEditingController();
+    String priority = 'sedang'; // tinggi | sedang | rendah
+    String selectedKind = 'kuliah';
+
+    showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppTokens.radiusLg),
+        ),
+      ),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Tambah Tugas Baru', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          content: Column(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: AppTokens.space4,
+            right: AppTokens.space4,
+            top: AppTokens.space4,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + AppTokens.space4,
+          ),
+          child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Tambah Tugas Baru',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppTokens.space3),
               TextField(
                 controller: titleCtrl,
-                decoration: const InputDecoration(labelText: 'Judul Tugas *', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'Judul Tugas',
+                ),
               ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                value: selectedKind,
-                decoration: const InputDecoration(labelText: 'Jenis Kegiatan', border: OutlineInputBorder()),
-                items: const [
-                  DropdownMenuItem(value: 'pribadi', child: Text('Pribadi')),
-                  DropdownMenuItem(value: 'intern', child: Text('Magang')),
-                  DropdownMenuItem(value: 'freelance', child: Text('Freelance')),
-                  DropdownMenuItem(value: 'kuliah', child: Text('Kuliah')),
+              const SizedBox(height: AppTokens.space3),
+              SegmentedButton<String>(
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(value: 'tinggi', label: Text('Tinggi')),
+                  ButtonSegment(value: 'sedang', label: Text('Sedang')),
+                  ButtonSegment(value: 'rendah', label: Text('Rendah')),
                 ],
-                onChanged: (val) => setDialogState(() => selectedKind = val ?? 'pribadi'),
+                selected: {priority},
+                onSelectionChanged: (s) =>
+                    setModalState(() => priority = s.first),
               ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                value: selectedPriority,
-                decoration: const InputDecoration(labelText: 'Prioritas', border: OutlineInputBorder()),
-                items: const [
-                  DropdownMenuItem(value: 'tinggi', child: Text('Tinggi')),
-                  DropdownMenuItem(value: 'sedang', child: Text('Sedang')),
-                  DropdownMenuItem(value: 'rendah', child: Text('Rendah')),
+              const SizedBox(height: AppTokens.space3),
+              Wrap(
+                spacing: AppTokens.space2,
+                runSpacing: AppTokens.space2,
+                children: [
+                  for (final k in const [
+                    'intern',
+                    'freelance',
+                    'kuliah',
+                    'pribadi',
+                  ])
+                    ChoiceChip(
+                      label: Text(AppColors.getKindLabel(k)),
+                      selected: selectedKind == k,
+                      onSelected: (_) =>
+                          setModalState(() => selectedKind = k),
+                    ),
                 ],
-                onChanged: (val) => setDialogState(() => selectedPriority = val ?? 'sedang'),
               ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                value: selectedProject,
-                decoration: const InputDecoration(labelText: 'Proyek Terkait (Opsional)', border: OutlineInputBorder()),
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('(Tanpa Proyek)')),
-                  ..._projects.map((p) => DropdownMenuItem(
-                        value: p['id'] as String,
-                        child: Text(p['name'] as String),
-                      )),
-                ],
-                onChanged: (val) => setDialogState(() => selectedProject = val),
+              const SizedBox(height: AppTokens.space4),
+              SizedBox(
+                height: AppTokens.minTouchTarget,
+                child: FilledButton(
+                  onPressed: () async {
+                    if (titleCtrl.text.trim().isEmpty) return;
+                    await _db.into(_db.localTasks).insert(
+                          LocalTasksCompanion.insert(
+                            id: _uuid.v4(),
+                            workspaceId: 'ws-local',
+                            kind: selectedKind,
+                            title: titleCtrl.text.trim(),
+                            priority: Value(priority),
+                            status: const Value('todo'),
+                            dueAt: Value(
+                              DateTime.now().add(const Duration(days: 1)),
+                            ),
+                          ),
+                        );
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    await _loadTasks();
+                  },
+                  child: const Text('Simpan Tugas'),
+                ),
               ),
             ],
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-            FilledButton(
-              onPressed: () async {
-                final title = titleCtrl.text.trim();
-                if (title.isEmpty || _workspaceId == null) return;
-                Navigator.pop(ctx);
-                try {
-                  await _supabase.from('tasks').insert({
-                    'workspace_id': _workspaceId,
-                    'title': title,
-                    'kind': selectedKind,
-                    'priority': selectedPriority,
-                    'project_id': selectedProject,
-                    'status': 'todo',
-                  });
-                  _loadData();
-                } catch (_) {}
-              },
-              child: const Text('Simpan'),
-            ),
-          ],
         ),
       ),
     );
@@ -230,118 +206,224 @@ class _TasksScreenState extends State<TasksScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final secondaryColor =
+        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+
     final filtered = _tasks.where((t) {
-      if (_filterKind != 'all' && t['kind'] != _filterKind) return false;
-      return true;
+      if (_selectedKind == 'all') return true;
+      return t.kind == _selectedKind;
     }).toList();
+
+    final content = RefreshIndicator(
+      onRefresh: _loadTasks,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          AppTokens.space4,
+          AppTokens.space3,
+          AppTokens.space4,
+          96,
+        ),
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: SegmentedButton<String>(
+                  showSelectedIcon: false,
+                  segments: const [
+                    ButtonSegment(value: 'daftar', label: Text('Daftar')),
+                    ButtonSegment(value: 'papan', label: Text('Papan')),
+                  ],
+                  selected: {_viewMode},
+                  onSelectionChanged: (s) =>
+                      setState(() => _viewMode = s.first),
+                ),
+              ),
+              const SizedBox(width: AppTokens.space2),
+              IconButton(
+                onPressed: _showAddTaskSheet,
+                tooltip: 'Tambah Tugas',
+                constraints: const BoxConstraints(
+                  minWidth: AppTokens.minTouchTarget,
+                  minHeight: AppTokens.minTouchTarget,
+                ),
+                icon: const Icon(Icons.add),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTokens.space3),
+
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final entry in const [
+                  ('all', 'Semua'),
+                  ('intern', 'Intern'),
+                  ('freelance', 'Freelance'),
+                  ('kuliah', 'Kuliah'),
+                  ('pribadi', 'Pribadi'),
+                ]) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(right: AppTokens.space2),
+                    child: ChoiceChip(
+                      label: Text(entry.$2),
+                      selected: _selectedKind == entry.$1,
+                      onSelected: (_) =>
+                          setState(() => _selectedKind = entry.$1),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: AppTokens.space4),
+
+          if (_errorMessage != null) ...[
+            OrbitErrorState(
+              message: _errorMessage!,
+              onRetry: _loadTasks,
+            ),
+            const SizedBox(height: AppTokens.space4),
+          ],
+
+          if (_loading) ...[
+            const OrbitSkeleton(height: 80),
+            const SizedBox(height: AppTokens.space3),
+            const OrbitSkeleton(height: 80),
+            const SizedBox(height: AppTokens.space3),
+            const OrbitSkeleton(height: 80),
+          ] else if (filtered.isEmpty) ...[
+            OrbitEmptyState(
+              icon: Icons.check_circle_outline,
+              title: 'Belum ada tugas aktif',
+              description:
+                  'Catat tugas kuliah, pekerjaan, atau pribadi lengkap dengan tenggat dan prioritas.',
+              actionLabel: 'Tambah Tugas',
+              onAction: _showAddTaskSheet,
+            ),
+          ] else ...[
+            for (final task in filtered) ...[
+              _buildTaskCard(context, task, secondaryColor),
+              const SizedBox(height: AppTokens.space3),
+            ],
+          ],
+        ],
+      ),
+    );
+
+    if (widget.embedded) {
+      return content;
+    }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tugas', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Tugas',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadData,
+            onPressed: _showAddTaskSheet,
+            tooltip: 'Tambah Tugas',
+            constraints: const BoxConstraints(
+              minWidth: AppTokens.minTouchTarget,
+              minHeight: AppTokens.minTouchTarget,
+            ),
+            icon: const Icon(Icons.add),
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
+      body: content,
+    );
+  }
+
+  Widget _buildTaskCard(
+    BuildContext context,
+    LocalTask task,
+    Color secondaryColor,
+  ) {
+    final isDone = task.status == 'done' || task.status == 'selesai';
+    final pNorm = task.priority.toLowerCase();
+    final priorityLabel = (pNorm == 'tinggi' || pNorm == '1')
+        ? 'Prioritas Tinggi'
+        : (pNorm == 'sedang' || pNorm == '2')
+            ? 'Prioritas Sedang'
+            : 'Prioritas Rendah';
+    final priorityVariant = (pNorm == 'tinggi' || pNorm == '1')
+        ? OrbitBadgeVariant.expense
+        : (pNorm == 'sedang' || pNorm == '2')
+            ? OrbitBadgeVariant.warning
+            : OrbitBadgeVariant.neutral;
+
+    return OrbitCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTokens.space3,
+        vertical: AppTokens.space3,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          IconButton(
+            onPressed: () => _toggleStatus(task),
+            tooltip: isDone ? 'Tandai belum selesai' : 'Tandai selesai',
+            constraints: const BoxConstraints(
+              minWidth: AppTokens.minTouchTarget,
+              minHeight: AppTokens.minTouchTarget,
+            ),
+            icon: Icon(
+              isDone ? Icons.check_circle : Icons.radio_button_unchecked,
+              color:
+                  isDone ? AppColors.incomeColor(context) : secondaryColor,
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Filter bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        FilterChip(
-                          label: const Text('Semua'),
-                          selected: _filterKind == 'all',
-                          onSelected: (_) => setState(() => _filterKind = 'all'),
-                        ),
-                        const SizedBox(width: 6),
-                        FilterChip(
-                          label: const Text('Magang'),
-                          selected: _filterKind == 'intern',
-                          onSelected: (_) => setState(() => _filterKind = 'intern'),
-                        ),
-                        const SizedBox(width: 6),
-                        FilterChip(
-                          label: const Text('Freelance'),
-                          selected: _filterKind == 'freelance',
-                          onSelected: (_) => setState(() => _filterKind = 'freelance'),
-                        ),
-                        const SizedBox(width: 6),
-                        FilterChip(
-                          label: const Text('Kuliah'),
-                          selected: _filterKind == 'kuliah',
-                          onSelected: (_) => setState(() => _filterKind = 'kuliah'),
-                        ),
-                        const SizedBox(width: 6),
-                        FilterChip(
-                          label: const Text('Pribadi'),
-                          selected: _filterKind == 'pribadi',
-                          onSelected: (_) => setState(() => _filterKind = 'pribadi'),
-                        ),
-                      ],
-                    ),
+                Text(
+                  task.title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    decoration: isDone ? TextDecoration.lineThrough : null,
                   ),
                 ),
-
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _loadData,
-                    child: filtered.isEmpty
-                        ? const Center(child: Text('Belum ada tugas yang cocok.'))
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: filtered.length,
-                            itemBuilder: (context, index) {
-                              final task = filtered[index];
-                              final isDone = task['status'] == 'done';
-                              final projName = (task['projects'] as Map<String, dynamic>?)?['name'] as String?;
-                              final checklistItems = task['task_checklist_items'] as List?;
-                              final checklistCount = checklistItems?.length ?? 0;
-                              final doneCount = checklistItems?.where((c) => c['done'] == true).length ?? 0;
-
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                child: ListTile(
-                                  leading: IconButton(
-                                    icon: Icon(
-                                      isDone ? Icons.check_circle : Icons.circle_outlined,
-                                      color: isDone ? Colors.green : Colors.grey,
-                                    ),
-                                    onPressed: () => _toggleTask(task),
-                                  ),
-                                  title: Text(
-                                    task['title'] as String? ?? '',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      decoration: isDone ? TextDecoration.lineThrough : null,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    [
-                                      if (projName != null) projName,
-                                      if (checklistCount > 0) 'Checklist: $doneCount/$checklistCount',
-                                    ].join(' • '),
-                                    style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.outline),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
+                const SizedBox(height: AppTokens.space2),
+                Wrap(
+                  spacing: AppTokens.space2,
+                  runSpacing: AppTokens.space1,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    OrbitKindBadge(kind: task.kind),
+                    OrbitStatusBadge(
+                      label: priorityLabel,
+                      variant: priorityVariant,
+                    ),
+                    if (task.dueAt != null)
+                      Text(
+                        'Tenggat: ${formatDateIndoShort(task.dueAt!)}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: secondaryColor,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddTaskDialog,
-        child: const Icon(Icons.add),
+          ),
+          IconButton(
+            onPressed: () => _deleteTask(task.id),
+            tooltip: 'Hapus Tugas',
+            constraints: const BoxConstraints(
+              minWidth: AppTokens.minTouchTarget,
+              minHeight: AppTokens.minTouchTarget,
+            ),
+            icon: const Icon(Icons.delete_outline, size: 18),
+          ),
+        ],
       ),
     );
   }

@@ -4,7 +4,20 @@ import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { formatCurrency, formatDateIndo } from '@/lib/format';
 import type { Database, AccountType, AccountVisibility } from '@/types/database';
-import { Wallet, Plus, Edit2, Archive, CheckCircle2, Lock, X } from 'lucide-react';
+import { Wallet, Plus, Edit2, Archive, CheckCircle2, Lock } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  Button,
+  Input,
+  Select,
+  Dialog,
+  StatusBadge,
+  Skeleton,
+  EmptyState,
+  ErrorState,
+  MoneySubNav,
+} from '@/components/ui';
 
 type AccountBalanceRow = Database['public']['Views']['v_account_balances']['Row'];
 
@@ -13,8 +26,8 @@ export default function AkunPage() {
   const [accounts, setAccounts] = useState<AccountBalanceRow[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Modal / Form state
   const [showModal, setShowModal] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -30,29 +43,37 @@ export default function AkunPage() {
 
   const loadAccounts = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
 
-    const { data: memberData } = await supabase
-      .from('workspace_members')
-      .select('workspace_id')
-      .limit(1)
-      .single();
+    try {
+      const { data: memberData, error: memberErr } = await supabase
+        .from('workspace_members')
+        .select('workspace_id')
+        .limit(1)
+        .single();
 
-    if (!memberData) {
+      if (memberErr) throw memberErr;
+      if (!memberData) {
+        setLoading(false);
+        return;
+      }
+
+      setWorkspaceId(memberData.workspace_id);
+
+      const { data, error } = await supabase
+        .from('v_account_balances')
+        .select('*')
+        .order('sort_order');
+
+      if (error) throw error;
+      if (data) {
+        setAccounts(data);
+      }
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : 'Gagal memuat daftar akun.');
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setWorkspaceId(memberData.workspace_id);
-
-    const { data } = await supabase
-      .from('v_account_balances')
-      .select('*')
-      .order('sort_order');
-
-    if (data) {
-      setAccounts(data);
-    }
-    setLoading(false);
   }, [supabase]);
 
   useEffect(() => {
@@ -156,238 +177,228 @@ export default function AkunPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Akun & Dompet</h1>
-          <p className="text-sm text-muted-foreground">
-            Daftar saldo riil dihitung dari saldo awal dan seluruh transaksi terkonfirmasi
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Uang</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Daftar akun dan dompet beserta saldo riil dari transaksi terkonfirmasi
           </p>
         </div>
 
-        <button
-          onClick={openCreateModal}
-          type="button"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm font-medium rounded-md hover:opacity-90 transition-opacity"
-        >
+        <Button onClick={openCreateModal}>
           <Plus className="w-4 h-4" />
           <span>Tambah Akun</span>
-        </button>
+        </Button>
       </div>
+
+      <MoneySubNav />
 
       {/* Saldo Likuid Card */}
-      <div className="p-5 bg-card border border-border rounded-lg flex items-center justify-between">
-        <div>
-          <div className="text-xs text-muted-foreground uppercase font-medium tracking-wider">
-            Total Saldo Likuid (IDR)
+      <Card>
+        <CardContent className="p-5 flex items-center justify-between">
+          <div>
+            <div className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">
+              Total Saldo Likuid (IDR)
+            </div>
+            <div className="text-2xl font-bold tabular-nums mt-1 text-foreground">
+              {formatCurrency(totalLiquid, 'IDR')}
+            </div>
           </div>
-          <div className="text-2xl font-semibold tabular-nums mt-1">
-            {formatCurrency(totalLiquid, 'IDR')}
+          <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+            <Wallet className="w-5 h-5" />
           </div>
-        </div>
-        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-foreground">
-          <Wallet className="w-5 h-5" />
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Daftar Akun */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {loading ? (
-          <div className="col-span-full p-8 text-center text-sm text-muted-foreground">
-            Memuat daftar akun...
-          </div>
-        ) : accounts.length === 0 ? (
-          <div className="col-span-full p-8 text-center text-sm text-muted-foreground border border-border bg-card rounded-lg">
-            Belum ada akun terdaftar
-          </div>
-        ) : (
-          accounts.map((a) => (
-            <div
+      {loadError ? (
+        <ErrorState message={loadError} onRetry={loadAccounts} />
+      ) : loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" aria-busy="true">
+          <Skeleton className="h-44 w-full" />
+          <Skeleton className="h-44 w-full" />
+          <Skeleton className="h-44 w-full" />
+        </div>
+      ) : accounts.length === 0 ? (
+        <EmptyState
+          icon={<Wallet className="w-5 h-5" />}
+          title="Belum ada akun terdaftar"
+          description="Tambahkan rekening bank, dompet tunai, atau e-wallet untuk mulai mencatat transaksi."
+          actionLabel="Tambah Akun"
+          onAction={openCreateModal}
+        />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {accounts.map((a) => (
+            <Card
               key={a.account_id}
-              className={`p-5 border border-border bg-card rounded-lg flex flex-col justify-between space-y-4 ${
+              className={`flex flex-col justify-between ${
                 a.archived ? 'opacity-60 bg-muted/20' : ''
               }`}
             >
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-base">{a.name}</span>
-                    {a.visibility === 'private' && (
-                      <span title="Akun Privat (Hanya Anda yang melihat)">
-                        <Lock className="w-3.5 h-3.5 text-muted-foreground" />
-                      </span>
-                    )}
+              <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-base text-foreground">{a.name}</span>
+                      {a.visibility === 'private' && (
+                        <span title="Akun Privat">
+                          <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+                        </span>
+                      )}
+                    </div>
+                    <StatusBadge variant="neutral">{a.type}</StatusBadge>
                   </div>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                    {a.type}
-                  </span>
-                </div>
 
-                <div className="text-xs text-muted-foreground mt-1">
-                  Mata Uang: {a.currency} • {a.is_liquid ? 'Likuid' : 'Non-Likuid'}
-                </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Mata Uang: {a.currency} • {a.is_liquid ? 'Likuid' : 'Non-Likuid'}
+                  </div>
 
-                <div className="mt-4">
-                  <div className="text-xs text-muted-foreground">Saldo Saat Ini</div>
-                  <div className="text-xl font-semibold tabular-nums mt-0.5">
-                    {formatCurrency(Number(a.balance ?? 0), a.currency ?? 'IDR')}
+                  <div className="mt-4">
+                    <div className="text-xs text-muted-foreground">Saldo Saat Ini</div>
+                    <div className="text-xl font-bold tabular-nums mt-0.5 text-foreground">
+                      {formatCurrency(Number(a.balance ?? 0), a.currency ?? 'IDR')}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="pt-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-                <div>
-                  {a.last_txn_at ? `Txn: ${formatDateIndo(a.last_txn_at)}` : 'Belum ada transaksi'}
+                <div className="pt-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="tabular-nums">
+                    {a.last_txn_at ? `Txn: ${formatDateIndo(a.last_txn_at)}` : 'Belum ada transaksi'}
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <Button
+                      onClick={() => openEditModal(a)}
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`Ubah ${a.name}`}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      onClick={() => toggleArchive(a.account_id ?? '', a.archived ?? false)}
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={a.archived ? `Buka Arsip ${a.name}` : `Arsipkan ${a.name}`}
+                    >
+                      {a.archived ? (
+                        <CheckCircle2 className="w-4 h-4 text-income" />
+                      ) : (
+                        <Archive className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => openEditModal(a)}
-                    type="button"
-                    title="Edit Akun"
-                    className="p-1 hover:text-foreground transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => toggleArchive(a.account_id ?? '', a.archived ?? false)}
-                    type="button"
-                    title={a.archived ? 'Buka Arsip' : 'Arsipkan'}
-                    className="p-1 hover:text-foreground transition-colors"
-                  >
-                    {a.archived ? (
-                      <CheckCircle2 className="w-4 h-4 text-income" />
-                    ) : (
-                      <Archive className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Modal Form Akun */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md border border-border bg-card rounded-lg shadow-lg p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <h2 className="text-lg font-semibold">
-                {formMode === 'create' ? 'Tambah Akun Baru' : 'Edit Akun'}
-              </h2>
-              <button
-                onClick={() => setShowModal(false)}
-                type="button"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {formError && (
-              <div className="p-3 text-sm rounded bg-expense/10 text-expense border border-expense/20">
-                {formError}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium mb-1">Nama Akun</label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Contoh: BCA Utama, Dompet Saku, GoPay"
-                  className="w-full px-3 py-2 text-sm border border-border rounded bg-background focus:outline-none focus:ring-1 focus:ring-foreground"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium mb-1">Jenis</label>
-                  <select
-                    value={type}
-                    onChange={(e) => setType(e.target.value as AccountType)}
-                    className="w-full px-3 py-2 text-sm border border-border rounded bg-background focus:outline-none"
-                  >
-                    <option value="bank">Bank</option>
-                    <option value="cash">Cash / Tunai</option>
-                    <option value="e_wallet">E-Wallet</option>
-                    <option value="credit_card">Kartu Kredit</option>
-                    <option value="savings">Tabungan</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium mb-1">Mata Uang</label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={3}
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-                    placeholder="IDR"
-                    className="w-full px-3 py-2 text-sm border border-border rounded bg-background focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium mb-1">Saldo Awal (Rp)</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={initialBalance}
-                  onChange={(e) => setInitialBalance(e.target.value)}
-                  placeholder="0"
-                  className="w-full px-3 py-2 text-sm border border-border rounded bg-background focus:outline-none tabular-nums"
-                />
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  Saldo riil dihitung otomatis: Saldo Awal + Transaksi Terkonfirmasi.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={isLiquid}
-                    onChange={(e) => setIsLiquid(e.target.checked)}
-                    className="rounded border-border"
-                  />
-                  <span>Akun Likuid (Siap Pakai)</span>
-                </label>
-
-                <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={visibility === 'private'}
-                    onChange={(e) => setVisibility(e.target.checked ? 'private' : 'shared')}
-                    className="rounded border-border"
-                  />
-                  <span>Akun Privat</span>
-                </label>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-sm font-medium border border-border rounded hover:bg-muted transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 text-sm font-medium bg-foreground text-background rounded hover:opacity-90 transition-opacity disabled:opacity-50"
-                >
-                  {submitting ? 'Menyimpan...' : 'Simpan Akun'}
-                </button>
-              </div>
-            </form>
-          </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
+
+      {/* Modal Form Akun */}
+      <Dialog
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={formMode === 'create' ? 'Tambah Akun Baru' : 'Ubah Akun'}
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {formError && (
+            <div className="p-3 text-xs rounded-lg bg-expense/10 text-expense border border-expense/20">
+              {formError}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1.5">Nama Akun</label>
+            <Input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Contoh: BCA Utama, Dompet Saku, GoPay"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1.5">Jenis</label>
+              <Select
+                value={type}
+                onChange={(e) => setType(e.target.value as AccountType)}
+              >
+                <option value="bank">Bank</option>
+                <option value="cash">Cash / Tunai</option>
+                <option value="e_wallet">E-Wallet</option>
+                <option value="credit_card">Kartu Kredit</option>
+                <option value="savings">Tabungan</option>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1.5">Mata Uang</label>
+              <Input
+                type="text"
+                required
+                maxLength={3}
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+                placeholder="IDR"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1.5">Saldo Awal (Rp)</label>
+            <Input
+              type="number"
+              step="any"
+              value={initialBalance}
+              onChange={(e) => setInitialBalance(e.target.value)}
+              placeholder="0"
+              className="tabular-nums"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Saldo riil dihitung otomatis: Saldo Awal + Transaksi Terkonfirmasi.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <label className="flex items-center gap-2.5 text-xs font-medium cursor-pointer select-none min-h-11">
+              <input
+                type="checkbox"
+                checked={isLiquid}
+                onChange={(e) => setIsLiquid(e.target.checked)}
+                className="w-4 h-4 rounded border-border text-primary"
+              />
+              <span>Akun Likuid (Siap Pakai)</span>
+            </label>
+
+            <label className="flex items-center gap-2.5 text-xs font-medium cursor-pointer select-none min-h-11">
+              <input
+                type="checkbox"
+                checked={visibility === 'private'}
+                onChange={(e) => setVisibility(e.target.checked ? 'private' : 'shared')}
+                className="w-4 h-4 rounded border-border text-primary"
+              />
+              <span>Akun Privat</span>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowModal(false)}
+            >
+              Batal
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Menyimpan...' : 'Simpan Akun'}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
     </div>
   );
 }

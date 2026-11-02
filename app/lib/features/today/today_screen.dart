@@ -1,167 +1,189 @@
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
 import 'package:orbit_app/core/database/database.dart';
-import 'package:orbit_app/features/accounts/accounts_screen.dart';
+import 'package:orbit_app/core/widgets/orbit_widgets.dart';
+import 'package:orbit_app/core/widgets/transaction_form_sheet.dart';
 import 'package:orbit_app/features/inbox/inbox_screen.dart';
-import 'package:intl/intl.dart';
 
 class TodayScreen extends StatefulWidget {
-  const TodayScreen({super.key});
+  final bool forceLoading;
+  final String? forceError;
+
+  const TodayScreen({
+    super.key,
+    this.forceLoading = false,
+    this.forceError,
+  });
 
   @override
   State<TodayScreen> createState() => _TodayScreenState();
 }
 
 class _TodayScreenState extends State<TodayScreen> {
-  final _supabase = Supabase.instance.client;
-  final _db = AppDatabase.shared;
+  AppDatabase get _db => AppDatabase.shared;
 
   bool _loading = true;
+  String? _errorMessage;
   String _selectedKind = 'all'; // all, intern, freelance, kuliah, pribadi
 
-  List<Map<String, dynamic>> _agendaItems = [];
-  List<Map<String, dynamic>> _conflicts = [];
+  List<Map<String, dynamic>> _events = [];
+  List<Map<String, dynamic>> _tasks = [];
+  bool _hasConflict = false;
+  String? _conflictDescription;
   bool _isHeavyDay = false;
-  double _liquidBalance = 0.0;
-  int _draftCount = 0;
-  List<Map<String, dynamic>> _accounts = [];
 
-  final _currencyFormatter =
-      NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
-  final _today = DateTime.now();
-  late final String _todayStr = DateFormat('yyyy-MM-dd').format(_today);
+  double _liquidBalance = 0.0;
+  double _todayIncome = 0.0;
+  double _todayExpense = 0.0;
+  int _draftCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    if (widget.forceLoading) {
+      _loading = true;
+    } else if (widget.forceError != null) {
+      _loading = false;
+      _errorMessage = widget.forceError;
+    } else {
+      _loadData();
+    }
+  }
+
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 11) return 'Selamat Pagi';
+    if (hour < 15) return 'Selamat Siang';
+    if (hour < 18) return 'Selamat Sore';
+    return 'Selamat Malam';
   }
 
   Future<void> _loadData() async {
-    setState(() => _loading = true);
+    if (widget.forceLoading) return;
+    setState(() {
+      _loading = true;
+      _errorMessage = widget.forceError;
+    });
+
+    if (widget.forceError != null) {
+      setState(() => _loading = false);
+      return;
+    }
 
     try {
-      final user = _supabase.auth.currentUser;
-      if (user == null) {
-        setState(() => _loading = false);
-        return;
-      }
+      final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day);
+      final endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
-      // Ambil workspace aktif
-      final member = await _supabase
-          .from('workspace_members')
-          .select('workspace_id')
-          .limit(1)
-          .maybeSingle();
+      // 1. Baca data lokal dari Drift terlebih dahulu (offline-first)
+      final localAccs = await _db.select(_db.localAccounts).get();
+      final localEvts = await _db.select(_db.localEvents).get();
+      final localTsks = await _db.select(_db.localTasks).get();
+      final localTxs = await _db.select(_db.localTransactions).get();
 
-      if (member == null) {
-        setState(() => _loading = false);
-        return;
-      }
-
-      final wsId = member['workspace_id'] as String;
-
-      // Ambil daftar akun
-      final accRes = await _supabase
-          .from('accounts')
-          .select('id, name')
-          .eq('workspace_id', wsId)
-          .filter('deleted_at', 'is', null)
-          .order('sort_order');
-      _accounts = List<Map<String, dynamic>>.from(accRes);
-
-      // Panggil fn_agenda
-      final kindFilter = _selectedKind == 'all' ? null : _selectedKind;
-      final agendaRes = await _supabase.rpc('fn_agenda', params: {
-        'p_workspace_id': wsId,
-        'p_start_date': _todayStr,
-        'p_end_date': _todayStr,
-        'p_kind': kindFilter,
-      });
-
-      if (agendaRes != null) {
-        _agendaItems = List<Map<String, dynamic>>.from(agendaRes);
-
-        // Cache lokal di Drift untuk ketersediaan offline (PRD M10c)
-        try {
-          for (final item in _agendaItems) {
-            await _db.into(_db.localAgendaCache).insertOnConflictUpdate(
-                  LocalAgendaCacheCompanion.insert(
-                    id: item['id'] as String,
-                    workspaceId: wsId,
-                    itemType: item['item_type'] as String,
-                    kind: item['kind'] as String,
-                    title: item['title'] as String,
-                    status: item['status'] as String,
-                    cachedDate: _todayStr,
-                  ),
-                );
-          }
-        } catch (_) {}
-      }
-
-      // Panggil fn_detect_conflicts
-      final conflictRes = await _supabase.rpc('fn_detect_conflicts', params: {
-        'p_workspace_id': wsId,
-        'p_start_date': _todayStr,
-        'p_end_date': _todayStr,
-      });
-
-      if (conflictRes != null) {
-        final rawList = List<Map<String, dynamic>>.from(conflictRes);
-        _conflicts = rawList.where((c) => c['event1_id'] != null).toList();
-        _isHeavyDay = rawList.any((c) => c['is_heavy_day'] == true);
-      }
-
-      // Ambil saldo likuid
-      final balRes = await _supabase
-          .from('v_account_balances')
-          .select('balance, is_liquid')
-          .eq('workspace_id', wsId);
-
-      double total = 0.0;
-      for (final b in balRes) {
-        if (b['is_liquid'] == true) {
-          total += (b['balance'] as num?)?.toDouble() ?? 0.0;
+      double bal = 0;
+      for (final a in localAccs) {
+        if (a.isLiquid && !a.archived) {
+          bal += a.currentBalance;
         }
       }
-      _liquidBalance = total;
 
-      // Hitung draft di Inbox
-      final draftRes = await _supabase
-          .from('transactions')
-          .select('id')
-          .eq('workspace_id', wsId)
-          .eq('status', 'draft')
-          .filter('deleted_at', 'is', null);
+      double inc = 0;
+      double exp = 0;
+      int drafts = 0;
+      for (final t in localTxs) {
+        if (t.deletedAt != null) continue;
+        if (t.status == 'draft') {
+          drafts++;
+          continue;
+        }
+        if (t.occurredAt.isAfter(startOfDay.subtract(const Duration(seconds: 1))) &&
+            t.occurredAt.isBefore(endOfDay.add(const Duration(seconds: 1)))) {
+          if (t.type == 'income') inc += t.amount;
+          if (t.type == 'expense') exp += t.amount;
+        }
+        if (bal == 0) {
+          if (t.type == 'income') bal += t.amount;
+          if (t.type == 'expense') bal -= t.amount;
+        }
+      }
 
-      _draftCount = (draftRes as List).length;
-    } catch (_) {
-      // Jika offline, baca dari Drift LocalAgendaCache
-      try {
-        final cached = await (_db.select(_db.localAgendaCache)
-              ..where((tbl) => tbl.cachedDate.equals(_todayStr)))
-            .get();
+      final filteredEvts = localEvts
+          .where((e) =>
+              e.deletedAt == null &&
+              (_selectedKind == 'all' || e.kind == _selectedKind))
+          .map((e) => {
+                'id': e.id,
+                'title': e.title,
+                'kind': e.kind,
+                'starts_at': e.startsAt,
+                'ends_at': e.endsAt,
+                'all_day': e.allDay,
+                'location': e.location,
+              })
+          .toList();
 
-        _agendaItems = cached
-            .map((c) => {
-                  'id': c.id,
-                  'item_type': c.itemType,
-                  'kind': c.kind,
-                  'title': c.title,
-                  'status': c.status,
-                  'is_overdue': c.isOverdue,
-                  'starts_at': c.startsAt?.toIso8601String(),
-                  'ends_at': c.endsAt?.toIso8601String(),
-                  'all_day': c.allDay,
-                  'location': c.location,
-                  'checklist_total': c.checklistTotal,
-                  'checklist_done': c.checklistDone,
-                  'project_name': c.projectName,
-                })
-            .toList();
-      } catch (_) {}
+      // Deteksi benturan waktu antar-jadwal
+      bool conflict = false;
+      String? conflictText;
+      int totalMinutes = 0;
+      for (int i = 0; i < filteredEvts.length; i++) {
+        final aStart = filteredEvts[i]['starts_at'] as DateTime;
+        final aEnd = filteredEvts[i]['ends_at'] as DateTime;
+        totalMinutes += aEnd.difference(aStart).inMinutes.clamp(0, 1440);
+        for (int j = i + 1; j < filteredEvts.length; j++) {
+          final bStart = filteredEvts[j]['starts_at'] as DateTime;
+          final bEnd = filteredEvts[j]['ends_at'] as DateTime;
+          if (aStart.isBefore(bEnd) && bStart.isBefore(aEnd)) {
+            conflict = true;
+            conflictText =
+                '"${filteredEvts[i]['title']}" berbenturan dengan "${filteredEvts[j]['title']}".';
+          }
+        }
+      }
+
+      final filteredTasks = localTsks
+          .where((t) =>
+              t.deletedAt == null &&
+              (_selectedKind == 'all' || t.kind == _selectedKind))
+          .map((t) {
+            final isOverdue = t.dueAt != null &&
+                t.dueAt!.isBefore(startOfDay) &&
+                t.status != 'selesai' &&
+                t.status != 'done';
+            return {
+              'id': t.id,
+              'title': t.title,
+              'kind': t.kind,
+              'status': t.status,
+              'priority': t.priority,
+              'due_at': t.dueAt,
+              'is_overdue': isOverdue,
+            };
+          })
+          .toList();
+
+      if (mounted) {
+        setState(() {
+          _events = filteredEvts;
+          _tasks = filteredTasks;
+          _hasConflict = conflict;
+          _conflictDescription = conflictText;
+          _isHeavyDay = totalMinutes >= 480;
+          _liquidBalance = bal;
+          _todayIncome = inc;
+          _todayExpense = exp;
+          _draftCount = drafts;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Gagal memuat ringkasan hari ini: $e';
+        });
+      }
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -169,269 +191,59 @@ class _TodayScreenState extends State<TodayScreen> {
     }
   }
 
-  // Toggle status tugas selesai via fn_complete_task
-  Future<void> _toggleTask(Map<String, dynamic> task) async {
-    final taskId = task['id'] as String;
-    final wasDone = task['status'] == 'done';
+  Future<void> _toggleTaskStatus(Map<String, dynamic> task) async {
+    final id = task['id'] as String;
+    final currentStatus = task['status'] as String;
+    final isDone = currentStatus == 'done' || currentStatus == 'selesai';
+    final nextStatus = isDone ? 'hari_ini' : 'selesai';
 
-    // Optimistic UI update
-    setState(() {
-      task['status'] = wasDone ? 'todo' : 'done';
-    });
-
-    try {
-      final res = await _supabase.rpc('fn_complete_task', params: {
-        'p_task_id': taskId,
-      });
-
-      // Jika tugas selesai memiliki milestone payment, tawarkan pelunasan
-      if (!wasDone && res != null && res['milestone_payment_id'] != null) {
-        final milestoneId = res['milestone_payment_id'] as String;
-        _showMilestoneConfirmDialog(milestoneId, task['title'] as String);
-      }
-    } catch (_) {
-      _loadData();
-    }
-  }
-
-  // Dialog konfirmasi pelunasan termin
-  void _showMilestoneConfirmDialog(String milestoneId, String taskTitle) {
-    String? selectedAccount =
-        _accounts.isNotEmpty ? _accounts.first['id'] as String : null;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Pelunasan Milestone',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Tugas "$taskTitle" terhubung dengan pembayaran termin freelance. Tandai lunas sekarang?',
-                style: const TextStyle(fontSize: 13),
-              ),
-              const SizedBox(height: 12),
-              const Text('Akun Penerima:',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 4),
-              DropdownButtonFormField<String>(
-                value: selectedAccount,
-                items: _accounts
-                    .map((acc) => DropdownMenuItem(
-                          value: acc['id'] as String,
-                          child: Text(acc['name'] as String,
-                              style: const TextStyle(fontSize: 13)),
-                        ))
-                    .toList(),
-                onChanged: (val) => setDialogState(() => selectedAccount = val),
-                decoration: const InputDecoration(
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Nanti'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                if (selectedAccount == null) return;
-                Navigator.pop(ctx);
-                try {
-                  await _supabase.rpc('fn_mark_payment_paid', params: {
-                    'p_payment_id': milestoneId,
-                    'p_account_id': selectedAccount,
-                  });
-                  _loadData();
-                } catch (_) {}
-              },
-              child: const Text('Tandai Lunas'),
-            ),
-          ],
-        ),
+    await (_db.update(_db.localTasks)..where((t) => t.id.equals(id))).write(
+      LocalTasksCompanion(
+        status: Value(nextStatus),
+        completedAt: Value(isDone ? null : DateTime.now()),
       ),
     );
-  }
-
-  Future<void> _showAccountSecuritySheet() async {
-    final user = _supabase.auth.currentUser;
-    final newPassCtrl = TextEditingController();
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.asset(
-                    'assets/images/orbit_icon.png',
-                    width: 36,
-                    height: 36,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Akun & Keamanan Orbit',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                      ),
-                      Text(
-                        user?.email ?? '-',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.outline,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: newPassCtrl,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Kata Sandi Baru (Min. 6 Karakter)',
-                prefixIcon: Icon(Icons.lock_reset, size: 20),
-              ),
-            ),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: () async {
-                final pass = newPassCtrl.text.trim();
-                if (pass.length < 6) return;
-                try {
-                  await _supabase.auth.updateUser(UserAttributes(password: pass));
-                  if (ctx.mounted) {
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      const SnackBar(content: Text('Kata sandi berhasil diperbarui.')),
-                    );
-                  }
-                } catch (e) {
-                  if (ctx.mounted) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(content: Text('Gagal memperbarui sandi: $e')),
-                    );
-                  }
-                }
-              },
-              child: const Text('Perbarui Kata Sandi'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: () async {
-                Navigator.pop(ctx);
-                await _supabase.auth.signOut();
-              },
-              icon: const Icon(Icons.logout, color: AppColors.expense, size: 18),
-              label: const Text(
-                'Keluar dari Akun',
-                style: TextStyle(color: AppColors.expense, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Color _getKindColor(String kind) {
-    switch (kind) {
-      case 'intern':
-        return AppColors.kindIntern;
-      case 'freelance':
-        return AppColors.kindFreelance;
-      case 'kuliah':
-        return AppColors.kindKuliah;
-      default:
-        return AppColors.kindPribadi;
-    }
-  }
-
-  String _getKindLabel(String kind) {
-    switch (kind) {
-      case 'intern':
-        return 'Magang';
-      case 'freelance':
-        return 'Freelance';
-      case 'kuliah':
-        return 'Kuliah';
-      default:
-        return 'Pribadi';
-    }
+    await _loadData();
   }
 
   @override
   Widget build(BuildContext context) {
-    final overdueTasks = _agendaItems
-        .where((i) => i['item_type'] == 'task' && i['is_overdue'] == true)
-        .toList();
-    final events =
-        _agendaItems.where((i) => i['item_type'] == 'event').toList();
-    final todayTasks = _agendaItems
-        .where((i) => i['item_type'] == 'task' && i['is_overdue'] != true)
-        .toList();
-
-    String dateFormatted;
-    try {
-      dateFormatted = DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(_today);
-    } catch (_) {
-      dateFormatted = _todayStr;
-    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final now = DateTime.now();
 
     return Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppTokens.radiusMd),
               child: Image.asset(
                 'assets/images/orbit_icon.png',
-                width: 34,
-                height: 34,
+                width: 32,
+                height: 32,
                 fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Icon(Icons.public, size: 28),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppTokens.space3),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Hari Ini',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                  Text(
+                    _greeting(),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   Text(
-                    dateFormatted,
+                    formatDateIndoShort(now),
                     style: TextStyle(
-                      fontSize: 11,
-                      color: Theme.of(context).colorScheme.outline,
+                      fontSize: 12,
+                      color: isDark
+                          ? AppColors.darkTextSecondary
+                          : AppColors.lightTextSecondary,
                     ),
                   ),
                 ],
@@ -441,328 +253,410 @@ class _TodayScreenState extends State<TodayScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.account_balance_wallet_outlined, size: 21),
-            tooltip: 'Akun & Dompet',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AccountsScreen()),
-              ).then((_) => _loadData());
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.inbox_outlined, size: 21),
-            tooltip: 'Inbox Draft',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const InboxScreen()),
-              ).then((_) => _loadData());
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.manage_accounts_outlined, size: 21),
-            tooltip: 'Akun & Sandi',
-            onPressed: _showAccountSecuritySheet,
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh, size: 21),
             onPressed: _loadData,
+            tooltip: 'Muat ulang ringkasan hari ini',
+            constraints: const BoxConstraints(
+              minWidth: AppTokens.minTouchTarget,
+              minHeight: AppTokens.minTouchTarget,
+            ),
+            icon: const Icon(Icons.refresh),
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadData,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
+      body: RefreshIndicator(
+        onRefresh: _loadData,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppTokens.space4,
+            AppTokens.space3,
+            AppTokens.space4,
+            96,
+          ),
+          children: [
+            // Filter Chip Jenis Kegiatan
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
                 children: [
-                  // Hero Financial & Activity Banner
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      gradient: AppColors.brandGradient,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.brandIndigo.withValues(alpha: 0.3),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
+                  for (final entry in const [
+                    MapEntry('all', 'Semua'),
+                    MapEntry('intern', 'Intern'),
+                    MapEntry('freelance', 'Freelance'),
+                    MapEntry('kuliah', 'Kuliah'),
+                    MapEntry('pribadi', 'Pribadi'),
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.only(right: AppTokens.space2),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minHeight: AppTokens.minTouchTarget,
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'TOTAL SALDO LIKUID',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1.1,
-                                color: Colors.white70,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.18),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                '$_draftCount Draft Inbox',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _currencyFormatter.format(_liquidBalance),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            _buildHeroStatPill(
-                              Icons.event_available,
-                              '${events.length} Agenda',
-                            ),
-                            const SizedBox(width: 8),
-                            _buildHeroStatPill(
-                              Icons.task_alt,
-                              '${todayTasks.where((t) => t['status'] == 'done').length}/${todayTasks.length + overdueTasks.length} Tugas',
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Filter Chips
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        FilterChip(
-                          label: const Text('Semua'),
-                          selected: _selectedKind == 'all',
+                        child: ChoiceChip(
+                          label: Text(entry.value),
+                          selected: _selectedKind == entry.key,
                           onSelected: (_) {
-                            setState(() => _selectedKind = 'all');
+                            setState(() => _selectedKind = entry.key);
                             _loadData();
                           },
                         ),
-                        const SizedBox(width: 6),
-                        ...['intern', 'freelance', 'kuliah', 'pribadi']
-                            .map((k) => Padding(
-                                  padding: const EdgeInsets.only(right: 6),
-                                  child: FilterChip(
-                                    label: Text(_getKindLabel(k)),
-                                    selected: _selectedKind == k,
-                                    onSelected: (_) {
-                                      setState(() => _selectedKind = k);
-                                      _loadData();
-                                    },
-                                  ),
-                                )),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Peringatan Benturan & Hari Padat
-                  if (_conflicts.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.expense.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                            color: AppColors.expense.withValues(alpha: 0.4)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.warning_amber_rounded,
-                              color: AppColors.expense, size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Benturan Jadwal: ${_conflicts.first['event1_title']} tumpang tindih waktu.',
-                              style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.expense,
-                                  fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ],
                       ),
                     ),
-
-                  if (_isHeavyDay)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.warning.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                            color: AppColors.warning.withValues(alpha: 0.4)),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.info_outline,
-                              color: AppColors.warning, size: 20),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Hari Padat: Durasi jadwal kegiatan mencapai >= 8 jam.',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.warning,
-                                  fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  // Tugas Terlambat (Overdue) - Di Atas
-                  if (overdueTasks.isNotEmpty) ...[
-                    const Text('Tugas Terlambat',
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.expense)),
-                    const SizedBox(height: 6),
-                    ...overdueTasks
-                        .map((t) => _buildTaskTile(t, isOverdue: true)),
-                    const SizedBox(height: 16),
-                  ],
-
-                  // Jadwal Hari Ini
-                  const Text('Jadwal Kegiatan',
-                      style:
-                          TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
-                  if (events.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        border: Border.all(color: Theme.of(context).dividerColor),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Center(
-                        child: Text('Tidak ada jadwal untuk hari ini.',
-                            style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      ),
-                    )
-                  else
-                    ...events.map(_buildEventTile),
-                  const SizedBox(height: 16),
-
-                  // Tugas Hari Ini
-                  const Text('Tugas Hari Ini',
-                      style:
-                          TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
-                  if (todayTasks.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        border: Border.all(color: Theme.of(context).dividerColor),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Center(
-                        child: Text('Semua tugas hari ini telah rampung.',
-                            style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      ),
-                    )
-                  else
-                    ...todayTasks
-                        .map((t) => _buildTaskTile(t, isOverdue: false)),
                 ],
               ),
             ),
+            const SizedBox(height: AppTokens.space4),
+
+            if (_errorMessage != null) ...[
+              OrbitErrorState(
+                message: _errorMessage!,
+                onRetry: _loadData,
+              ),
+              const SizedBox(height: AppTokens.space4),
+            ],
+
+            if (_loading) ...[
+              const OrbitSkeleton(height: 112),
+              const SizedBox(height: AppTokens.space4),
+              const OrbitSkeleton(height: 128),
+              const SizedBox(height: AppTokens.space4),
+              const OrbitSkeleton(height: 112),
+            ] else ...[
+              // Peringatan Benturan Jadwal / Hari Padat
+              if (_hasConflict && _conflictDescription != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(AppTokens.space3),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColors.expenseSubtleDark
+                        : AppColors.expenseSubtleLight,
+                    borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+                    border: Border.all(
+                      color: AppColors.expenseColor(context).withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        size: 20,
+                        color: AppColors.expenseColor(context),
+                      ),
+                      const SizedBox(width: AppTokens.space2),
+                      Expanded(
+                        child: Text(
+                          'Benturan Jadwal: $_conflictDescription',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.expenseColor(context),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppTokens.space3),
+              ],
+
+              if (_isHeavyDay) ...[
+                Container(
+                  padding: const EdgeInsets.all(AppTokens.space3),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColors.warningSubtleDark
+                        : AppColors.warningSubtleLight,
+                    borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+                    border: Border.all(
+                      color: AppColors.warningColor(context).withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.schedule,
+                        size: 20,
+                        color: AppColors.warningColor(context),
+                      ),
+                      const SizedBox(width: AppTokens.space2),
+                      Expanded(
+                        child: Text(
+                          'Hari Padat: Total durasi jadwal mencapai 8 jam atau lebih.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.warningColor(context),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppTokens.space3),
+              ],
+
+              // 1. Bagian Jadwal Hari Ini (Sesuai Urutan PRD M10c)
+              _buildSectionHeader(
+                context,
+                icon: Icons.event_note_outlined,
+                title: 'Jadwal Hari Ini',
+                countLabel: '${_events.length}',
+              ),
+              const SizedBox(height: AppTokens.space2),
+              if (_events.isEmpty)
+                const OrbitEmptyState(
+                  icon: Icons.calendar_today_outlined,
+                  title: 'Belum ada jadwal hari ini',
+                  description:
+                      'Gunakan tombol + di kanan bawah untuk menambahkan jadwal baru.',
+                )
+              else
+                OrbitCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    children: [
+                      for (int i = 0; i < _events.length; i++) ...[
+                        if (i > 0) const Divider(height: 1),
+                        _buildEventRow(context, _events[i]),
+                      ],
+                    ],
+                  ),
+                ),
+              const SizedBox(height: AppTokens.space6),
+
+              // 2. Bagian Tugas Hari Ini & Terlambat
+              _buildSectionHeader(
+                context,
+                icon: Icons.check_circle_outline,
+                title: 'Tugas Prioritas',
+                countLabel: '${_tasks.length}',
+              ),
+              const SizedBox(height: AppTokens.space2),
+              if (_tasks.isEmpty)
+                const OrbitEmptyState(
+                  icon: Icons.task_alt_outlined,
+                  title: 'Tidak ada tugas jatuh tempo',
+                  description: 'Semua tugas hari ini sudah selesai.',
+                )
+              else
+                OrbitCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    children: [
+                      for (int i = 0; i < _tasks.length; i++) ...[
+                        if (i > 0) const Divider(height: 1),
+                        _buildTaskRow(context, _tasks[i]),
+                      ],
+                    ],
+                  ),
+                ),
+              const SizedBox(height: AppTokens.space6),
+
+              // 3. Bagian Ringkasan Uang Hari Itu
+              _buildSectionHeader(
+                context,
+                icon: Icons.account_balance_wallet_outlined,
+                title: 'Ringkasan Uang Hari Ini',
+              ),
+              const SizedBox(height: AppTokens.space2),
+              OrbitCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Total Saldo Likuid',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: isDark
+                            ? AppColors.darkTextSecondary
+                            : AppColors.lightTextSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppTokens.space1),
+                    Text(
+                      formatRupiah(_liquidBalance),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    const SizedBox(height: AppTokens.space4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(AppTokens.space3),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? AppColors.darkSubtle
+                                  : AppColors.lightSubtle,
+                              borderRadius:
+                                  BorderRadius.circular(AppTokens.radiusMd),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Pemasukan Hari Ini',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark
+                                        ? AppColors.darkTextSecondary
+                                        : AppColors.lightTextSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: AppTokens.space1),
+                                Text(
+                                  '+${formatRupiah(_todayIncome)}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.incomeColor(context),
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppTokens.space3),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(AppTokens.space3),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? AppColors.darkSubtle
+                                  : AppColors.lightSubtle,
+                              borderRadius:
+                                  BorderRadius.circular(AppTokens.radiusMd),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Pengeluaran Hari Ini',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark
+                                        ? AppColors.darkTextSecondary
+                                        : AppColors.lightTextSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: AppTokens.space1),
+                                Text(
+                                  '-${formatRupiah(_todayExpense)}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.expenseColor(context),
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppTokens.space3),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.of(context)
+                                  .push(
+                                    MaterialPageRoute(
+                                      builder: (_) => const InboxScreen(),
+                                    ),
+                                  )
+                                  .then((_) => _loadData());
+                            },
+                            icon: const Icon(Icons.inbox_outlined, size: 18),
+                            label: Text('Inbox ($_draftCount Draft)'),
+                          ),
+                        ),
+                        const SizedBox(width: AppTokens.space2),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () {
+                              TransactionFormSheet.show(
+                                context,
+                                onSaved: _loadData,
+                              );
+                            },
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('Catat Uang'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildHeroStatPill(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: Colors.white),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
+  Widget _buildSectionHeader(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    String? countLabel,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: AppTokens.space2),
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
-        ],
-      ),
+        ),
+        if (countLabel != null) OrbitStatusBadge(label: countLabel),
+      ],
     );
   }
 
-  Widget _buildEventTile(Map<String, dynamic> evt) {
-    final startsAtStr = evt['starts_at'] as String?;
-    final timeStr = startsAtStr != null
-        ? DateFormat('HH:mm').format(DateTime.parse(startsAtStr).toLocal())
-        : '-';
-
+  Widget _buildEventRow(BuildContext context, Map<String, dynamic> evt) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final startsAt = evt['starts_at'] as DateTime;
+    final endsAt = evt['ends_at'] as DateTime;
+    final timeStr = evt['all_day'] == true
+        ? 'Seharian'
+        : '${DateFormat('HH:mm').format(startsAt)} - ${DateFormat('HH:mm').format(endsAt)}';
     final kind = evt['kind'] as String? ?? 'pribadi';
-    final color = _getKindColor(kind);
+    final location = evt['location'] as String?;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).dividerColor),
-      ),
+    return Padding(
+      padding: const EdgeInsets.all(AppTokens.space4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(6),
-            ),
+          SizedBox(
+            width: 84,
             child: Text(
-              _getKindLabel(kind),
+              timeStr,
               style: TextStyle(
-                  fontSize: 10, color: color, fontWeight: FontWeight.bold),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isDark
+                    ? AppColors.darkTextSecondary
+                    : AppColors.lightTextSecondary,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppTokens.space2),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -770,36 +664,32 @@ class _TodayScreenState extends State<TodayScreen> {
                 Text(
                   evt['title'] as String? ?? '',
                   style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                const SizedBox(height: 3),
-                Row(
+                const SizedBox(height: AppTokens.space1),
+                Wrap(
+                  spacing: AppTokens.space2,
+                  runSpacing: AppTokens.space1,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Icon(Icons.access_time,
-                        size: 12, color: Theme.of(context).colorScheme.outline),
-                    const SizedBox(width: 4),
-                    Text(
-                      evt['all_day'] == true ? 'Seharian' : timeStr,
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: Theme.of(context).colorScheme.outline),
-                    ),
-                    if (evt['location'] != null) ...[
-                      const SizedBox(width: 8),
-                      Icon(Icons.location_on_outlined,
-                          size: 12,
-                          color: Theme.of(context).colorScheme.outline),
-                      const SizedBox(width: 2),
-                      Expanded(
-                        child: Text(
-                          evt['location'] as String,
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: Theme.of(context).colorScheme.outline),
-                          overflow: TextOverflow.ellipsis,
+                    OrbitKindBadge(kind: kind),
+                    if (_hasConflict)
+                      const OrbitStatusBadge(
+                        label: 'Benturan',
+                        variant: OrbitBadgeVariant.expense,
+                      ),
+                    if (location != null && location.isNotEmpty)
+                      Text(
+                        location,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.lightTextSecondary,
                         ),
                       ),
-                    ],
                   ],
                 ),
               ],
@@ -810,36 +700,33 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-  Widget _buildTaskTile(Map<String, dynamic> task, {required bool isOverdue}) {
-    final isDone = task['status'] == 'done';
+  Widget _buildTaskRow(BuildContext context, Map<String, dynamic> task) {
+    final isDone =
+        task['status'] == 'done' || task['status'] == 'selesai';
+    final isOverdue = task['is_overdue'] == true;
     final kind = task['kind'] as String? ?? 'pribadi';
-    final color = _getKindColor(kind);
+    final priority = task['priority'] as String? ?? 'sedang';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: isOverdue
-            ? AppColors.expense.withValues(alpha: 0.05)
-            : Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isOverdue
-              ? AppColors.expense.withValues(alpha: 0.3)
-              : Theme.of(context).dividerColor,
-        ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTokens.space2,
+        vertical: AppTokens.space2,
       ),
       child: Row(
         children: [
           IconButton(
-            icon: Icon(
-              isDone ? Icons.check_circle : Icons.circle_outlined,
-              color: isDone
-                  ? AppColors.income
-                  : (isOverdue ? AppColors.expense : Colors.grey),
-              size: 20,
+            onPressed: () => _toggleTaskStatus(task),
+            tooltip: isDone ? 'Tandai belum selesai' : 'Tandai selesai',
+            constraints: const BoxConstraints(
+              minWidth: AppTokens.minTouchTarget,
+              minHeight: AppTokens.minTouchTarget,
             ),
-            onPressed: () => _toggleTask(task),
+            icon: Icon(
+              isDone ? Icons.check_circle : Icons.radio_button_unchecked,
+              color: isDone
+                  ? AppColors.incomeColor(context)
+                  : Theme.of(context).colorScheme.outline,
+            ),
           ),
           Expanded(
             child: Column(
@@ -848,38 +735,28 @@ class _TodayScreenState extends State<TodayScreen> {
                 Text(
                   task['title'] as String? ?? '',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    decoration: isDone ? TextDecoration.lineThrough : null,
+                    decoration:
+                        isDone ? TextDecoration.lineThrough : null,
                   ),
                 ),
-                const SizedBox(height: 3),
-                Row(
+                const SizedBox(height: AppTokens.space1),
+                Wrap(
+                  spacing: AppTokens.space2,
+                  runSpacing: AppTokens.space1,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(5),
+                    OrbitKindBadge(kind: kind),
+                    if (isOverdue && !isDone)
+                      const OrbitStatusBadge(
+                        label: 'Terlambat',
+                        variant: OrbitBadgeVariant.expense,
                       ),
-                      child: Text(
-                        _getKindLabel(kind),
-                        style: TextStyle(
-                            fontSize: 9,
-                            color: color,
-                            fontWeight: FontWeight.bold),
+                    if (priority == 'tinggi' || priority == 'mendesak')
+                      const OrbitStatusBadge(
+                        label: 'Prioritas Tinggi',
+                        variant: OrbitBadgeVariant.warning,
                       ),
-                    ),
-                    if (task['project_name'] != null) ...[
-                      const SizedBox(width: 6),
-                      Text(
-                        task['project_name'] as String,
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: Theme.of(context).colorScheme.outline),
-                      ),
-                    ],
                   ],
                 ),
               ],

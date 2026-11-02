@@ -3,7 +3,21 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Database, CategoryType } from '@/types/database';
-import { Plus, Edit2, Archive, CheckCircle2, CornerDownRight, X, ShieldAlert } from 'lucide-react';
+import { Plus, Edit2, Archive, CheckCircle2, CornerDownRight, ShieldAlert, Tags } from 'lucide-react';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  Button,
+  Input,
+  Select,
+  Dialog,
+  StatusBadge,
+  Skeleton,
+  EmptyState,
+  ErrorState,
+  LainnyaSubNav,
+} from '@/components/ui';
 
 type CategoryRow = Database['public']['Tables']['categories']['Row'];
 
@@ -12,8 +26,8 @@ export default function KategoriPage() {
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Modal / Form state
   const [showModal, setShowModal] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -26,31 +40,39 @@ export default function KategoriPage() {
 
   const loadCategories = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
 
-    const { data: memberData } = await supabase
-      .from('workspace_members')
-      .select('workspace_id')
-      .limit(1)
-      .single();
+    try {
+      const { data: memberData, error: memberErr } = await supabase
+        .from('workspace_members')
+        .select('workspace_id')
+        .limit(1)
+        .single();
 
-    if (!memberData) {
+      if (memberErr) throw memberErr;
+      if (!memberData) {
+        setLoading(false);
+        return;
+      }
+
+      setWorkspaceId(memberData.workspace_id);
+
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('workspace_id', memberData.workspace_id)
+        .is('deleted_at', null)
+        .order('sort_order');
+
+      if (error) throw error;
+      if (data) {
+        setCategories(data);
+      }
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : 'Gagal memuat daftar kategori.');
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setWorkspaceId(memberData.workspace_id);
-
-    const { data } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('workspace_id', memberData.workspace_id)
-      .is('deleted_at', null)
-      .order('sort_order');
-
-    if (data) {
-      setCategories(data);
-    }
-    setLoading(false);
   }, [supabase]);
 
   useEffect(() => {
@@ -136,122 +158,132 @@ export default function KategoriPage() {
     const rootCategories = categories.filter((c) => c.type === targetType && !c.parent_id);
 
     return (
-      <div className="border border-border bg-card rounded-lg divide-y divide-border">
-        {rootCategories.length === 0 ? (
-          <div className="p-6 text-center text-xs text-muted-foreground">
-            Belum ada kategori
-          </div>
-        ) : (
-          rootCategories.map((parent) => {
-            const subcategories = categories.filter((c) => c.parent_id === parent.id);
+      <Card className="overflow-hidden">
+        <CardHeader>
+          <CardTitle>
+            {targetType === 'expense' ? 'Kategori Pengeluaran' : 'Kategori Pemasukan'}
+          </CardTitle>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {categories.filter((c) => c.type === targetType).length} kategori
+          </span>
+        </CardHeader>
 
-            return (
-              <div key={parent.id} className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">{parent.name}</span>
-                    {parent.system_key && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                        <ShieldAlert className="w-3 h-3" />
-                        Sistem
-                      </span>
-                    )}
-                    {parent.archived && (
-                      <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                        Diarsipkan
-                      </span>
-                    )}
-                  </div>
+        <div className="divide-y divide-border">
+          {rootCategories.length === 0 ? (
+            <div className="p-6 text-center text-xs text-muted-foreground">
+              Belum ada kategori
+            </div>
+          ) : (
+            rootCategories.map((parent) => {
+              const subcategories = categories.filter((c) => c.parent_id === parent.id);
 
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => openCreateModal(targetType, parent.id)}
-                      type="button"
-                      title="Tambah Subkategori"
-                      className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                    {!parent.system_key && (
-                      <>
-                        <button
-                          onClick={() => openEditModal(parent)}
-                          type="button"
-                          title="Edit Kategori"
-                          className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => toggleArchive(parent.id, parent.archived)}
-                          type="button"
-                          title={parent.archived ? 'Buka Arsip' : 'Arsipkan'}
-                          className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          {parent.archived ? (
-                            <CheckCircle2 className="w-4 h-4 text-income" />
-                          ) : (
-                            <Archive className="w-4 h-4" />
-                          )}
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
+              return (
+                <div key={parent.id} className="p-4 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-sm text-foreground">{parent.name}</span>
+                      {parent.system_key && (
+                        <StatusBadge variant="neutral">
+                          <ShieldAlert className="w-3 h-3" />
+                          <span>Sistem</span>
+                        </StatusBadge>
+                      )}
+                      {parent.archived && (
+                        <StatusBadge variant="warning">Diarsipkan</StatusBadge>
+                      )}
+                    </div>
 
-                {/* Subkategori list */}
-                {subcategories.length > 0 && (
-                  <div className="pl-6 space-y-1.5 pt-1">
-                    {subcategories.map((sub) => (
-                      <div
-                        key={sub.id}
-                        className="flex items-center justify-between text-xs text-muted-foreground hover:text-foreground py-1 px-2 rounded hover:bg-muted/40 transition-colors"
+                    <div className="flex items-center gap-1">
+                      <Button
+                        onClick={() => openCreateModal(targetType, parent.id)}
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Tambah subkategori di ${parent.name}`}
                       >
-                        <div className="flex items-center gap-2">
-                          <CornerDownRight className="w-3.5 h-3.5 text-muted-foreground/60" />
-                          <span>{sub.name}</span>
-                          {sub.archived && (
-                            <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-muted">
-                              Diarsipkan
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => openEditModal(sub)}
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                      {!parent.system_key && (
+                        <>
+                          <Button
+                            onClick={() => openEditModal(parent)}
                             type="button"
-                            title="Edit Subkategori"
-                            className="p-1 hover:text-foreground"
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Ubah ${parent.name}`}
                           >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => toggleArchive(sub.id, sub.archived)}
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            onClick={() => toggleArchive(parent.id, parent.archived)}
                             type="button"
-                            title={sub.archived ? 'Buka Arsip' : 'Arsipkan'}
-                            className="p-1 hover:text-foreground"
+                            variant="ghost"
+                            size="icon"
+                            aria-label={parent.archived ? `Buka arsip ${parent.name}` : `Arsipkan ${parent.name}`}
                           >
-                            {sub.archived ? (
-                              <CheckCircle2 className="w-3.5 h-3.5 text-income" />
+                            {parent.archived ? (
+                              <CheckCircle2 className="w-4 h-4 text-income" />
                             ) : (
-                              <Archive className="w-3.5 h-3.5" />
+                              <Archive className="w-4 h-4" />
                             )}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
+
+                  {subcategories.length > 0 && (
+                    <div className="pl-5 space-y-1 pt-1">
+                      {subcategories.map((sub) => (
+                        <div
+                          key={sub.id}
+                          className="flex items-center justify-between text-xs text-muted-foreground hover:text-foreground py-1 px-2 rounded-lg hover:bg-muted/40 transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            <CornerDownRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+                            <span className="font-medium text-foreground">{sub.name}</span>
+                            {sub.archived && (
+                              <StatusBadge variant="warning">Diarsipkan</StatusBadge>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <Button
+                              onClick={() => openEditModal(sub)}
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Ubah ${sub.name}`}
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              onClick={() => toggleArchive(sub.id, sub.archived)}
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              aria-label={sub.archived ? `Buka arsip ${sub.name}` : `Arsipkan ${sub.name}`}
+                            >
+                              {sub.archived ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-income" />
+                              ) : (
+                                <Archive className="w-3.5 h-3.5" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </Card>
     );
   };
 
-  // Kategori induk yang valid untuk pilihan parent (hanya root, bukan sub)
   const availableParents = categories.filter(
     (c) => c.type === type && !c.parent_id && (!editingId || c.id !== editingId)
   );
@@ -260,141 +292,119 @@ export default function KategoriPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Kategori</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Lainnya</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Struktur klasifikasi pengeluaran dan pemasukan (hierarki maksimal 2 tingkat)
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => openCreateModal('expense')}
-            type="button"
-            className="inline-flex items-center gap-2 px-3 py-2 bg-foreground text-background text-sm font-medium rounded-md hover:opacity-90 transition-opacity"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tambah Kategori</span>
-          </button>
-        </div>
+        <Button onClick={() => openCreateModal('expense')} type="button">
+          <Plus className="w-4 h-4" />
+          <span>Tambah Kategori</span>
+        </Button>
       </div>
 
-      {loading ? (
-        <div className="p-8 text-center text-sm text-muted-foreground">Memuat data kategori...</div>
+      <LainnyaSubNav />
+
+      {loadError ? (
+        <ErrorState message={loadError} onRetry={loadCategories} />
+      ) : loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6" aria-busy="true">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      ) : categories.length === 0 ? (
+        <EmptyState
+          icon={<Tags className="w-5 h-5" />}
+          title="Belum ada kategori terdaftar"
+          description="Buat kategori pengeluaran atau pemasukan untuk mengelompokkan transaksi Anda."
+          actionLabel="Tambah Kategori"
+          onAction={() => openCreateModal('expense')}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold">Pengeluaran</h2>
-              <span className="text-xs text-muted-foreground">
-                {categories.filter((c) => c.type === 'expense').length} kategori
-              </span>
-            </div>
-            {renderCategoryList('expense')}
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold">Pemasukan</h2>
-              <span className="text-xs text-muted-foreground">
-                {categories.filter((c) => c.type === 'income').length} kategori
-              </span>
-            </div>
-            {renderCategoryList('income')}
-          </div>
+          {renderCategoryList('expense')}
+          {renderCategoryList('income')}
         </div>
       )}
 
       {/* Modal Form Kategori */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md border border-border bg-card rounded-lg shadow-lg p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <h2 className="text-lg font-semibold">
-                {formMode === 'create'
-                  ? parentId
-                    ? 'Tambah Subkategori'
-                    : 'Tambah Kategori Baru'
-                  : 'Edit Kategori'}
-              </h2>
-              <button
-                onClick={() => setShowModal(false)}
-                type="button"
-                className="text-muted-foreground hover:text-foreground"
+      <Dialog
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={
+          formMode === 'create'
+            ? parentId
+              ? 'Tambah Subkategori'
+              : 'Tambah Kategori Baru'
+            : 'Ubah Kategori'
+        }
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {formError && (
+            <div className="p-3 text-xs rounded-lg bg-expense/10 text-expense border border-expense/20">
+              {formError}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1.5">
+              Nama Kategori
+            </label>
+            <Input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Contoh: Makan Siang, Kursus, Langganan Musik"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1.5">Jenis</label>
+              <Select
+                value={type}
+                disabled={!!parentId}
+                onChange={(e) => setType(e.target.value as CategoryType)}
               >
-                <X className="w-5 h-5" />
-              </button>
+                <option value="expense">Pengeluaran</option>
+                <option value="income">Pemasukan</option>
+              </Select>
             </div>
 
-            {formError && (
-              <div className="p-3 text-sm rounded bg-expense/10 text-expense border border-expense/20">
-                {formError}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium mb-1">Nama Kategori</label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Contoh: Makan Siang, Kursus, Langganan Musik"
-                  className="w-full px-3 py-2 text-sm border border-border rounded bg-background focus:outline-none focus:ring-1 focus:ring-foreground"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium mb-1">Jenis</label>
-                  <select
-                    value={type}
-                    disabled={!!parentId}
-                    onChange={(e) => setType(e.target.value as CategoryType)}
-                    className="w-full px-3 py-2 text-sm border border-border rounded bg-background focus:outline-none disabled:opacity-60"
-                  >
-                    <option value="expense">Pengeluaran</option>
-                    <option value="income">Pemasukan</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium mb-1">Kategori Induk</label>
-                  <select
-                    value={parentId || ''}
-                    onChange={(e) => setParentId(e.target.value || null)}
-                    className="w-full px-3 py-2 text-sm border border-border rounded bg-background focus:outline-none"
-                  >
-                    <option value="">Tanpa Induk (Kategori Utama)</option>
-                    {availableParents.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-sm font-medium border border-border rounded hover:bg-muted transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 text-sm font-medium bg-foreground text-background rounded hover:opacity-90 transition-opacity disabled:opacity-50"
-                >
-                  {submitting ? 'Menyimpan...' : 'Simpan Kategori'}
-                </button>
-              </div>
-            </form>
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1.5">
+                Kategori Induk
+              </label>
+              <Select
+                value={parentId || ''}
+                onChange={(e) => setParentId(e.target.value || null)}
+              >
+                <option value="">Tanpa Induk (Kategori Utama)</option>
+                {availableParents.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowModal(false)}
+            >
+              Batal
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Menyimpan...' : 'Simpan Kategori'}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
     </div>
   );
 }

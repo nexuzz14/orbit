@@ -14,8 +14,22 @@ import {
   X,
   Play,
   Clock,
-  Layers
 } from 'lucide-react';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  Button,
+  Input,
+  Select,
+  Dialog,
+  StatusBadge,
+  Skeleton,
+  EmptyState,
+  ErrorState,
+  MoneySubNav,
+} from '@/components/ui';
 
 interface ExtendedRecurringBill extends RecurringBill {
   category?: { name: string } | null;
@@ -29,10 +43,10 @@ export default function TagihanPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  // Modal / Form state
   const [showModal, setShowModal] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -51,70 +65,74 @@ export default function TagihanPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
 
-    const { data: memberData } = await supabase
-      .from('workspace_members')
-      .select('workspace_id')
-      .limit(1)
-      .single();
+    try {
+      const { data: memberData, error: memberErr } = await supabase
+        .from('workspace_members')
+        .select('workspace_id')
+        .limit(1)
+        .single();
 
-    if (!memberData) {
+      if (memberErr) throw memberErr;
+      if (!memberData) {
+        setLoading(false);
+        return;
+      }
+
+      setWorkspaceId(memberData.workspace_id);
+
+      const { data: billsData, error: billsErr } = await supabase
+        .from('recurring_bills')
+        .select(`
+          *,
+          category:categories(name),
+          account:accounts(name)
+        `)
+        .eq('workspace_id', memberData.workspace_id)
+        .is('deleted_at', null)
+        .order('schedule_value', { ascending: true });
+
+      if (billsErr) throw billsErr;
+      if (billsData) {
+        setBills(billsData as unknown as ExtendedRecurringBill[]);
+      }
+
+      const { data: catData } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('workspace_id', memberData.workspace_id)
+        .eq('type', 'expense')
+        .is('deleted_at', null)
+        .eq('archived', false)
+        .order('name');
+
+      if (catData) {
+        setCategories(catData);
+        if (catData.length > 0 && !categoryId) {
+          setCategoryId(catData[0].id);
+        }
+      }
+
+      const { data: accData } = await supabase
+        .from('accounts')
+        .select('*')
+        .eq('workspace_id', memberData.workspace_id)
+        .is('deleted_at', null)
+        .eq('archived', false)
+        .order('name');
+
+      if (accData) {
+        setAccounts(accData);
+        if (accData.length > 0 && !accountId) {
+          setAccountId(accData[0].id);
+        }
+      }
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : 'Gagal memuat daftar tagihan rutin.');
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setWorkspaceId(memberData.workspace_id);
-
-    // Fetch recurring bills with joins
-    const { data: billsData } = await supabase
-      .from('recurring_bills')
-      .select(`
-        *,
-        category:categories(name),
-        account:accounts(name)
-      `)
-      .eq('workspace_id', memberData.workspace_id)
-      .is('deleted_at', null)
-      .order('schedule_value', { ascending: true });
-
-    if (billsData) {
-      setBills(billsData as unknown as ExtendedRecurringBill[]);
-    }
-
-    // Fetch active expense categories
-    const { data: catData } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('workspace_id', memberData.workspace_id)
-      .eq('type', 'expense')
-      .is('deleted_at', null)
-      .eq('archived', false)
-      .order('name');
-
-    if (catData) {
-      setCategories(catData);
-      if (catData.length > 0 && !categoryId) {
-        setCategoryId(catData[0].id);
-      }
-    }
-
-    // Fetch active accounts
-    const { data: accData } = await supabase
-      .from('accounts')
-      .select('*')
-      .eq('workspace_id', memberData.workspace_id)
-      .is('deleted_at', null)
-      .eq('archived', false)
-      .order('name');
-
-    if (accData) {
-      setAccounts(accData);
-      if (accData.length > 0 && !accountId) {
-        setAccountId(accData[0].id);
-      }
-    }
-
-    setLoading(false);
   }, [supabase, categoryId, accountId]);
 
   useEffect(() => {
@@ -220,8 +238,7 @@ export default function TagihanPage() {
   };
 
   const handleDelete = async (billId: string) => {
-    const confirmDelete = window.confirm('Hapus konfigurasi tagihan rutin ini?');
-    if (!confirmDelete) return;
+    if (!window.confirm('Hapus konfigurasi tagihan rutin ini?')) return;
 
     const { error } = await supabase
       .from('recurring_bills')
@@ -269,41 +286,39 @@ export default function TagihanPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Tagihan Rutin</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Otomatisasi pengingat dan pembuatan draft transaksi untuk pengeluaran berulang.
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Uang</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Otomatisasi pengingat dan pembuatan draft transaksi untuk pengeluaran berulang
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
             onClick={handleGenerateDrafts}
             disabled={generating}
             type="button"
-            className="flex items-center gap-2 bg-muted text-foreground hover:bg-muted/80 px-3.5 py-2 rounded-md text-sm font-medium border border-border transition-colors disabled:opacity-50"
-            title="Periksa dan buat draft transaksi untuk tagihan yang jatuh tempo hari ini"
+            variant="secondary"
           >
-            <Play className="w-3.5 h-3.5 text-primary" />
+            <Play className="w-4 h-4 text-primary" />
             <span>{generating ? 'Memproses...' : 'Proses Tagihan Hari Ini'}</span>
-          </button>
+          </Button>
 
-          <button
-            onClick={openCreateModal}
-            type="button"
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
-          >
+          <Button onClick={openCreateModal} type="button">
             <Plus className="w-4 h-4" />
             <span>Tambah Tagihan</span>
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* Status banner */}
+      <MoneySubNav />
+
       {statusMessage && (
-        <div className="p-3 text-xs bg-muted border border-border rounded-md flex items-center justify-between">
+        <div
+          role="status"
+          className="p-3.5 text-xs bg-muted border border-border rounded-lg flex items-center justify-between"
+        >
           <span className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-primary" />
             <span>{statusMessage}</span>
@@ -311,7 +326,8 @@ export default function TagihanPage() {
           <button
             onClick={() => setStatusMessage(null)}
             type="button"
-            className="text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground p-1"
+            aria-label="Tutup pesan"
           >
             <X className="w-4 h-4" />
           </button>
@@ -320,76 +336,79 @@ export default function TagihanPage() {
 
       {/* Ringkasan Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 rounded-lg border border-border bg-card">
-          <div className="text-xs font-medium text-muted-foreground uppercase">Tagihan Aktif</div>
-          <div className="text-2xl font-bold mt-1 tracking-tight text-foreground">
-            {activeBills.length}{' '}
-            <span className="text-xs font-normal text-muted-foreground">
-              dari {bills.length} total
-            </span>
-          </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            Terjadwal untuk pengingat & auto-draft
-          </div>
-        </div>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Tagihan Aktif
+            </div>
+            <div className="text-2xl font-bold mt-1 tracking-tight text-foreground tabular-nums">
+              {activeBills.length}{' '}
+              <span className="text-xs font-normal text-muted-foreground">
+                dari {bills.length} total
+              </span>
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Terjadwal untuk pengingat & auto-draft
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="p-4 rounded-lg border border-border bg-card">
-          <div className="text-xs font-medium text-muted-foreground uppercase">
-            Estimasi Komitmen Bulanan
-          </div>
-          <div className="text-2xl font-bold mt-1 tracking-tight text-expense">
-            {formatCurrency(totalMonthlyCommitment)}
-          </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            Total biaya berulang yang harus dialokasikan
-          </div>
-        </div>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Estimasi Komitmen Bulanan
+            </div>
+            <div className="text-2xl font-bold mt-1 tracking-tight text-expense tabular-nums">
+              {formatCurrency(totalMonthlyCommitment)}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Total biaya berulang yang harus dialokasikan
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="p-4 rounded-lg border border-border bg-card flex flex-col justify-center">
-          <div className="text-xs font-medium text-muted-foreground uppercase">Sistem Pengingat</div>
-          <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
-            <Clock className="w-4 h-4 text-primary" />
-            <span>Pengingat lokal H-3 dan pembuatan draft idempoten di Inbox</span>
-          </div>
-        </div>
+        <Card>
+          <CardContent className="p-4 flex flex-col justify-center">
+            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Sistem Pengingat
+            </div>
+            <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
+              <Clock className="w-4 h-4 text-primary shrink-0" />
+              <span>Pengingat H-3 dan pembuatan draft di Inbox</span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Daftar Tagihan */}
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <div className="p-4 border-b border-border flex justify-between items-center">
-          <h2 className="font-medium text-sm flex items-center gap-2">
-            <CalendarClock className="w-4 h-4 text-primary" />
-            <span>Daftar Tagihan Berulang</span>
-          </h2>
-          <button
-            onClick={() => loadData()}
-            type="button"
-            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-          >
-            <RefreshCw className="w-3 h-3" />
-            <span>Muat Ulang</span>
-          </button>
+      {loadError ? (
+        <ErrorState message={loadError} onRetry={loadData} />
+      ) : loading ? (
+        <div className="space-y-3" aria-busy="true">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
         </div>
+      ) : bills.length === 0 ? (
+        <EmptyState
+          icon={<CalendarClock className="w-5 h-5" />}
+          title="Belum ada tagihan rutin terdaftar"
+          description="Daftarkan langganan, internet, listrik, atau sewa agar tagihan otomatis diingatkan."
+          actionLabel="Tambah Tagihan"
+          onAction={openCreateModal}
+        />
+      ) : (
+        <Card className="overflow-hidden">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarClock className="w-4 h-4 text-primary" />
+              <span>Daftar Tagihan Berulang</span>
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => loadData()}>
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Muat Ulang</span>
+            </Button>
+          </CardHeader>
 
-        {loading ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">Memuat tagihan...</div>
-        ) : bills.length === 0 ? (
-          <div className="p-8 text-center">
-            <Layers className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-50" />
-            <div className="text-sm font-medium">Belum ada tagihan rutin terdaftar</div>
-            <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-              Daftarkan langganan, internet, listrik, atau sewa agar tagihan otomatis diingatkan.
-            </p>
-            <button
-              onClick={openCreateModal}
-              type="button"
-              className="mt-4 inline-flex items-center gap-2 bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-xs font-medium"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Daftarkan Tagihan Pertama</span>
-            </button>
-          </div>
-        ) : (
           <div className="divide-y divide-border">
             {bills.map((bill) => {
               const freqLabel =
@@ -397,254 +416,230 @@ export default function TagihanPage() {
                   ? `Bulanan (tgl ${bill.schedule_value})`
                   : bill.schedule_type === 'weekly'
                   ? `Mingguan (hari ${bill.schedule_value})`
-                  : `Tahunan`;
+                  : 'Tahunan';
 
               const remindDays = bill.remind_days_before?.[0] ?? 3;
 
               return (
                 <div
                   key={bill.id}
-                  className={`p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:bg-muted/30 transition-colors ${
+                  className={`p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:bg-muted/20 transition-colors ${
                     !bill.active ? 'opacity-60' : ''
                   }`}
                 >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm tracking-tight">{bill.name}</span>
-                      <span className="text-[11px] px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground">
-                        {freqLabel}
-                      </span>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-sm text-foreground">{bill.name}</span>
+                      <StatusBadge variant="neutral">{freqLabel}</StatusBadge>
                       {!bill.active && (
-                        <span className="text-[11px] px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground">
-                          Nonaktif
-                        </span>
+                        <StatusBadge variant="warning">Nonaktif</StatusBadge>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap tabular-nums">
                       <span>Kategori: {bill.category?.name || 'Tanpa Kategori'}</span>
+                      <span>•</span>
                       <span>Rekening: {bill.account?.name || 'Belum dipilih'}</span>
+                      <span>•</span>
                       <span>Pengingat: H-{remindDays}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center justify-between sm:justify-end gap-4">
                     <div className="text-right">
-                      <div className="text-base font-bold tracking-tight text-expense">
-                        {formatCurrency(bill.amount)}
+                      <div className="text-base font-bold tabular-nums text-expense">
+                        -{formatCurrency(bill.amount)}
                       </div>
                     </div>
 
                     <div className="flex items-center gap-1 pl-2 border-l border-border">
-                      <button
+                      <Button
                         onClick={() => openEditModal(bill)}
                         type="button"
-                        className="p-1.5 text-muted-foreground hover:text-foreground rounded transition-colors"
-                        title="Ubah Tagihan"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Ubah ${bill.name}`}
                       >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button
                         onClick={() => handleDelete(bill.id)}
                         type="button"
-                        className="p-1.5 text-muted-foreground hover:text-expense rounded transition-colors"
-                        title="Hapus Tagihan"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Hapus ${bill.name}`}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                        <Trash2 className="w-4 h-4 text-muted-foreground hover:text-expense" />
+                      </Button>
                     </div>
                   </div>
                 </div>
               );
             })}
           </div>
-        )}
-      </div>
+        </Card>
+      )}
 
       {/* Modal Form */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-card border border-border rounded-lg max-w-md w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center">
-              <h3 className="font-semibold text-lg tracking-tight">
-                {formMode === 'create' ? 'Tambah Tagihan Rutin' : 'Ubah Tagihan Rutin'}
-              </h3>
-              <button
-                onClick={() => setShowModal(false)}
-                type="button"
-                className="text-muted-foreground hover:text-foreground"
+      <Dialog
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={formMode === 'create' ? 'Tambah Tagihan Rutin' : 'Ubah Tagihan Rutin'}
+      >
+        <form onSubmit={handleSave} className="space-y-4">
+          {formError && (
+            <div className="p-3 text-xs bg-expense/10 text-expense border border-expense/20 rounded-lg">
+              {formError}
+            </div>
+          )}
+
+          <div>
+            <label className="text-xs font-medium text-foreground block mb-1.5">Nama Tagihan</label>
+            <Input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Contoh: Langganan Internet IndiHome"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-foreground block mb-1.5">Nominal (IDR)</label>
+            <Input
+              type="number"
+              step="any"
+              min="0"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="Contoh: 350000"
+              className="tabular-nums"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-foreground block mb-1.5">Kategori</label>
+              <Select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                required
               >
-                <X className="w-5 h-5" />
-              </button>
+                <option value="">Pilih Kategori</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
             </div>
 
-            {formError && (
-              <div className="p-3 text-xs bg-expense/10 text-expense border border-expense/20 rounded-md">
-                {formError}
-              </div>
-            )}
-
-            <form onSubmit={handleSave} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Nama Tagihan</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Contoh: Langganan Internet IndiHome"
-                  className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Nominal (IDR)</label>
-                <input
-                  type="number"
-                  step="any"
-                  min="0"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Contoh: 350000"
-                  className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Kategori</label>
-                  <select
-                    value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
-                    required
-                  >
-                    <option value="">Pilih Kategori</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Rekening Sumber</label>
-                  <select
-                    value={accountId}
-                    onChange={(e) => setAccountId(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
-                    required
-                  >
-                    <option value="">Pilih Rekening</option>
-                    {accounts.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Frekuensi</label>
-                  <select
-                    value={scheduleType}
-                    onChange={(e) =>
-                      setScheduleType(e.target.value as 'monthly' | 'weekly' | 'yearly')
-                    }
-                    className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
-                  >
-                    <option value="monthly">Bulanan</option>
-                    <option value="weekly">Mingguan</option>
-                    <option value="yearly">Tahunan</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    {scheduleType === 'monthly'
-                      ? 'Tanggal Jatuh Tempo (1-31)'
-                      : scheduleType === 'weekly'
-                      ? 'Hari (1=Senin..7=Minggu)'
-                      : 'Tanggal/Bulan'}
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="31"
-                    value={scheduleValue}
-                    onChange={(e) => setScheduleValue(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Ingatkan Sebelumnya (Hari)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="30"
-                  value={remindDaysBefore}
-                  onChange={(e) => setRemindDaysBefore(e.target.value)}
-                  placeholder="3"
-                  className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
-                  required
-                />
-                <span className="text-[11px] text-muted-foreground">
-                  Default 3 memunculkan pengingat lokal H-3 dan hari-H.
-                </span>
-              </div>
-
-              <div className="space-y-2 pt-1">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={active}
-                    onChange={(e) => setActive(e.target.checked)}
-                    className="rounded border-input text-primary focus:ring-ring"
-                  />
-                  <span className="text-xs font-medium">Tagihan aktif</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={autoCreateDraft}
-                    onChange={(e) => setAutoCreateDraft(e.target.checked)}
-                    className="rounded border-input text-primary focus:ring-ring"
-                  />
-                  <span className="text-xs font-medium">
-                    Otomatis buat draft transaksi ke Inbox saat jatuh tempo
-                  </span>
-                </label>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground rounded-md transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 text-sm bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
-                >
-                  {submitting ? 'Menyimpan...' : 'Simpan'}
-                </button>
-              </div>
-            </form>
+            <div>
+              <label className="text-xs font-medium text-foreground block mb-1.5">Rekening Sumber</label>
+              <Select
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value)}
+                required
+              >
+                <option value="">Pilih Rekening</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-foreground block mb-1.5">Frekuensi</label>
+              <Select
+                value={scheduleType}
+                onChange={(e) =>
+                  setScheduleType(e.target.value as 'monthly' | 'weekly' | 'yearly')
+                }
+              >
+                <option value="monthly">Bulanan</option>
+                <option value="weekly">Mingguan</option>
+                <option value="yearly">Tahunan</option>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-foreground block mb-1.5">
+                {scheduleType === 'monthly'
+                  ? 'Tanggal Jatuh Tempo (1-31)'
+                  : scheduleType === 'weekly'
+                  ? 'Hari (1=Senin..7=Minggu)'
+                  : 'Tanggal/Bulan'}
+              </label>
+              <Input
+                type="number"
+                min="1"
+                max="31"
+                value={scheduleValue}
+                onChange={(e) => setScheduleValue(e.target.value)}
+                className="tabular-nums"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-foreground block mb-1.5">
+              Ingatkan Sebelumnya (Hari)
+            </label>
+            <Input
+              type="number"
+              min="0"
+              max="30"
+              value={remindDaysBefore}
+              onChange={(e) => setRemindDaysBefore(e.target.value)}
+              placeholder="3"
+              className="tabular-nums"
+              required
+            />
+          </div>
+
+          <div className="space-y-1 pt-1">
+            <label className="flex items-center gap-2.5 cursor-pointer min-h-11">
+              <input
+                type="checkbox"
+                checked={active}
+                onChange={(e) => setActive(e.target.checked)}
+                className="w-4 h-4 rounded border-border text-primary"
+              />
+              <span className="text-xs font-medium text-foreground">Tagihan aktif</span>
+            </label>
+
+            <label className="flex items-center gap-2.5 cursor-pointer min-h-11">
+              <input
+                type="checkbox"
+                checked={autoCreateDraft}
+                onChange={(e) => setAutoCreateDraft(e.target.checked)}
+                className="w-4 h-4 rounded border-border text-primary"
+              />
+              <span className="text-xs font-medium text-foreground">
+                Otomatis buat draft transaksi ke Inbox saat jatuh tempo
+              </span>
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-border">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowModal(false)}
+            >
+              Batal
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Menyimpan...' : 'Simpan'}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
     </div>
   );
 }
