@@ -29,6 +29,8 @@
                 <data
                     android:scheme="io.supabase.orbit"
                     android:host="login-callback" />
+                <data
+                    android:scheme="io.supabase.orbit" />
             </intent-filter>
         </activity>
         <meta-data

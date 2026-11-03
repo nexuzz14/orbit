@@ -14,8 +14,15 @@ void main() async {
   } catch (_) {}
 
   await Supabase.initialize(
-    url: const String.fromEnvironment('SUPABASE_URL', defaultValue: 'http://10.0.2.2:54321'),
-    anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: 'sb-anon-key-placeholder'),
+    url: const String.fromEnvironment(
+      'SUPABASE_URL',
+      defaultValue: 'https://kpsfdqswoerzkicocvre.supabase.co',
+    ),
+    anonKey: const String.fromEnvironment(
+      'SUPABASE_ANON_KEY',
+      defaultValue:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtwc2ZkcXN3b2VyemtpY29jdnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1MDE3NjQsImV4cCI6MjEwOTA3Nzc2NH0.FkCf95BO0rEWixYlbNVvWOBj72kdWFiaXRg444mdEYc',
+    ),
   );
 
   runApp(const ProviderScope(child: OrbitApp()));
