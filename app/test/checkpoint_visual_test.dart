@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +23,31 @@ void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
+    try {
+      final segoeFile = File('C:/Windows/Fonts/segoeui.ttf');
+      if (segoeFile.existsSync()) {
+        final bytes = segoeFile.readAsBytesSync();
+        final fontLoader = FontLoader('Segoe UI')
+          ..addFont(Future.value(ByteData.view(bytes.buffer)));
+        await fontLoader.load();
+
+        final robotoLoader = FontLoader('Roboto')
+          ..addFont(Future.value(ByteData.view(bytes.buffer)));
+        await robotoLoader.load();
+      }
+
+      final iconFile = File('build/unit_test_assets/fonts/MaterialIcons-Regular.otf');
+      if (iconFile.existsSync()) {
+        final iconBytes = iconFile.readAsBytesSync();
+        final iconLoader = FontLoader('MaterialIcons')
+          ..addFont(Future.value(ByteData.view(iconBytes.buffer)));
+        await iconLoader.load();
+      }
+    } catch (e) {
+      debugPrint('Font load error: $e');
+    }
+
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
       const MethodChannel('plugins.flutter.io/shared_preferences'),
@@ -198,6 +224,87 @@ void main() {
           ),
         );
 
+    await db.into(db.localBudgets).insert(
+          LocalBudgetsCompanion.insert(
+            id: 'b-1',
+            workspaceId: 'ws-1',
+            categoryId: 'Makanan & Minuman',
+            amount: 1500000,
+          ),
+        );
+    await db.into(db.localBudgets).insert(
+          LocalBudgetsCompanion.insert(
+            id: 'b-2',
+            workspaceId: 'ws-1',
+            categoryId: 'Transportasi & BBM',
+            amount: 600000,
+          ),
+        );
+    await db.into(db.localBudgets).insert(
+          LocalBudgetsCompanion.insert(
+            id: 'b-3',
+            workspaceId: 'ws-1',
+            categoryId: 'Kebutuhan Kuliah & Buku',
+            amount: 500000,
+          ),
+        );
+
+    await db.into(db.localRecurringBills).insert(
+          LocalRecurringBillsCompanion.insert(
+            id: 'bill-1',
+            workspaceId: 'ws-1',
+            name: 'Spotify Premium Student',
+            amount: 27500,
+            categoryId: 'cat-1',
+            accountId: 'acc-1',
+            scheduleType: const Value('monthly'),
+            scheduleValue: const Value(14),
+          ),
+        );
+    await db.into(db.localRecurringBills).insert(
+          LocalRecurringBillsCompanion.insert(
+            id: 'bill-2',
+            workspaceId: 'ws-1',
+            name: 'GitHub Copilot Pro',
+            amount: 160000,
+            categoryId: 'cat-1',
+            accountId: 'acc-1',
+            scheduleType: const Value('monthly'),
+            scheduleValue: const Value(20),
+          ),
+        );
+    await db.into(db.localRecurringBills).insert(
+          LocalRecurringBillsCompanion.insert(
+            id: 'bill-3',
+            workspaceId: 'ws-1',
+            name: 'Internet Kos Fiber',
+            amount: 250000,
+            categoryId: 'cat-1',
+            accountId: 'acc-1',
+            scheduleType: const Value('monthly'),
+            scheduleValue: const Value(1),
+          ),
+        );
+
+    await db.into(db.localSavingsGoals).insert(
+          LocalSavingsGoalsCompanion.insert(
+            id: 'goal-1',
+            workspaceId: 'ws-1',
+            name: 'Dana Darurat Mahasiswa',
+            targetAmount: 10000000,
+            currentAmount: const Value(6500000),
+          ),
+        );
+    await db.into(db.localSavingsGoals).insert(
+          LocalSavingsGoalsCompanion.insert(
+            id: 'goal-2',
+            workspaceId: 'ws-1',
+            name: 'Upgrade Laptop Kerja',
+            targetAmount: 18000000,
+            currentAmount: const Value(9200000),
+          ),
+        );
+
     return db;
   }
 
@@ -214,18 +321,25 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
+    final lightTheme = AppTheme.light().copyWith(
+      textTheme: AppTheme.light().textTheme.apply(fontFamily: 'Segoe UI'),
+    );
+    final darkTheme = AppTheme.dark().copyWith(
+      textTheme: AppTheme.dark().textTheme.apply(fontFamily: 'Segoe UI'),
+    );
+
     await tester.pumpWidget(
       MaterialApp(
         debugShowCheckedModeBanner: false,
         themeMode: themeMode,
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
+        theme: lightTheme,
+        darkTheme: darkTheme,
         home: child,
       ),
     );
 
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
 
     await expectLater(
       find.byType(MaterialApp),

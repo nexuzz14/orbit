@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
 import 'package:orbit_app/core/database/database.dart';
+import 'package:orbit_app/core/services/sync_service.dart';
 import 'package:orbit_app/core/widgets/orbit_widgets.dart';
 import 'package:uuid/uuid.dart';
 
@@ -39,10 +40,13 @@ class _AccountsScreenState extends State<AccountsScreen> {
       _errorMessage = widget.forceError;
     } else {
       _loadAccounts();
+      SyncService.instance.pullAllFromSupabase().then((_) {
+        if (mounted) _loadAccounts();
+      });
     }
   }
 
-  Future<void> _loadAccounts() async {
+  Future<void> _loadAccounts({bool pull = false}) async {
     if (widget.forceLoading) return;
     setState(() {
       _loading = true;
@@ -52,6 +56,10 @@ class _AccountsScreenState extends State<AccountsScreen> {
     if (widget.forceError != null) {
       setState(() => _loading = false);
       return;
+    }
+
+    if (pull) {
+      await SyncService.instance.pullAllFromSupabase();
     }
 
     try {
@@ -179,21 +187,45 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 child: FilledButton(
                   onPressed: () async {
                     if (nameCtrl.text.trim().isEmpty) return;
+                    final wsId =
+                        await SyncService.instance.getWorkspaceId() ??
+                            'ws-local';
+                    final accId = _uuid.v4();
+                    final name = nameCtrl.text.trim();
                     final initAmount = double.tryParse(
                           initialCtrl.text.replaceAll(RegExp(r'[^0-9.]'), ''),
                         ) ??
                         0;
+
                     await _db.into(_db.localAccounts).insert(
                           LocalAccountsCompanion.insert(
-                            id: _uuid.v4(),
-                            workspaceId: 'ws-local',
-                            name: nameCtrl.text.trim(),
+                            id: accId,
+                            workspaceId: wsId,
+                            name: name,
                             type: selectedType,
                             currency: 'IDR',
                             initialBalance: Value(initAmount),
                             currentBalance: Value(initAmount),
                           ),
                         );
+
+                    SyncService.instance.pushRecord(
+                      tableName: 'accounts',
+                      recordId: accId,
+                      action: 'insert',
+                      payload: {
+                        'id': accId,
+                        'workspace_id': wsId,
+                        'name': name,
+                        'type': selectedType,
+                        'currency': 'IDR',
+                        'initial_balance': initAmount,
+                        'current_balance': initAmount,
+                        'is_liquid': true,
+                        'visibility': 'shared',
+                      },
+                    );
+
                     if (ctx.mounted) Navigator.pop(ctx);
                     await _loadAccounts();
                   },
@@ -237,7 +269,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadAccounts,
+        onRefresh: () => _loadAccounts(pull: true),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             AppTokens.space4,

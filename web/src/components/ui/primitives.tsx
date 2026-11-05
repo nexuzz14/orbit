@@ -376,8 +376,7 @@ export function MoneySubNav({ draftCount = 0 }: { draftCount?: number }) {
     { href: '/ringkasan', label: 'Ringkasan' },
   ];
 
-  const shortcuts = [
-    { href: '/inbox', label: 'Inbox', icon: Inbox, badge: draftCount },
+  const phase3Items = [
     { href: '/anggaran', label: 'Anggaran', icon: PiggyBank },
     { href: '/tagihan', label: 'Tagihan', icon: Receipt },
     { href: '/tabungan', label: 'Target', icon: Target },
@@ -409,14 +408,36 @@ export function MoneySubNav({ draftCount = 0 }: { draftCount?: number }) {
         })}
       </div>
 
-      <div className="flex items-center gap-2 overflow-x-auto pb-1" role="navigation" aria-label="Pintasan Uang">
-        {shortcuts.map((s) => {
-          const Icon = s.icon;
-          const active = pathname === s.href;
+      <div
+        className="flex items-center gap-2 overflow-x-auto pb-1 [mask-image:linear-gradient(to_right,black_calc(100%-24px),transparent)] sm:[mask-image:none]"
+        role="navigation"
+        aria-label="Pintasan Uang"
+      >
+        <Link
+          href="/inbox"
+          className={cn(
+            'min-h-11 inline-flex items-center gap-2 rounded-md border px-3.5 py-2 text-xs font-medium shrink-0 transition-colors duration-150',
+            pathname === '/inbox'
+              ? 'border-primary bg-primary-subtle text-primary'
+              : 'border-border bg-card text-foreground hover:bg-subtle'
+          )}
+        >
+          <Inbox className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>Inbox</span>
+          {typeof draftCount === 'number' && draftCount > 0 && (
+            <span className="inline-flex items-center justify-center rounded-sm bg-warning-subtle border border-warning-border px-1.5 py-0.5 text-xs font-semibold text-warning tabular-nums">
+              {draftCount}
+            </span>
+          )}
+        </Link>
+
+        {phase3Items.map((item) => {
+          const Icon = item.icon;
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
-              key={s.href}
-              href={s.href}
+              key={item.href}
+              href={item.href}
               className={cn(
                 'min-h-11 inline-flex items-center gap-2 rounded-md border px-3.5 py-2 text-xs font-medium shrink-0 transition-colors duration-150',
                 active
@@ -425,12 +446,7 @@ export function MoneySubNav({ draftCount = 0 }: { draftCount?: number }) {
               )}
             >
               <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>{s.label}</span>
-              {typeof s.badge === 'number' && s.badge > 0 && (
-                <span className="inline-flex items-center justify-center rounded-sm bg-warning-subtle border border-warning-border px-1.5 py-0.5 text-xs font-semibold text-warning tabular-nums">
-                  {s.badge}
-                </span>
-              )}
+              <span>{item.label}</span>
             </Link>
           );
         })}
@@ -485,7 +501,7 @@ export function LainnyaSubNav() {
     <div
       role="navigation"
       aria-label="Sub-navigasi Lainnya"
-      className="inline-flex w-full sm:w-auto items-center rounded-md bg-subtle p-1 border border-border overflow-x-auto"
+      className="inline-flex w-full sm:w-auto items-center rounded-md bg-subtle p-1 border border-border overflow-x-auto [mask-image:linear-gradient(to_right,black_calc(100%-24px),transparent)] sm:[mask-image:none]"
     >
       {tabs.map((t) => {
         const active = pathname === t.href || pathname.startsWith(`${t.href}/`);

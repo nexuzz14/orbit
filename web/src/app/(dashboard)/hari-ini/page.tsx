@@ -18,7 +18,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { formatCurrency, formatDateIndo } from '@/lib/format';
+import { formatCurrency, formatDateIndo, getGreeting } from '@/lib/format';
 import type { ActivityKind } from '@/types/database';
 import {
   Button,
@@ -96,13 +96,6 @@ type AccountItem = {
   currency: string;
 };
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 11) return 'Selamat Pagi';
-  if (hour < 15) return 'Selamat Siang';
-  if (hour < 18) return 'Selamat Sore';
-  return 'Selamat Malam';
-}
 
 export default function HariIniPage() {
   const supabase = createClient();

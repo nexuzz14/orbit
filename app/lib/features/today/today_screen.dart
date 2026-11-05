@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
 import 'package:orbit_app/core/database/database.dart';
+import 'package:orbit_app/core/services/sync_service.dart';
 import 'package:orbit_app/core/widgets/orbit_widgets.dart';
 import 'package:orbit_app/core/widgets/transaction_form_sheet.dart';
 import 'package:orbit_app/features/inbox/inbox_screen.dart';
@@ -49,18 +50,17 @@ class _TodayScreenState extends State<TodayScreen> {
       _errorMessage = widget.forceError;
     } else {
       _loadData();
+      SyncService.instance.pullAllFromSupabase().then((_) {
+        if (mounted) _loadData();
+      });
     }
   }
 
   String _greeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 11) return 'Selamat Pagi';
-    if (hour < 15) return 'Selamat Siang';
-    if (hour < 18) return 'Selamat Sore';
-    return 'Selamat Malam';
+    return getGreeting();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadData({bool pull = false}) async {
     if (widget.forceLoading) return;
     setState(() {
       _loading = true;
@@ -70,6 +70,10 @@ class _TodayScreenState extends State<TodayScreen> {
     if (widget.forceError != null) {
       setState(() => _loading = false);
       return;
+    }
+
+    if (pull) {
+      await SyncService.instance.pullAllFromSupabase();
     }
 
     try {
@@ -195,14 +199,26 @@ class _TodayScreenState extends State<TodayScreen> {
     final id = task['id'] as String;
     final currentStatus = task['status'] as String;
     final isDone = currentStatus == 'done' || currentStatus == 'selesai';
-    final nextStatus = isDone ? 'hari_ini' : 'selesai';
+    final nextStatus = isDone ? 'todo' : 'done';
+    final completedAt = isDone ? null : DateTime.now();
 
     await (_db.update(_db.localTasks)..where((t) => t.id.equals(id))).write(
       LocalTasksCompanion(
         status: Value(nextStatus),
-        completedAt: Value(isDone ? null : DateTime.now()),
+        completedAt: Value(completedAt),
       ),
     );
+
+    SyncService.instance.pushRecord(
+      tableName: 'tasks',
+      recordId: id,
+      action: 'update',
+      payload: {
+        'status': nextStatus,
+        'completed_at': completedAt?.toIso8601String(),
+      },
+    );
+
     await _loadData();
   }
 
@@ -264,7 +280,7 @@ class _TodayScreenState extends State<TodayScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadData,
+        onRefresh: () => _loadData(pull: true),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             AppTokens.space4,

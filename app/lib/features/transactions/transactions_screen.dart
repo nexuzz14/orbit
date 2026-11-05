@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
 import 'package:orbit_app/core/database/database.dart';
+import 'package:orbit_app/core/services/sync_service.dart';
 import 'package:orbit_app/core/widgets/orbit_widgets.dart';
 import 'package:orbit_app/core/widgets/transaction_form_sheet.dart';
 import 'package:orbit_app/features/accounts/accounts_screen.dart';
@@ -56,10 +57,13 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       _errorMessage = widget.forceError;
     } else {
       _loadTransactions();
+      SyncService.instance.pullAllFromSupabase().then((_) {
+        if (mounted) _loadTransactions();
+      });
     }
   }
 
-  Future<void> _loadTransactions() async {
+  Future<void> _loadTransactions({bool pull = false}) async {
     if (widget.forceLoading) return;
     setState(() {
       _loading = true;
@@ -69,6 +73,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     if (widget.forceError != null) {
       setState(() => _loading = false);
       return;
+    }
+
+    if (pull) {
+      await SyncService.instance.pullAllFromSupabase();
     }
 
     try {
@@ -117,13 +125,14 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   List<_DailyGroup> _groupTransactionsByDay() {
     final map = <String, _DailyGroup>{};
     for (final tx in _transactions) {
-      final d = tx.occurredAt;
+      // Pastikan pengelompokan tanggal memakai zona waktu profil (Asia/Jakarta, UTC+7)
+      final local = tx.occurredAt.toUtc().add(const Duration(hours: 7));
       final key =
-          '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+          '${local.year.toString().padLeft(4, '0')}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')}';
       final group = map.putIfAbsent(
         key,
         () => _DailyGroup(
-          date: DateTime(d.year, d.month, d.day),
+          date: DateTime(local.year, local.month, local.day),
           dateKey: key,
           items: [],
         ),
@@ -164,7 +173,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             icon: const Icon(Icons.add),
           ),
           IconButton(
-            onPressed: _loadTransactions,
+            onPressed: () => _loadTransactions(pull: true),
             tooltip: 'Segarkan daftar transaksi',
             constraints: const BoxConstraints(
               minWidth: AppTokens.minTouchTarget,
@@ -175,7 +184,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadTransactions,
+        onRefresh: () => _loadTransactions(pull: true),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             AppTokens.space4,
@@ -236,9 +245,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => const PlanningScreen(
-                            initialTab: 'anggaran',
-                          ),
+                          builder: (_) => const PlanningScreen(initialTab: 'anggaran'),
                         ),
                       );
                     },
@@ -251,9 +258,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => const PlanningScreen(
-                            initialTab: 'tagihan',
-                          ),
+                          builder: (_) => const PlanningScreen(initialTab: 'tagihan'),
                         ),
                       );
                     },
@@ -266,9 +271,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => const PlanningScreen(
-                            initialTab: 'target',
-                          ),
+                          builder: (_) => const PlanningScreen(initialTab: 'target'),
                         ),
                       );
                     },
@@ -331,7 +334,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                formatDateIndoShort(group.date),
+                                formatTransactionGroupDateKey(group.dateKey),
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   fontSize: 12,
@@ -381,7 +384,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     required IconData icon,
     required String label,
     int badgeCount = 0,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
   }) {
     return OutlinedButton(
       onPressed: onTap,

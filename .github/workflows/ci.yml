@@ -101,8 +101,27 @@ jobs:
           PGPASSWORD=orbit_password psql -h localhost -p 5433 -U orbit_user -d orbit_restore -c "select count(*) from information_schema.tables where table_schema = 'public';"
 
       - name: Jalankan Perhitungan Paritas Skema pada Database CI
+        id: local_schema
         run: |
           PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -f supabase/scripts/schema_signature.sql
+
+      - name: Bandingkan Signature Skema Lokal CI dengan Cloud Supabase
+        env:
+          CLOUD_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          LOCAL_SIG=$(PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -t -A -f supabase/scripts/schema_signature.sql)
+          echo "Signature Skema Lokal CI: $LOCAL_SIG"
+          if [ -n "$CLOUD_DB_URL" ]; then
+            CLOUD_SIG=$(psql "$CLOUD_DB_URL" -t -A -f supabase/scripts/schema_signature.sql)
+            echo "Signature Skema Cloud: $CLOUD_SIG"
+            if [ "$LOCAL_SIG" != "$CLOUD_SIG" ]; then
+              echo "Error: Selisih skema terdeteksi antara migrasi repo dan database cloud!"
+              exit 1
+            fi
+            echo "Paritas skema 100% cocok (zero diff)."
+          else
+            echo "SUPABASE_DB_URL tidak tersedia di secret repository, perbandingan cloud dilewati."
+          fi
 
   # --------------------------------------------------------------------------
   # 4. Web Lint, Typecheck, Audit, & Test (Next.js & Playwright CSP)

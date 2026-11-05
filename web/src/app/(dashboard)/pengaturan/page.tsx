@@ -13,6 +13,7 @@ import {
   Check,
   AlertCircle,
   Bell,
+  Radio,
 } from 'lucide-react';
 import {
   Card,
@@ -140,6 +141,20 @@ export default function PengaturanPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!loading && typeof window !== 'undefined') {
+      const tab = new URLSearchParams(window.location.search).get('tab');
+      if (tab === 'sumber' || tab === 'keamanan') {
+        const target = document.getElementById(tab);
+        if (target) {
+          setTimeout(() => {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 100);
+        }
+      }
+    }
+  }, [loading]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -312,7 +327,7 @@ export default function PengaturanPage() {
       ) : (
         <div className="space-y-6">
           {/* Bagian Profil */}
-          <Card>
+          <Card id="profil">
             <CardHeader>
               <CardTitle className="flex items-center gap-2.5">
                 <User className="w-4 h-4 text-primary" />
@@ -363,8 +378,39 @@ export default function PengaturanPage() {
             </CardContent>
           </Card>
 
+          {/* Bagian Sumber Otomatis */}
+          <Card id="sumber">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2.5">
+                <Radio className="w-4 h-4 text-primary" />
+                <span>Sumber Otomatis Transaksi</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-xs text-muted-foreground">
+                Orbit membaca dan mengekstrak mutasi perbankan serta notifikasi pembayaran secara lokal tanpa pernah meminta atau menyimpan kredensial login perbankan Anda.
+              </p>
+              <div className="space-y-3 max-w-xl">
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-subtle/50">
+                  <div>
+                    <div className="text-xs font-semibold text-foreground">Listener Notifikasi SMS &amp; Aplikasi Bank</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">Parsing mutasi otomatis dari BCA, Mandiri, BRI, BNI, GoPay, OVO</div>
+                  </div>
+                  <StatusBadge variant="income">Siap</StatusBadge>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-subtle/50">
+                  <div>
+                    <div className="text-xs font-semibold text-foreground">Penerusan Email Notifikasi Transaksi</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">Penerimaan draft struk pembayaran digital via webhook lokal</div>
+                  </div>
+                  <StatusBadge variant="income">Siap</StatusBadge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Bagian Ubah Kata Sandi */}
-          <Card>
+          <Card id="keamanan">
             <CardHeader>
               <CardTitle className="flex items-center gap-2.5">
                 <Key className="w-4 h-4 text-primary" />

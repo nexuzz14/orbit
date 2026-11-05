@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
 import 'package:orbit_app/core/database/database.dart';
+import 'package:orbit_app/core/services/sync_service.dart';
 import 'package:orbit_app/core/widgets/orbit_widgets.dart';
 import 'package:uuid/uuid.dart';
 
@@ -43,10 +44,13 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       _errorMessage = widget.forceError;
     } else {
       _loadProjects();
+      SyncService.instance.pullAllFromSupabase().then((_) {
+        if (mounted) _loadProjects();
+      });
     }
   }
 
-  Future<void> _loadProjects() async {
+  Future<void> _loadProjects({bool pull = false}) async {
     if (widget.forceLoading) return;
     setState(() {
       _loading = true;
@@ -56,6 +60,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     if (widget.forceError != null) {
       setState(() => _loading = false);
       return;
+    }
+
+    if (pull) {
+      await SyncService.instance.pullAllFromSupabase();
     }
 
     try {
@@ -148,15 +156,36 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 child: FilledButton(
                   onPressed: () async {
                     if (nameCtrl.text.trim().isEmpty) return;
+                    final wsId =
+                        await SyncService.instance.getWorkspaceId() ??
+                            'ws-local';
+                    final projId = _uuid.v4();
+                    final name = nameCtrl.text.trim();
+
                     await _db.into(_db.localProjects).insert(
                           LocalProjectsCompanion.insert(
-                            id: _uuid.v4(),
-                            workspaceId: 'ws-local',
+                            id: projId,
+                            workspaceId: wsId,
                             kind: selectedKind,
-                            name: nameCtrl.text.trim(),
+                            name: name,
                             color: const Value('#0284C7'),
                           ),
                         );
+
+                    SyncService.instance.pushRecord(
+                      tableName: 'projects',
+                      recordId: projId,
+                      action: 'insert',
+                      payload: {
+                        'id': projId,
+                        'workspace_id': wsId,
+                        'kind': selectedKind,
+                        'name': name,
+                        'color': '#0284C7',
+                        'status': 'berjalan',
+                      },
+                    );
+
                     if (ctx.mounted) Navigator.pop(ctx);
                     await _loadProjects();
                   },
@@ -202,7 +231,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadProjects,
+        onRefresh: () => _loadProjects(pull: true),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             AppTokens.space4,

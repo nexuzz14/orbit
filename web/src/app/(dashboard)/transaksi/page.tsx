@@ -12,7 +12,12 @@ import {
   Trash2,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { formatCurrency, formatDateIndo } from '@/lib/format';
+import {
+  formatCurrency,
+  formatDateIndo,
+  formatTransactionGroupDate,
+  getDateKeyInTimezone,
+} from '@/lib/format';
 import type { Database } from '@/types/database';
 import {
   Button,
@@ -194,9 +199,8 @@ export default function TransaksiPage() {
     const map = new Map<string, DailyTransactionGroup>();
 
     for (const t of filtered) {
-      const dateStr = (t.occurred_at || (t as any).tx_date || new Date().toISOString()).slice(
-        0,
-        10
+      const dateStr = getDateKeyInTimezone(
+        t.occurred_at || (t as any).tx_date || new Date()
       );
       if (!map.has(dateStr)) {
         map.set(dateStr, { dateKey: dateStr, subtotalNet: 0, items: [] });
@@ -351,7 +355,7 @@ export default function TransaksiPage() {
                 {/* Header Hari & Subtotal Harian */}
                 <div className="flex items-center justify-between border-b border-border bg-subtle/60 px-4 py-2.5">
                   <span className="text-xs font-semibold text-foreground">
-                    {formatDateIndo(group.dateKey)}
+                    {formatTransactionGroupDate(group.dateKey)}
                   </span>
                   <span
                     className={cn(

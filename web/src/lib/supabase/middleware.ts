@@ -32,9 +32,28 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Keamanan ketat: Bypass autentikasi E2E HANYA aktif bila:
+  // 1. process.env.NODE_ENV !== 'production'
+  // 2. process.env.E2E_AUTH_BYPASS === '1'
+  // Di luar dua kondisi ini (termasuk build produksi di Vercel), bypass dinonaktifkan secara absolut.
+  const isE2EBypassAllowed =
+    process.env.NODE_ENV !== 'production' &&
+    process.env.E2E_AUTH_BYPASS === '1';
+
+  const e2eUserCookie = isE2EBypassAllowed
+    ? request.cookies.get('orbit-e2e-user')?.value
+    : null;
+
+  let user: any = null;
+
+  if (e2eUserCookie) {
+    user = { id: 'e2e-test-user-id', email: 'e2e@test.local' };
+  } else {
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+    user = authUser;
+  }
 
   const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
     request.nextUrl.pathname.startsWith('/auth');

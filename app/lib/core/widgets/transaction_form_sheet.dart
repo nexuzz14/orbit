@@ -2,8 +2,8 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
 import 'package:orbit_app/core/database/database.dart';
+import 'package:orbit_app/core/services/sync_service.dart';
 import 'package:orbit_app/core/widgets/orbit_widgets.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TransactionFormSheet extends StatefulWidget {
   final VoidCallback? onSaved;
@@ -111,17 +111,20 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
 
     setState(() => _saving = true);
     try {
+      final wsId =
+          await SyncService.instance.getWorkspaceId() ?? 'ws-local';
       final id = 'tx_${DateTime.now().millisecondsSinceEpoch}';
       final merchant = _merchantController.text.trim().isEmpty
           ? (_type == 'transfer' ? 'Transfer Antar Akun' : _selectedCategoryId)
           : _merchantController.text.trim();
+      final catId = _type == 'transfer' ? null : _selectedCategoryId;
 
       await _db.into(_db.localTransactions).insert(
             LocalTransactionsCompanion.insert(
               id: id,
-              workspaceId: 'ws-local',
+              workspaceId: wsId,
               accountId: _selectedAccountId,
-              categoryId: Value(_type == 'transfer' ? null : _selectedCategoryId),
+              categoryId: Value(catId),
               type: _type,
               status: 'confirmed',
               amount: amount,
@@ -132,32 +135,26 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
             ),
           );
 
-      // Sinkronkan ke Supabase bila sesi aktif tersedia
-      try {
-        final client = Supabase.instance.client;
-        final user = client.auth.currentUser;
-        if (user != null) {
-          final member = await client
-              .from('workspace_members')
-              .select('workspace_id')
-              .limit(1)
-              .maybeSingle();
-          if (member != null && member['workspace_id'] != null) {
-            await client.from('transactions').insert({
-              'workspace_id': member['workspace_id'],
-              'account_id': _selectedAccountId,
-              'type': _type,
-              'status': 'confirmed',
-              'amount': amount,
-              'currency': 'IDR',
-              'source': _selectedSource,
-              'merchant': merchant,
-              'occurred_at': _selectedDate.toIso8601String(),
-              'origin': 'manual',
-            });
-          }
-        }
-      } catch (_) {}
+      // Sinkronkan ke Supabase (langsung jika online, atau outbox jika offline)
+      SyncService.instance.pushRecord(
+        tableName: 'transactions',
+        recordId: id,
+        action: 'insert',
+        payload: {
+          'id': id,
+          'workspace_id': wsId,
+          'account_id': _selectedAccountId,
+          if (catId != null) 'category_id': catId,
+          'type': _type,
+          'status': 'confirmed',
+          'amount': amount,
+          'currency': 'IDR',
+          'source': _selectedSource,
+          'merchant': merchant,
+          'occurred_at': _selectedDate.toIso8601String(),
+          'origin': 'manual',
+        },
+      );
 
       widget.onSaved?.call();
       if (mounted) {

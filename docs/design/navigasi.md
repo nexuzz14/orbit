@@ -73,9 +73,13 @@ Menggunakan komponen Material 3 `NavigationBar` dengan 4 `NavigationDestination`
 ## 3. Arsitektur Navigasi Aplikasi Web (`web/`)
 
 ### 3.1 Sidebar Kiri Desktop (`>= 768 px`)
-- **Empat Grup Seragam**: Sidebar menampilkan empat grup yang sama persis dengan struktur App (`Hari Ini`, `Agenda`, `Uang`, `Lainnya`).
+- **Empat Grup Seragam (Tanpa Navigasi Ganda)**:
+  - Sidebar desktop menggunakan prinsip **satu item per grup utama** untuk domain operasional (`Hari Ini` -> `/hari-ini`, `Agenda` -> `/jadwal`, `Uang` -> `/transaksi`).
+  - Sub-navigasi operasional (seperti `Jadwal` | `Tugas` pada Agenda, serta `Transaksi` | `Akun` | `Ringkasan` dan `Inbox` pada Uang) dikelola **hanya di dalam halaman** (`AgendaSubNav` dan `MoneySubNav`) untuk menghilangkan duplikasi navigasi.
+  - Fitur perencanaan keuangan masa depan (`Anggaran`, `Tagihan`, `Target`) dinonaktifkan dengan label **"Segera"** hingga Fase 3, dan tidak memicu navigasi ke rute kosong atau error.
+  - Grup `Lainnya` menampilkan item konfigurasi dan entitas pendukung: `Kegiatan & Piutang` (`/proyek`), `Kategori & Aturan` (`/kategori`), `Sumber Otomatis` (`/pengaturan?tab=sumber`), `Keamanan` (`/pengaturan?tab=keamanan`), dan `Pengaturan` (`/pengaturan`). Seluruh item terjangkau secara ergonomis pada tinggi layar minimal 700 px dengan area navigasi yang dapat di-scroll mandiri (`overflow-y-auto`) serta footer tetap terlihat.
 - **Dapat Dilipat (Collapsible)**:
-  - Keadaan terbuka (`w-64` / `256 px`): menampilkan logo + teks "Orbit", judul grup, ikon (`Lucide`), label tautan, dan lencana jumlah draft pada `Inbox`.
+  - Keadaan terbuka (`w-64` / `256 px`): menampilkan logo + teks "Orbit", judul grup, ikon (`Lucide`), dan label tautan.
   - Keadaan terlipat (`w-16` / `64 px`): menampilkan logo kompak, ikon navigasi terpusat dengan atribut `title` dan `aria-label`, serta tombol pelipat sidebar (`ChevronLeft` / `ChevronRight`) berukuran minimal `44x44 px`.
 - **Posisi Tetap (Fixed Viewport)**: Sidebar terkunci penuh setinggi layar (`fixed inset-y-0 left-0 h-screen`) dan tidak ikut tergulir bersama konten utama.
 

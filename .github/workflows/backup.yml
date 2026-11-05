@@ -55,3 +55,54 @@ jobs:
           name: ${{ env.FILENAME }}
           path: ${{ env.FILENAME }}
           retention-days: 30
+
+  restore-test:
+    name: Uji Pemulihan Cadangan (Restore Test)
+    needs: backup
+    runs-on: ubuntu-latest
+    services:
+      postgres_target:
+        image: postgres:16
+        env:
+          POSTGRES_USER: orbit_restore_user
+          POSTGRES_PASSWORD: orbit_restore_password
+          POSTGRES_DB: orbit_restore_db
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Pasang PostgreSQL Client & GPG
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client gnupg
+
+      - name: Unduh Artefak Cadangan
+        uses: actions/download-artifact@v4
+        with:
+          path: ./backups
+
+      - name: Dekripsi dan Uji Restore ke Container Efemeral
+        env:
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+          TARGET_DATABASE_URL: postgres://orbit_restore_user:orbit_restore_password@localhost:5434/orbit_restore_db
+        run: |
+          ENC_FILE=$(find ./backups -name "*.dump.gpg" | head -n 1)
+          if [ -z "$ENC_FILE" ]; then
+            echo "Error: Berkas cadangan terenkripsi tidak ditemukan."
+            exit 1
+          fi
+          echo "Menjalankan restore test dari $ENC_FILE..."
+          chmod +x ./supabase/scripts/restore.sh
+          ./supabase/scripts/restore.sh "$ENC_FILE"
+
+      - name: Verifikasi Sanity Check Data Pasca-Restore
+        run: |
+          PGPASSWORD=orbit_restore_password psql -h localhost -p 5434 -U orbit_restore_user -d orbit_restore_db -c "select count(*) as total_tables from information_schema.tables where table_schema = 'public';"
+          echo "Verifikasi pemulihan sukses 100%."

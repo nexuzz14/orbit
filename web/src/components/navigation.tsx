@@ -21,7 +21,9 @@ import {
   Plus,
   Receipt,
   Search,
+  Settings,
   Shield,
+  Sliders,
   Sun,
   Tags,
   Target,
@@ -35,6 +37,8 @@ interface NavLinkItem {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  matchHrefs?: string[];
+  tabParam?: string;
 }
 
 interface NavGroup {
@@ -47,36 +51,58 @@ const NAV_GROUPS: NavGroup[] = [
   {
     id: 'hari-ini',
     label: 'Hari Ini',
-    items: [{ href: '/hari-ini', label: 'Hari Ini', icon: Calendar }],
+    items: [
+      { href: '/hari-ini', label: 'Hari Ini', icon: Calendar, matchHrefs: ['/hari-ini'] },
+    ],
   },
   {
     id: 'agenda',
     label: 'Agenda',
     items: [
-      { href: '/jadwal', label: 'Jadwal', icon: CalendarDays },
-      { href: '/tugas', label: 'Tugas', icon: CheckSquare },
+      {
+        href: '/jadwal',
+        label: 'Agenda',
+        icon: CalendarDays,
+        matchHrefs: ['/jadwal', '/tugas'],
+      },
     ],
   },
   {
     id: 'uang',
     label: 'Uang',
     items: [
-      { href: '/transaksi', label: 'Transaksi', icon: Receipt },
-      { href: '/akun', label: 'Akun', icon: Wallet },
-      { href: '/ringkasan', label: 'Ringkasan', icon: LayoutDashboard },
-      { href: '/inbox', label: 'Inbox', icon: Inbox },
-      { href: '/anggaran', label: 'Anggaran', icon: PieChart },
-      { href: '/tagihan', label: 'Tagihan', icon: CalendarClock },
-      { href: '/tabungan', label: 'Target', icon: Target },
+      {
+        href: '/transaksi',
+        label: 'Uang',
+        icon: Receipt,
+        matchHrefs: ['/transaksi', '/akun', '/ringkasan', '/inbox'],
+      },
     ],
   },
   {
     id: 'lainnya',
     label: 'Lainnya',
     items: [
-      { href: '/proyek', label: 'Kegiatan & Piutang', icon: Briefcase },
-      { href: '/kategori', label: 'Kategori & Aturan', icon: Tags },
-      { href: '/pengaturan', label: 'Keamanan & Pengaturan', icon: Shield },
+      { href: '/proyek', label: 'Kegiatan & Piutang', icon: Briefcase, matchHrefs: ['/proyek'] },
+      { href: '/kategori', label: 'Kategori & Aturan', icon: Tags, matchHrefs: ['/kategori'] },
+      {
+        href: '/pengaturan?tab=sumber',
+        label: 'Sumber Otomatis',
+        icon: Sliders,
+        tabParam: 'sumber',
+      },
+      {
+        href: '/pengaturan?tab=keamanan',
+        label: 'Keamanan',
+        icon: Shield,
+        tabParam: 'keamanan',
+      },
+      {
+        href: '/pengaturan',
+        label: 'Pengaturan',
+        icon: Settings,
+        tabParam: 'umum',
+      },
     ],
   },
 ];
@@ -149,14 +175,28 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     pathname.startsWith('/transaksi') ||
     pathname.startsWith('/akun') ||
     pathname.startsWith('/ringkasan') ||
-    pathname.startsWith('/inbox') ||
-    pathname.startsWith('/anggaran') ||
-    pathname.startsWith('/tagihan') ||
-    pathname.startsWith('/tabungan');
+    pathname.startsWith('/inbox');
   const isLainnyaActive =
     pathname.startsWith('/proyek') ||
     pathname.startsWith('/kategori') ||
     pathname.startsWith('/pengaturan');
+
+  const isItemActive = (item: NavLinkItem) => {
+    if (item.matchHrefs) {
+      return item.matchHrefs.some(
+        (h) => pathname === h || pathname.startsWith(`${h}/`)
+      );
+    }
+    if (item.tabParam) {
+      if (pathname !== '/pengaturan') return false;
+      const currentTab =
+        typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('tab') || 'umum'
+          : 'umum';
+      return currentTab === item.tabParam;
+    }
+    return pathname === item.href || pathname.startsWith(`${item.href}/`);
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -231,7 +271,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <div className="space-y-0.5">
                 {group.items.map((item) => {
                   const Icon = item.icon;
-                  const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  const active = isItemActive(item);
                   return (
                     <Link
                       key={item.href}
@@ -313,7 +353,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </Link>
 
             {/* Pencarian Cepat */}
-            <div className="relative flex-1">
+            <div className="relative flex-1 min-w-0">
               <Search
                 aria-hidden="true"
                 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
@@ -321,12 +361,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <Input
                 type="search"
                 aria-label="Cari halaman, transaksi, atau tugas"
-                placeholder="Cari menu atau fitur..."
+                placeholder="Cari..."
                 value={searchQuery}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setTimeout(() => setSearchFocused(false), 180)}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-11"
+                className="pl-9 h-11 w-full text-xs sm:text-sm placeholder:text-muted-foreground"
               />
               {searchFocused && filteredSearchItems.length > 0 && (
                 <div
@@ -354,18 +394,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Aksi Kanan Top Bar: Menu "+ Tambah" & Toggle Tema */}
-          <div className="flex items-center gap-2">
-            <div className="relative" ref={addMenuRef}>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="relative shrink-0" ref={addMenuRef}>
               <Button
                 variant="primary"
                 size="default"
                 aria-haspopup="menu"
                 aria-expanded={addMenuOpen}
                 onClick={() => setAddMenuOpen((prev) => !prev)}
+                className="min-h-11 px-3 sm:px-4"
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
-                <span>Tambah</span>
-                <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                <span className="hidden sm:inline">Tambah</span>
+                <ChevronDown className="hidden sm:inline h-3.5 w-3.5" aria-hidden="true" />
               </Button>
 
               {addMenuOpen && (

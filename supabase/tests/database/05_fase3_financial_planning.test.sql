@@ -309,5 +309,73 @@ select is(
   'Status expected_incomes berubah menjadi confirmed setelah dikonfirmasi'
 );
 
+-- -----------------------------------------------------------------------------
+-- 6. Uji Batas Nilai & Constraint Integritas Tabungan / Alokasi
+-- -----------------------------------------------------------------------------
+-- Target Tabungan dilarang bernilai negatif (check current_amount >= 0)
+select isnt(
+  pg_temp.err_as(
+    'b3000000-0000-0000-0000-000000000001',
+    format($q$
+      insert into public.savings_goals (workspace_id, name, target_amount, current_amount, currency)
+      values (%L, 'Target Negatif', 1000000.0000, -50000.0000, 'IDR');
+    $q$, (select wid from ws_f3 where uid = 'b3000000-0000-0000-0000-000000000001'))
+  ),
+  'ok',
+  'Target tabungan dilarang bernilai saldo berjalan negatif (CHECK current_amount >= 0)'
+);
+
+-- Target amount dilarang <= 0
+select isnt(
+  pg_temp.err_as(
+    'b3000000-0000-0000-0000-000000000001',
+    format($q$
+      insert into public.savings_goals (workspace_id, name, target_amount, current_amount, currency)
+      values (%L, 'Target Nol', 0.0000, 0.0000, 'IDR');
+    $q$, (select wid from ws_f3 where uid = 'b3000000-0000-0000-0000-000000000001'))
+  ),
+  'ok',
+  'Target tabungan dilarang dengan target nominal <= 0 (CHECK target_amount > 0)'
+);
+
+-- -----------------------------------------------------------------------------
+-- 7. Uji RLS Lintas Workspace Menyeluruh (IDOR Isolation)
+-- -----------------------------------------------------------------------------
+-- User lain (Other F3) dilarang melihat recurring_bills workspace lain
+select is(
+  pg_temp.scalar_as(
+    'b3000000-0000-0000-0000-000000000004',
+    format($q$
+      select count(*)::text from public.recurring_bills where workspace_id = %L;
+    $q$, (select wid from ws_f3 where uid = 'b3000000-0000-0000-0000-000000000001'))
+  ),
+  '0',
+  'RLS Lintas Workspace: User lain tidak dapat membaca recurring_bills workspace orang lain'
+);
+
+-- User lain dilarang melihat savings_goals workspace lain
+select is(
+  pg_temp.scalar_as(
+    'b3000000-0000-0000-0000-000000000004',
+    format($q$
+      select count(*)::text from public.savings_goals where workspace_id = %L;
+    $q$, (select wid from ws_f3 where uid = 'b3000000-0000-0000-0000-000000000001'))
+  ),
+  '0',
+  'RLS Lintas Workspace: User lain tidak dapat membaca savings_goals workspace orang lain'
+);
+
+-- User lain dilarang melihat expected_incomes workspace lain
+select is(
+  pg_temp.scalar_as(
+    'b3000000-0000-0000-0000-000000000004',
+    format($q$
+      select count(*)::text from public.expected_incomes where workspace_id = %L;
+    $q$, (select wid from ws_f3 where uid = 'b3000000-0000-0000-0000-000000000001'))
+  ),
+  '0',
+  'RLS Lintas Workspace: User lain tidak dapat membaca expected_incomes workspace orang lain'
+);
+
 select * from finish();
 rollback;

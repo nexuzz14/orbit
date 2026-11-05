@@ -16,9 +16,12 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run start',
+    command: 'npm run dev',
     port: 3000,
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
+    env: {
+      E2E_AUTH_BYPASS: '1',
+    },
   },
 });

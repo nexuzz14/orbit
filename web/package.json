@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "test:unit": "npx tsx --test src/lib/format.test.ts src/lib/middleware_security.test.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {

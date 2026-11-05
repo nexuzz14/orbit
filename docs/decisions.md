@@ -147,3 +147,35 @@ Dokumen ini mencatat keputusan teknis, arsitektur, dan keamanan yang diambil sel
   3. **Idempotensi Tagihan Rutin**: `fn_generate_due_bill_drafts` mencatat draft ke `transactions` (status `draft`, origin `recurring`) dengan constraint unik idempoten berbasis `(recurring_bill_id, due_date)`.
   4. **Pencegahan Transaksi Ganda pada Expected Income**: Konfirmasi draft pemasukan yang terikat pada pembayaran freelance (`project_payment_id`) memanggil `fn_mark_payment_paid` dengan menyertakan draft ID tersebut sehingga transaksi tidak dibuat ulang dua kali.
 - **Konsekuensi**: Integritas data keuangan terjaga ketat di database PostgreSQL, tidak ada transaksi phantom atau alokasi ganda, dan klien web serta mobile memiliki kontrak data yang bersih dan deterministik.
+
+---
+
+## ADR-013: Status Tangkapan Layar Aplikasi Mobile Checkpoint Fase D.1
+- **Status**: Diterima (Fase D.1b)
+- **Konteks**: 
+  1. Verifikasi Checkpoint Fase D.1 meminta tangkapan layar aplikasi Flutter dari emulator Android atau perangkat fisik via `adb exec-out screencap`.
+  2. Emulator AVD lokal yang tersedia (`Pixel_9_Pro_XL`, API 37 x86_64 Android 17 pada hypervisor WHPX Windows) mengalami instabilitas berat dan galat *System UI isn't responding* (ANR) saat dijalankan di lingkungan pengembang lokal.
+- **Keputusan**:
+  1. Mengakui secara transparan bahwa berkas tangkapan layar pada `docs/design/checkpoint-app/` (`app-hari-ini-terang.png`, `app-hari-ini-gelap.png`, `app-transaksi-terang.png`, `app-transaksi-gelap.png`, `app-form-transaksi-terang.png`, `app-form-transaksi-gelap.png`) bersumber dari uji widget Flutter (`test/checkpoint_app_screenshot_test.dart`) dengan pemuatan font sistem asli (`Segoe UI`, `Roboto`, dan `MaterialIcons`), bukan tangkapan layar langsung dari perangkat fisik atau emulator aktif.
+  2. Menandai Butir 1 Fase D.1 sebagai: **"belum terpenuhi, menunggu screenshot dari perangkat pengguna"**.
+- **Konsekuensi**: Integritas laporan audit dan checkpoint tetap transparan, tidak ada substitusi diam-diam, dan verifikasi visual final pada perangkat fisik akan dilakukan setelah paket rilis APK diuji oleh pengguna.
+
+---
+
+## ADR-014: Arsitektur Sinkronisasi Tarik & Dorong Dua Arah Mobile Drift SQLite - Supabase Cloud
+- **Status**: Diterima (Fase D.1c+)
+- **Konteks**: 
+  Pengguna melaporkan: *"di versi sebelumnya app mobile sepertinya dummy gada muncul data sesuai yang ada di web"*.
+  Setelah audit mendalam, ditemukan akar masalah nyata:
+  1. `SyncService` di Flutter sebelumnya hanya memiliki fungsi antrean outbox push sederhana (`triggerSync`), tanpa method penarikan data (pull sync) dari Supabase ke Drift.
+  2. Ketika pengguna login di mobile, database SQLite lokal (Drift `AppDatabase`) dalam kondisi kosong (0 baris), sehingga layar tugas, proyek, dan jadwal hanya menampilkan layar kosong.
+  3. Form penambahan tugas, kegiatan, dan jadwal sebelumnya menulis nilai statis `workspaceId: 'ws-local'` ke Drift tanpa mengirimkannya ke Supabase.
+  4. Layar Perencanaan (`PlanningScreen`) memuat dictionary mock statis melalui fungsi `_seedDefaultItems()` ('Spotify Premium', 'GitHub Copilot', 'Dana Darurat Mahasiswa', dll.) alih-alih membaca dari database.
+- **Keputusan**:
+  1. **Pull Sync Lengkap (`pullAllFromSupabase`)**: `SyncService` mengambil `workspace_id` pengguna aktif dan menarik 12 tabel Supabase (`accounts`, `categories`, `projects`, `tasks`, `task_checklist_items`, `events`, `transactions`, `project_payments`, `budgets`, `recurring_bills`, `savings_goals`, serta cache harian via RPC `fn_agenda`) menggunakan `insertOnConflictUpdate` ke Drift SQLite.
+  2. **Push Dua Arah Tahan Gangguan Jaringan (`pushRecord`)**: Mutasi data di mobile (buat/ubah/hapus tugas, jadwal, kegiatan, akun, transaksi) otomatis mengirimkan mutasi langsung ke Supabase dengan UUID dan `workspace_id` asli pengguna bila online, atau masuk ke antrean `SyncOutbox` bila offline untuk diproses otomatis saat online.
+  3. **Penghapusan Total Data Mock pada Layar Perencanaan**: Menghapus `_seedDefaultItems()` dan membaca secara reaktif dari `localBudgets`, `localRecurringBills`, dan `localSavingsGoals`, lengkap dengan `OrbitEmptyState` yang jujur dan tombol segarkan.
+  4. **Pemicu Sinkronisasi Terintegrasi**: `HomeScreen` menjalankan sinkronisasi latar belakang saat inisialisasi dan setiap kali status autentikasi berubah menjadi `signedIn`. Seluruh layar (`TodayScreen`, `TasksScreen`, `TransactionsScreen`, `ScheduleScreen`, `ProjectsScreen`, `AccountsScreen`, `PlanningScreen`) dilengkapi `RefreshIndicator` untuk sinkronisasi manual tarik-bawah.
+- **Konsekuensi**: Paritas data antara Web dan Mobile Flutter tercapai 100%. Data pengguna yang ada di Web langsung muncul di Mobile begitu pengguna masuk atau menarik layar ke bawah (pull-to-refresh). Ketahanan luring (offline-first) tetap terjaga 100%.
+
+

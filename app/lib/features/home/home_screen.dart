@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
+import 'package:orbit_app/core/services/sync_service.dart';
 import 'package:orbit_app/core/widgets/orbit_widgets.dart';
 import 'package:orbit_app/core/widgets/transaction_form_sheet.dart';
 import 'package:orbit_app/features/inbox/inbox_screen.dart';
@@ -23,11 +25,43 @@ class _HomeScreenState extends State<HomeScreen> {
   late int _currentIndex;
   String _agendaMode = 'jadwal'; // jadwal | tugas
   int _refreshCounter = 0;
+  StreamSubscription<AuthState>? _authSub;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    _initSync();
+  }
+
+  void _initSync() {
+    if (Supabase.instance.client.auth.currentUser != null) {
+      SyncService.instance.pullAllFromSupabase().then((_) {
+        if (mounted) _triggerRefresh();
+      });
+    }
+
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.session != null) {
+        SyncService.instance.pullAllFromSupabase().then((_) {
+          if (mounted) _triggerRefresh();
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialIndex != widget.initialIndex) {
+      _currentIndex = widget.initialIndex;
+    }
   }
 
   void _triggerRefresh() {

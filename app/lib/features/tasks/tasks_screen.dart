@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
 import 'package:orbit_app/core/database/database.dart';
+import 'package:orbit_app/core/services/sync_service.dart';
 import 'package:orbit_app/core/widgets/orbit_widgets.dart';
 import 'package:uuid/uuid.dart';
 
@@ -42,10 +43,13 @@ class _TasksScreenState extends State<TasksScreen> {
       _errorMessage = widget.forceError;
     } else {
       _loadTasks();
+      SyncService.instance.pullAllFromSupabase().then((_) {
+        if (mounted) _loadTasks();
+      });
     }
   }
 
-  Future<void> _loadTasks() async {
+  Future<void> _loadTasks({bool pull = false}) async {
     if (widget.forceLoading) return;
     setState(() {
       _loading = true;
@@ -55,6 +59,10 @@ class _TasksScreenState extends State<TasksScreen> {
     if (widget.forceError != null) {
       setState(() => _loading = false);
       return;
+    }
+
+    if (pull) {
+      await SyncService.instance.pullAllFromSupabase();
     }
 
     try {
@@ -80,19 +88,42 @@ class _TasksScreenState extends State<TasksScreen> {
 
   Future<void> _toggleStatus(LocalTask task) async {
     final nextStatus = task.status == 'done' ? 'todo' : 'done';
+    final completedAt = nextStatus == 'done' ? DateTime.now() : null;
     await (_db.update(_db.localTasks)..where((t) => t.id.equals(task.id)))
         .write(
       LocalTasksCompanion(
         status: Value(nextStatus),
-        completedAt: Value(nextStatus == 'done' ? DateTime.now() : null),
+        completedAt: Value(completedAt),
       ),
     );
+
+    SyncService.instance.pushRecord(
+      tableName: 'tasks',
+      recordId: task.id,
+      action: 'update',
+      payload: {
+        'status': nextStatus,
+        'completed_at': completedAt?.toIso8601String(),
+      },
+    );
+
     await _loadTasks();
   }
 
   Future<void> _deleteTask(String id) async {
+    final now = DateTime.now();
     await (_db.update(_db.localTasks)..where((t) => t.id.equals(id)))
-        .write(LocalTasksCompanion(deletedAt: Value(DateTime.now())));
+        .write(LocalTasksCompanion(deletedAt: Value(now)));
+
+    SyncService.instance.pushRecord(
+      tableName: 'tasks',
+      recordId: id,
+      action: 'update',
+      payload: {
+        'deleted_at': now.toIso8601String(),
+      },
+    );
+
     await _loadTasks();
   }
 
@@ -178,19 +209,41 @@ class _TasksScreenState extends State<TasksScreen> {
                 child: FilledButton(
                   onPressed: () async {
                     if (titleCtrl.text.trim().isEmpty) return;
+                    final wsId =
+                        await SyncService.instance.getWorkspaceId() ??
+                            'ws-local';
+                    final taskId = _uuid.v4();
+                    final due = DateTime.now().add(const Duration(days: 1));
+                    final title = titleCtrl.text.trim();
+
                     await _db.into(_db.localTasks).insert(
                           LocalTasksCompanion.insert(
-                            id: _uuid.v4(),
-                            workspaceId: 'ws-local',
+                            id: taskId,
+                            workspaceId: wsId,
                             kind: selectedKind,
-                            title: titleCtrl.text.trim(),
+                            title: title,
                             priority: Value(priority),
                             status: const Value('todo'),
-                            dueAt: Value(
-                              DateTime.now().add(const Duration(days: 1)),
-                            ),
+                            dueAt: Value(due),
                           ),
                         );
+
+                    SyncService.instance.pushRecord(
+                      tableName: 'tasks',
+                      recordId: taskId,
+                      action: 'insert',
+                      payload: {
+                        'id': taskId,
+                        'workspace_id': wsId,
+                        'kind': selectedKind,
+                        'title': title,
+                        'priority': priority,
+                        'status': 'todo',
+                        'due_at': due.toIso8601String(),
+                        'due_is_date_only': false,
+                      },
+                    );
+
                     if (ctx.mounted) Navigator.pop(ctx);
                     await _loadTasks();
                   },
@@ -216,7 +269,7 @@ class _TasksScreenState extends State<TasksScreen> {
     }).toList();
 
     final content = RefreshIndicator(
-      onRefresh: _loadTasks,
+      onRefresh: () => _loadTasks(pull: true),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(
           AppTokens.space4,

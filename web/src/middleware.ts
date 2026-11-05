@@ -5,9 +5,12 @@ export async function middleware(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
 
   // Content Security Policy (PRD 9.8 & 9.16)
+  // Di mode development (next dev), Webpack / Fast Refresh membutuhkan 'unsafe-eval' untuk eval source-maps.
+  // Di mode production, 'unsafe-eval' dilarang keras.
+  const isDev = process.env.NODE_ENV === 'development';
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'nonce-${nonce}' 'strict-dynamic';
+    script-src 'self' 'nonce-${nonce}' 'strict-dynamic' ${isDev ? "'unsafe-eval'" : ''};
     style-src 'self' 'unsafe-inline';
     img-src 'self' blob: data: https:;
     font-src 'self';

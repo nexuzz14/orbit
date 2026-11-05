@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
 import 'package:orbit_app/core/database/database.dart';
+import 'package:orbit_app/core/services/sync_service.dart';
 import 'package:orbit_app/core/widgets/orbit_widgets.dart';
 import 'package:uuid/uuid.dart';
 
@@ -42,10 +43,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       _errorMessage = widget.forceError;
     } else {
       _loadEvents();
+      SyncService.instance.pullAllFromSupabase().then((_) {
+        if (mounted) _loadEvents();
+      });
     }
   }
 
-  Future<void> _loadEvents() async {
+  Future<void> _loadEvents({bool pull = false}) async {
     if (widget.forceLoading) return;
     setState(() {
       _loading = true;
@@ -55,6 +59,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     if (widget.forceError != null) {
       setState(() => _loading = false);
       return;
+    }
+
+    if (pull) {
+      await SyncService.instance.pullAllFromSupabase();
     }
 
     try {
@@ -232,21 +240,44 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     if (!endsAt.isAfter(startsAt)) {
                       endsAt = startsAt.add(const Duration(hours: 1));
                     }
+                    final wsId =
+                        await SyncService.instance.getWorkspaceId() ??
+                            'ws-local';
+                    final eventId = _uuid.v4();
+                    final title = titleCtrl.text.trim();
+                    final loc = locationCtrl.text.trim().isEmpty
+                        ? null
+                        : locationCtrl.text.trim();
+
                     await _db.into(_db.localEvents).insert(
                           LocalEventsCompanion.insert(
-                            id: _uuid.v4(),
-                            workspaceId: 'ws-local',
+                            id: eventId,
+                            workspaceId: wsId,
                             kind: selectedKind,
-                            title: titleCtrl.text.trim(),
-                            location: Value(
-                              locationCtrl.text.trim().isEmpty
-                                  ? null
-                                  : locationCtrl.text.trim(),
-                            ),
+                            title: title,
+                            location: Value(loc),
                             startsAt: startsAt,
                             endsAt: endsAt,
                           ),
                         );
+
+                    SyncService.instance.pushRecord(
+                      tableName: 'events',
+                      recordId: eventId,
+                      action: 'insert',
+                      payload: {
+                        'id': eventId,
+                        'workspace_id': wsId,
+                        'kind': selectedKind,
+                        'title': title,
+                        'location': loc,
+                        'starts_at': startsAt.toIso8601String(),
+                        'ends_at': endsAt.toIso8601String(),
+                        'all_day': false,
+                        'timezone': 'Asia/Jakarta',
+                      },
+                    );
+
                     if (ctx.mounted) Navigator.pop(ctx);
                     await _loadEvents();
                   },
@@ -274,7 +305,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final conflicts = _computeConflictingIds(filtered);
 
     final content = RefreshIndicator(
-      onRefresh: _loadEvents,
+      onRefresh: () => _loadEvents(pull: true),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(
           AppTokens.space4,
