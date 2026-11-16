@@ -87,11 +87,13 @@ class TodayAlertBanner extends StatelessWidget {
 class TodayEventRow extends StatelessWidget {
   final Map<String, dynamic> event;
   final bool hasConflict;
+  final VoidCallback? onTap;
 
   const TodayEventRow({
     super.key,
     required this.event,
     this.hasConflict = false,
+    this.onTap,
   });
 
   @override
@@ -104,7 +106,7 @@ class TodayEventRow extends StatelessWidget {
     final kind = event['kind'] as String? ?? 'pribadi';
     final location = event['location'] as String?;
 
-    return Padding(
+    final content = Padding(
       padding: const EdgeInsets.all(AppTokens.space4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,9 +160,18 @@ class TodayEventRow extends StatelessWidget {
               ],
             ),
           ),
+          if (onTap != null)
+            Icon(
+              Icons.more_horiz_rounded,
+              size: 18,
+              color: AppColors.textMutedColor(context),
+            ),
         ],
       ),
     );
+
+    if (onTap == null) return content;
+    return InkWell(onTap: onTap, child: content);
   }
 }
 
@@ -168,12 +179,18 @@ class TodayTaskRow extends StatelessWidget {
   final Map<String, dynamic> task;
   final VoidCallback onToggleStatus;
   final VoidCallback? onTap;
+  final VoidCallback? onFocusTap;
+  final VoidCallback? onScheduleTap;
+  final VoidCallback? onExpenseTap;
 
   const TodayTaskRow({
     super.key,
     required this.task,
     required this.onToggleStatus,
     this.onTap,
+    this.onFocusTap,
+    this.onScheduleTap,
+    this.onExpenseTap,
   });
 
   @override
@@ -261,6 +278,36 @@ class TodayTaskRow extends StatelessWidget {
                         ),
                     ],
                   ),
+                  if (!isDone &&
+                      (onFocusTap != null ||
+                          onScheduleTap != null ||
+                          onExpenseTap != null)) ...[
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (onFocusTap != null)
+                          _TaskInlineActionPill(
+                            icon: Icons.timer_outlined,
+                            label: 'Fokus',
+                            onTap: onFocusTap!,
+                          ),
+                        if (onScheduleTap != null)
+                          _TaskInlineActionPill(
+                            icon: Icons.event_available_outlined,
+                            label: 'Jadwalkan',
+                            onTap: onScheduleTap!,
+                          ),
+                        if (onExpenseTap != null)
+                          _TaskInlineActionPill(
+                            icon: Icons.receipt_long_outlined,
+                            label: 'Biaya',
+                            onTap: onExpenseTap!,
+                          ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -410,6 +457,50 @@ class _TodayStatTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TaskInlineActionPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _TaskInlineActionPill({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppColors.accentColor(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.subtleColor(context),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: AppColors.borderColor(context)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: accent),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimaryColor(context),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

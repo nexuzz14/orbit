@@ -20,7 +20,7 @@
             android:layout_weight="1"
             android:ellipsize="end"
             android:maxLines="1"
-            android:text="Orbit Hari Ini"
+            android:text="Orbit Command"
             android:textColor="@color/orbit_widget_text_primary"
             android:textSize="14sp"
             android:textStyle="bold" />
@@ -38,7 +38,32 @@
             android:textColor="@color/orbit_widget_accent_ink"
             android:textSize="11sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_today_add_btn"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/orbit_widget_btn_primary_bg"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="+"
+            android:textColor="@color/orbit_widget_btn_text_on_accent"
+            android:textSize="15sp"
+            android:textStyle="bold" />
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/widget_today_stats"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="0 Tugas • 0 Jadwal • 0 Tagihan"
+        android:textColor="@color/orbit_widget_text_secondary"
+        android:textSize="11sp" />
 
     <TextView
         android:id="@+id/widget_today_empty"
@@ -54,8 +79,16 @@
         android:id="@+id/widget_today_row_1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:orientation="horizontal">
+        android:layout_marginTop="8dp"
+        android:background="@drawable/orbit_widget_btn_secondary_bg"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingLeft="10dp"
+        android:paddingTop="6dp"
+        android:paddingRight="10dp"
+        android:paddingBottom="6dp">
 
         <TextView
             android:id="@+id/widget_today_item_1_title"
@@ -66,7 +99,8 @@
             android:maxLines="1"
             android:text="Agenda terdekat"
             android:textColor="@color/orbit_widget_text_primary"
-            android:textSize="13sp" />
+            android:textSize="12.5sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/widget_today_item_1_time"
@@ -74,7 +108,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text=""
-            android:textColor="@color/orbit_widget_accent"
+            android:textColor="@color/orbit_widget_accent_ink"
             android:textSize="11sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -83,8 +117,16 @@
         android:id="@+id/widget_today_row_2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:orientation="horizontal">
+        android:layout_marginTop="5dp"
+        android:background="@drawable/orbit_widget_btn_secondary_bg"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingLeft="10dp"
+        android:paddingTop="6dp"
+        android:paddingRight="10dp"
+        android:paddingBottom="6dp">
 
         <TextView
             android:id="@+id/widget_today_item_2_title"
@@ -95,7 +137,8 @@
             android:maxLines="1"
             android:text=""
             android:textColor="@color/orbit_widget_text_primary"
-            android:textSize="13sp" />
+            android:textSize="12.5sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/widget_today_item_2_time"
@@ -103,7 +146,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text=""
-            android:textColor="@color/orbit_widget_accent"
+            android:textColor="@color/orbit_widget_accent_ink"
             android:textSize="11sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -112,8 +155,16 @@
         android:id="@+id/widget_today_row_3"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:orientation="horizontal">
+        android:layout_marginTop="5dp"
+        android:background="@drawable/orbit_widget_btn_secondary_bg"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingLeft="10dp"
+        android:paddingTop="6dp"
+        android:paddingRight="10dp"
+        android:paddingBottom="6dp">
 
         <TextView
             android:id="@+id/widget_today_item_3_title"
@@ -124,7 +175,8 @@
             android:maxLines="1"
             android:text=""
             android:textColor="@color/orbit_widget_text_primary"
-            android:textSize="13sp" />
+            android:textSize="12.5sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/widget_today_item_3_time"
@@ -132,7 +184,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text=""
-            android:textColor="@color/orbit_widget_accent"
+            android:textColor="@color/orbit_widget_accent_ink"
             android:textSize="11sp"
             android:textStyle="bold" />
     </LinearLayout>

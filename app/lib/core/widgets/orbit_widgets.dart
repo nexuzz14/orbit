@@ -15,33 +15,59 @@ class OrbitCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
+  final Color? borderColor;
+  final Gradient? gradient;
 
   const OrbitCard({
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(AppTokens.space4),
     this.onTap,
+    this.borderColor,
+    this.gradient,
   });
 
   @override
   Widget build(BuildContext context) {
-    final card = Card(
-      color: AppColors.surfaceColor(context),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-        side: BorderSide(color: AppColors.borderColor(context)),
-      ),
-      child: Padding(
-        padding: padding,
-        child: child,
-      ),
+    final resolvedBorder = borderColor ?? AppColors.borderColor(context);
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+      side: BorderSide(color: resolvedBorder),
     );
 
-    if (onTap == null) return card;
-    return InkWell(
-      borderRadius: BorderRadius.circular(AppTokens.radiusLg),
-      onTap: onTap,
-      child: card,
+    if (gradient != null) {
+      return Container(
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+          border: Border.all(color: resolvedBorder),
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+          clipBehavior: Clip.antiAlias,
+          child: onTap == null
+              ? Padding(padding: padding, child: child)
+              : InkWell(
+                  borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+                  onTap: onTap,
+                  child: Padding(padding: padding, child: child),
+                ),
+        ),
+      );
+    }
+
+    return Material(
+      color: AppColors.surfaceColor(context),
+      shape: shape,
+      clipBehavior: Clip.antiAlias,
+      child: onTap == null
+          ? Padding(padding: padding, child: child)
+          : InkWell(
+              borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+              onTap: onTap,
+              child: Padding(padding: padding, child: child),
+            ),
     );
   }
 }

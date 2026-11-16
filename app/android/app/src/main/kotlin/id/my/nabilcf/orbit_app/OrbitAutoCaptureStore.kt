@@ -42,6 +42,9 @@ object OrbitAutoCaptureStore {
     @Volatile
     var pendingQuickAddAction: String? = null
 
+    @Volatile
+    var pendingOpenRoute: Map<String, String?>? = null
+
     fun setBankListenerEnabled(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
 import 'package:orbit_app/core/database/database.dart';
+import 'package:orbit_app/core/services/home_widget_bridge.dart';
 import 'package:orbit_app/core/services/privacy_and_lock_service.dart';
 import 'package:orbit_app/core/services/sync_service.dart';
 import 'package:orbit_app/core/widgets/orbit_privacy_widgets.dart';
@@ -238,7 +239,7 @@ class _PlanningScreenState extends State<PlanningScreen> {
           final warning = !overBudget && (ratio * 100) >= b.notifyAtPercent;
           final barColor = overBudget
               ? AppColors.expenseColor(context)
-              : (warning ? AppColors.warningColor(context) : AppColors.primary);
+              : (warning ? AppColors.warningColor(context) : AppColors.accentColor(context));
 
           return OrbitCard(
             padding: const EdgeInsets.all(AppTokens.space4),
@@ -381,11 +382,33 @@ class _PlanningScreenState extends State<PlanningScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    OrbitStatusBadge(
-                      label: bill.active ? 'Aktif' : 'Nonaktif',
-                      variant: bill.active
-                          ? OrbitBadgeVariant.income
-                          : OrbitBadgeVariant.neutral,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        OrbitStatusBadge(
+                          label: bill.active ? 'Aktif' : 'Nonaktif',
+                          variant: bill.active
+                              ? OrbitBadgeVariant.income
+                              : OrbitBadgeVariant.neutral,
+                        ),
+                        if (bill.active) ...[
+                          const SizedBox(width: 6),
+                          OutlinedButton(
+                            onPressed: () => _payBillNow(bill),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 34),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                            ),
+                            child: const Text(
+                              'Bayar',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -465,7 +488,7 @@ class _PlanningScreenState extends State<PlanningScreen> {
                     valueColor: AlwaysStoppedAnimation<Color>(
                       goal.isCompleted
                           ? AppColors.incomeColor(context)
-                          : AppColors.primary,
+                          : AppColors.accentColor(context),
                     ),
                   ),
                 ),
@@ -499,6 +522,70 @@ class _PlanningScreenState extends State<PlanningScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _payBillNow(LocalRecurringBill bill) async {
+    final db = AppDatabase.shared;
+    final wsId = (await SyncService.instance.getWorkspaceId()) ?? 'personal-ws';
+    final txId = const Uuid().v4();
+    final now = DateTime.now();
+
+    await db.into(db.localTransactions).insert(
+          LocalTransactionsCompanion.insert(
+            id: txId,
+            workspaceId: wsId,
+            accountId: bill.accountId,
+            categoryId: drift.Value(bill.categoryId),
+            type: 'expense',
+            status: 'confirmed',
+            amount: bill.amount,
+            currency: 'IDR',
+            source: const drift.Value('pribadi'),
+            merchant: drift.Value(bill.name),
+            note: drift.Value('Pembayaran tagihan rutin: ${bill.name}'),
+            occurredAt: now,
+          ),
+        );
+
+    final acc = await (db.select(db.localAccounts)
+          ..where((a) => a.id.equals(bill.accountId)))
+        .getSingleOrNull();
+    if (acc != null) {
+      await (db.update(db.localAccounts)..where((a) => a.id.equals(acc.id)))
+          .write(
+        LocalAccountsCompanion(
+          currentBalance: drift.Value(acc.currentBalance - bill.amount),
+        ),
+      );
+    }
+
+    await SyncService.instance.pushRecord(
+      tableName: 'transactions',
+      recordId: txId,
+      action: 'insert',
+      payload: {
+        'id': txId,
+        'workspace_id': wsId,
+        'account_id': bill.accountId,
+        'category_id': bill.categoryId,
+        'type': 'expense',
+        'status': 'confirmed',
+        'amount': bill.amount,
+        'currency': 'IDR',
+        'source': 'personal',
+        'merchant': bill.name,
+        'note': 'Pembayaran tagihan rutin: ${bill.name}',
+        'occurred_at': now.toUtc().toIso8601String(),
+        'origin': 'manual',
+      },
+    );
+
+    await HomeWidgetBridge.syncFromDatabase(db);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Tagihan "${bill.name}" tercatat lunas.')),
+    );
+    _loadData();
   }
 
   void _handleQuickAddForTab() {

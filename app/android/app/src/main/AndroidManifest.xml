@@ -39,6 +39,9 @@
                     android:scheme="io.supabase.orbit"
                     android:host="quick-add" />
                 <data
+                    android:scheme="io.supabase.orbit"
+                    android:host="open" />
+                <data
                     android:scheme="io.supabase.orbit" />
             </intent-filter>
             <!-- Share Target Android: hanya teks mutasi/struk atau gambar struk aman -->
@@ -86,6 +89,7 @@
             android:label="@string/orbit_widget_tasks_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="id.my.nabilcf.orbit_app.ACTION_COMPLETE_TASK" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -108,6 +112,7 @@
             android:label="@string/orbit_widget_balance_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="id.my.nabilcf.orbit_app.ACTION_TOGGLE_PRIVACY" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

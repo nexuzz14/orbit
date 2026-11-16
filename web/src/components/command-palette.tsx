@@ -15,6 +15,7 @@ import {
   Kanban,
   Loader2,
   Moon,
+  Palette,
   PieChart,
   Plus,
   Receipt,
@@ -27,6 +28,7 @@ import {
   X,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { ORBIT_ACCENTS, useThemeAccent } from '@/lib/theme-accent';
 import { cn, KindBadge, StatusBadge, TaskStatusBadge } from '@/components/ui';
 
 export interface GlobalSearchResult {
@@ -90,6 +92,7 @@ export function CommandPalette({
   const router = useRouter();
   const pathname = usePathname();
   const inputRef = useRef<HTMLInputElement>(null);
+  const { accent, setAccent } = useThemeAccent();
 
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -278,6 +281,13 @@ export function CommandPalette({
         icon: isDark ? Sun : Moon,
         run: () => onToggleTheme(),
       },
+      ...ORBIT_ACCENTS.map((item) => ({
+        id: `action-accent-${item.id}`,
+        label: `Tema Aksen: ${item.label}${accent === item.id ? ' (Aktif)' : ''}`,
+        hint: 'Ubah warna aksen interaktif Command Center',
+        icon: Palette,
+        run: () => setAccent(item.id),
+      })),
     ];
 
     if (!trimmedQuery) return base;
@@ -286,7 +296,7 @@ export function CommandPalette({
         a.label.toLowerCase().includes(trimmedQuery) ||
         a.hint.toLowerCase().includes(trimmedQuery)
     );
-  }, [isDark, onOpenNewTransaction, onToggleTheme, pathname, router, trimmedQuery]);
+  }, [accent, isDark, onOpenNewTransaction, onToggleTheme, pathname, router, setAccent, trimmedQuery]);
 
   const filteredNavShortcuts = useMemo(() => {
     if (!trimmedQuery) return NAV_SHORTCUTS.slice(0, 6);

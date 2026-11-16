@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:orbit_app/core/services/theme_controller.dart';
 
 class AppTokens {
   static const double space1 = 4.0;
@@ -36,29 +37,29 @@ class AppColors {
     end: Alignment.bottomRight,
   );
 
-  // Permukaan Mode Terang (Netral Notion Warm/Zinc - Opsi A dikunci)
-  static const Color lightBackground = Color(0xFFFFFFFF);
-  static const Color lightSidebar = Color(0xFFF7F7F5);
+  // Permukaan Mode Terang (Interactive Command Center Slate-White)
+  static const Color lightBackground = Color(0xFFF8FAFC);
+  static const Color lightSidebar = Color(0xFFF4F5F7);
   static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightSubtle = Color(0xFFEFEFED);
-  static const Color lightHover = Color(0xFFF4F4F2);
-  static const Color lightBorder = Color(0xFFE6E6E3);
-  static const Color lightBorderStrong = Color(0xFFD1D1CC);
-  static const Color lightTextPrimary = Color(0xFF11181C);
-  static const Color lightTextSecondary = Color(0xFF555550);
-  static const Color lightTextMuted = Color(0xFF80807A);
+  static const Color lightSubtle = Color(0xFFF1F5F9);
+  static const Color lightHover = Color(0xFFEEF2F6);
+  static const Color lightBorder = Color(0xFFE2E8F0);
+  static const Color lightBorderStrong = Color(0xFFCBD5E1);
+  static const Color lightTextPrimary = Color(0xFF0F172A);
+  static const Color lightTextSecondary = Color(0xFF475569);
+  static const Color lightTextMuted = Color(0xFF64748B);
 
-  // Permukaan Mode Gelap (Netral Notion Dark - Opsi A dikunci)
-  static const Color darkBackground = Color(0xFF191919);
-  static const Color darkSidebar = Color(0xFF202020);
-  static const Color darkSurface = Color(0xFF242424);
-  static const Color darkSubtle = Color(0xFF2F2F2F);
-  static const Color darkHover = Color(0xFF2A2A2A);
-  static const Color darkBorder = Color(0xFF323232);
-  static const Color darkBorderStrong = Color(0xFF454545);
-  static const Color darkTextPrimary = Color(0xFFF3F3F2);
-  static const Color darkTextSecondary = Color(0xFFB3B3AE);
-  static const Color darkTextMuted = Color(0xFF7E7E78);
+  // Permukaan Mode Gelap (Interactive Command Center Deep Slate)
+  static const Color darkBackground = Color(0xFF0D1117);
+  static const Color darkSidebar = Color(0xFF121720);
+  static const Color darkSurface = Color(0xFF161B22);
+  static const Color darkSubtle = Color(0xFF1E2530);
+  static const Color darkHover = Color(0xFF212834);
+  static const Color darkBorder = Color(0xFF262F3D);
+  static const Color darkBorderStrong = Color(0xFF374151);
+  static const Color darkTextPrimary = Color(0xFFF1F5F9);
+  static const Color darkTextSecondary = Color(0xFF94A3B8);
+  static const Color darkTextMuted = Color(0xFF64748B);
 
   // Warna Semantik Keuangan
   static const Color income = Color(0xFF15803D);
@@ -230,7 +231,12 @@ class AppColors {
   }
 
   static Color accentColor(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? primaryDark : primary;
+      Theme.of(context).colorScheme.primary;
+
+  static Color accentSubtleColor(BuildContext context) {
+    final accent = OrbitThemeController.instance.accent;
+    return isDark(context) ? accent.darkSubtle : accent.lightSubtle;
+  }
 
   static Color incomeColor(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark ? incomeDark : income;
@@ -243,12 +249,13 @@ class AppColors {
 }
 
 class AppTheme {
-  static ThemeData light() {
+  static ThemeData light({OrbitAccent accent = OrbitAccent.ocean}) {
     final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.seedBlue,
+      seedColor: accent.lightPrimary,
       brightness: Brightness.light,
-      primary: AppColors.primary,
+      primary: accent.lightPrimary,
       surface: AppColors.lightSurface,
+      surfaceContainerLow: AppColors.lightSubtle,
     );
 
     return ThemeData(
@@ -277,21 +284,21 @@ class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.lightSurface,
         surfaceTintColor: Colors.transparent,
-        indicatorColor: const Color(0xFFE0F2FE),
+        indicatorColor: accent.lightSubtle,
         height: 68,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.primary,
+        backgroundColor: accent.lightPrimary,
         foregroundColor: Colors.white,
-        elevation: 2,
+        elevation: 3,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusLg),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: accent.lightPrimary,
           foregroundColor: Colors.white,
           minimumSize: const Size(AppTokens.minTouchTarget, AppTokens.minTouchTarget),
           shape: RoundedRectangleBorder(
@@ -335,18 +342,19 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          borderSide: BorderSide(color: accent.lightPrimary, width: 1.5),
         ),
       ),
     );
   }
 
-  static ThemeData dark() {
+  static ThemeData dark({OrbitAccent accent = OrbitAccent.ocean}) {
     final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.seedBlue,
+      seedColor: accent.darkPrimary,
       brightness: Brightness.dark,
-      primary: AppColors.primaryDark,
+      primary: accent.darkPrimary,
       surface: AppColors.darkSurface,
+      surfaceContainerLow: AppColors.darkSubtle,
     );
 
     return ThemeData(
@@ -375,21 +383,21 @@ class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.darkSurface,
         surfaceTintColor: Colors.transparent,
-        indicatorColor: const Color(0xFF0C4A6E),
+        indicatorColor: accent.darkSubtle,
         height: 68,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.primaryDark,
+        backgroundColor: accent.darkPrimary,
         foregroundColor: AppColors.darkBackground,
-        elevation: 2,
+        elevation: 3,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusLg),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.primaryDark,
+          backgroundColor: accent.darkPrimary,
           foregroundColor: AppColors.darkBackground,
           minimumSize: const Size(AppTokens.minTouchTarget, AppTokens.minTouchTarget),
           shape: RoundedRectangleBorder(
@@ -433,7 +441,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-          borderSide: const BorderSide(color: AppColors.primaryDark, width: 1.5),
+          borderSide: BorderSide(color: accent.darkPrimary, width: 1.5),
         ),
       ),
     );

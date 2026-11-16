@@ -6,6 +6,7 @@ import 'package:orbit_app/core/database/database.dart';
 import 'package:orbit_app/core/services/home_widget_bridge.dart';
 import 'package:orbit_app/core/services/notification_service.dart';
 import 'package:orbit_app/core/services/privacy_and_lock_service.dart';
+import 'package:orbit_app/core/services/theme_controller.dart';
 import 'package:orbit_app/core/widgets/orbit_privacy_widgets.dart';
 import 'package:orbit_app/features/auth/login_screen.dart';
 import 'package:orbit_app/features/home/home_screen.dart';
@@ -18,8 +19,12 @@ void main() async {
   } catch (_) {}
 
   await PrivacyModeController.instance.load();
+  await OrbitThemeController.instance.load();
   await AppLockService.instance.init();
   PrivacyModeController.instance.registerSyncHook(() async {
+    await HomeWidgetBridge.syncFromDatabase(AppDatabase.shared);
+  });
+  OrbitThemeController.instance.registerSyncHook(() async {
     await HomeWidgetBridge.syncFromDatabase(AppDatabase.shared);
   });
 
@@ -43,16 +48,22 @@ class OrbitApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Orbit',
-      debugShowCheckedModeBanner: false,
-      themeMode: ThemeMode.system,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      home: const _OrbitAuthRootGate(),
-      onUnknownRoute: (_) => MaterialPageRoute<void>(
-        builder: (_) => const _OrbitAuthRootGate(),
-      ),
+    return ListenableBuilder(
+      listenable: OrbitThemeController.instance,
+      builder: (context, _) {
+        final themeCtrl = OrbitThemeController.instance;
+        return MaterialApp(
+          title: 'Orbit',
+          debugShowCheckedModeBanner: false,
+          themeMode: themeCtrl.themeMode,
+          theme: AppTheme.light(accent: themeCtrl.accent),
+          darkTheme: AppTheme.dark(accent: themeCtrl.accent),
+          home: const _OrbitAuthRootGate(),
+          onUnknownRoute: (_) => MaterialPageRoute<void>(
+            builder: (_) => const _OrbitAuthRootGate(),
+          ),
+        );
+      },
     );
   }
 }

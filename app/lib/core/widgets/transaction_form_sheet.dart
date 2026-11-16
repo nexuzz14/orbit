@@ -2,16 +2,45 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
 import 'package:orbit_app/core/database/database.dart';
+import 'package:orbit_app/core/services/home_widget_bridge.dart';
 import 'package:orbit_app/core/services/notification_scheduler_service.dart';
 import 'package:orbit_app/core/services/sync_service.dart';
 import 'package:orbit_app/core/widgets/orbit_widgets.dart';
+import 'package:uuid/uuid.dart';
 
 class TransactionFormSheet extends StatefulWidget {
   final VoidCallback? onSaved;
+  final String? initialType;
+  final String? initialMerchant;
+  final String? initialNote;
+  final String? initialSource;
+  final String? initialProjectId;
+  final String? linkTargetType;
+  final String? linkTargetId;
 
-  const TransactionFormSheet({super.key, this.onSaved});
+  const TransactionFormSheet({
+    super.key,
+    this.onSaved,
+    this.initialType,
+    this.initialMerchant,
+    this.initialNote,
+    this.initialSource,
+    this.initialProjectId,
+    this.linkTargetType,
+    this.linkTargetId,
+  });
 
-  static Future<bool?> show(BuildContext context, {VoidCallback? onSaved}) {
+  static Future<bool?> show(
+    BuildContext context, {
+    VoidCallback? onSaved,
+    String? initialType,
+    String? initialMerchant,
+    String? initialNote,
+    String? initialSource,
+    String? initialProjectId,
+    String? linkTargetType,
+    String? linkTargetId,
+  }) {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -21,7 +50,16 @@ class TransactionFormSheet extends StatefulWidget {
           top: Radius.circular(AppTokens.radiusLg),
         ),
       ),
-      builder: (ctx) => TransactionFormSheet(onSaved: onSaved),
+      builder: (ctx) => TransactionFormSheet(
+        onSaved: onSaved,
+        initialType: initialType,
+        initialMerchant: initialMerchant,
+        initialNote: initialNote,
+        initialSource: initialSource,
+        initialProjectId: initialProjectId,
+        linkTargetType: linkTargetType,
+        linkTargetId: linkTargetId,
+      ),
     );
   }
 
@@ -66,6 +104,22 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialType != null &&
+        (widget.initialType == 'expense' ||
+            widget.initialType == 'income' ||
+            widget.initialType == 'transfer')) {
+      _type = widget.initialType!;
+    }
+    if (widget.initialSource != null && widget.initialSource!.isNotEmpty) {
+      _selectedSource = widget.initialSource!;
+    }
+    if (widget.initialMerchant != null && widget.initialMerchant!.isNotEmpty) {
+      _merchantController.text = widget.initialMerchant!;
+      _showDetails = true;
+    } else if (widget.initialNote != null && widget.initialNote!.isNotEmpty) {
+      _merchantController.text = widget.initialNote!;
+      _showDetails = true;
+    }
     _loadLocalAccounts();
   }
 
@@ -114,7 +168,7 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
     try {
       final wsId =
           await SyncService.instance.getWorkspaceId() ?? 'ws-local';
-      final id = 'tx_${DateTime.now().millisecondsSinceEpoch}';
+      final id = const Uuid().v4();
       final merchant = _merchantController.text.trim().isEmpty
           ? (_type == 'transfer' ? 'Transfer Antar Akun' : _selectedCategoryId)
           : _merchantController.text.trim();
@@ -126,15 +180,40 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
               workspaceId: wsId,
               accountId: _selectedAccountId,
               categoryId: Value(catId),
+              projectId: Value(widget.initialProjectId),
               type: _type,
               status: 'confirmed',
               amount: amount,
               currency: 'IDR',
               source: Value(_selectedSource),
               merchant: Value(merchant),
+              note: Value(widget.initialNote),
               occurredAt: _selectedDate,
             ),
           );
+
+      // Update saldo akun lokal secara reaktif agar dashboard langsung sinkron
+      final acc = await (_db.select(_db.localAccounts)
+            ..where((a) => a.id.equals(_selectedAccountId)))
+          .getSingleOrNull();
+      if (acc != null) {
+        final delta = _type == 'income' ? amount : (_type == 'expense' ? -amount : -amount);
+        await (_db.update(_db.localAccounts)..where((a) => a.id.equals(acc.id))).write(
+          LocalAccountsCompanion(currentBalance: Value(acc.currentBalance + delta)),
+        );
+      }
+
+      if (widget.linkTargetType != null && widget.linkTargetId != null) {
+        try {
+          await SyncService.instance.addEntityLink(
+            sourceType: 'transaction',
+            sourceId: id,
+            targetType: widget.linkTargetType!,
+            targetId: widget.linkTargetId!,
+            relationType: 'related',
+          );
+        } catch (_) {}
+      }
 
       // Sinkronkan ke Supabase (langsung jika online, atau outbox jika offline)
       SyncService.instance.pushRecord(
@@ -146,17 +225,20 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
           'workspace_id': wsId,
           'account_id': _selectedAccountId,
           if (catId != null) 'category_id': catId,
+          if (widget.initialProjectId != null) 'project_id': widget.initialProjectId,
           'type': _type,
           'status': 'confirmed',
           'amount': amount,
           'currency': 'IDR',
           'source': _selectedSource,
           'merchant': merchant,
+          if (widget.initialNote != null) 'note': widget.initialNote,
           'occurred_at': _selectedDate.toIso8601String(),
           'origin': 'manual',
         },
       );
 
+      await HomeWidgetBridge.syncFromDatabase(_db);
       widget.onSaved?.call();
       await NotificationSchedulerService.rescheduleAll(_db);
       if (mounted) {

@@ -3,15 +3,18 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:orbit_app/core/database/database.dart';
 import 'package:orbit_app/core/services/privacy_and_lock_service.dart';
+import 'package:orbit_app/core/services/theme_controller.dart';
 import 'package:orbit_app/core/widgets/orbit_formatters.dart';
 
 class OrbitWidgetTodayItem {
+  final String id;
   final String title;
   final String timeLabel;
   final String kind;
   final String itemType; // 'event' | 'task'
 
   const OrbitWidgetTodayItem({
+    this.id = '',
     required this.title,
     required this.timeLabel,
     required this.kind,
@@ -19,6 +22,7 @@ class OrbitWidgetTodayItem {
   });
 
   Map<String, dynamic> toJson() => {
+    'id': id,
     'title': title,
     'timeLabel': timeLabel,
     'kind': kind,
@@ -31,12 +35,14 @@ class OrbitWidgetTaskItem {
   final String title;
   final String status;
   final String dueLabel;
+  final int progressPercent;
 
   const OrbitWidgetTaskItem({
     required this.id,
     required this.title,
     required this.status,
     required this.dueLabel,
+    this.progressPercent = 0,
   });
 
   Map<String, dynamic> toJson() => {
@@ -44,6 +50,7 @@ class OrbitWidgetTaskItem {
     'title': title,
     'status': status,
     'dueLabel': dueLabel,
+    'progressPercent': progressPercent,
   };
 }
 
@@ -53,7 +60,11 @@ class OrbitWidgetSnapshot {
   final String updatedAtLabelWib;
   final bool privacyMasked;
   final String balanceDisplayText;
+  final String todayExpenseText;
+  final String accentId;
   final int activeTaskCount;
+  final int todayEventCount;
+  final int activeBillCount;
   final List<OrbitWidgetTodayItem> todayItems;
   final List<OrbitWidgetTaskItem> priorityTasks;
 
@@ -62,7 +73,11 @@ class OrbitWidgetSnapshot {
     required this.updatedAtLabelWib,
     required this.privacyMasked,
     required this.balanceDisplayText,
+    this.todayExpenseText = 'Rp 0',
+    this.accentId = 'ocean',
     required this.activeTaskCount,
+    this.todayEventCount = 0,
+    this.activeBillCount = 0,
     required this.todayItems,
     required this.priorityTasks,
   });
@@ -73,7 +88,11 @@ class OrbitWidgetSnapshot {
       'updatedAtLabelWib': updatedAtLabelWib,
       'privacyMasked': privacyMasked,
       'balanceDisplayText': balanceDisplayText,
+      'todayExpenseText': todayExpenseText,
+      'accentId': accentId,
       'activeTaskCount': activeTaskCount,
+      'todayEventCount': todayEventCount,
+      'activeBillCount': activeBillCount,
       'todayItems': todayItems.map((e) => e.toJson()).toList(),
       'priorityTasks': priorityTasks.map((e) => e.toJson()).toList(),
       'todayItemsJson': jsonEncode(todayItems.map((e) => e.toJson()).toList()),
@@ -94,9 +113,21 @@ class HomeWidgetBridge {
 
   static bool _listenerAttached = false;
   static void Function(String actionType)? _onQuickAdd;
+  static void Function(String targetTab, String? entityId)? _onOpenRoute;
 
   static void registerQuickAddHandler(void Function(String actionType) handler) {
     _onQuickAdd = handler;
+    _attachMethodHandlerIfNeeded();
+  }
+
+  static void registerOpenRouteHandler(
+    void Function(String targetTab, String? entityId) handler,
+  ) {
+    _onOpenRoute = handler;
+    _attachMethodHandlerIfNeeded();
+  }
+
+  static void _attachMethodHandlerIfNeeded() {
     if (_listenerAttached) return;
     _listenerAttached = true;
     try {
@@ -106,11 +137,61 @@ class HomeWidgetBridge {
           if (_isValidQuickAddType(type)) {
             _onQuickAdd?.call(type!);
           }
+        } else if (call.method == 'onOpenWidgetRoute') {
+          final args = call.arguments;
+          if (args is Map) {
+            final tab = args['tab']?.toString() ?? 'today';
+            final id = args['id']?.toString();
+            _onOpenRoute?.call(tab, (id == null || id.isEmpty) ? null : id);
+          }
         }
       });
     } on MissingPluginException {
       // Aman saat headless test.
     } catch (_) {}
+  }
+
+  static Future<List<String>> consumePendingCompletedTaskIds() async {
+    try {
+      final raw = await _channel.invokeMethod<dynamic>(
+        'consumePendingCompletedTaskIds',
+      );
+      if (raw is List) {
+        return raw.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
+      }
+      return const [];
+    } on MissingPluginException {
+      return const [];
+    } on PlatformException {
+      return const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  static Future<Map<String, String>?> consumePendingOpenRoute() async {
+    try {
+      final raw = await _channel.invokeMethod<dynamic>(
+        'consumePendingOpenRoute',
+      );
+      if (raw is Map) {
+        final tab = raw['tab']?.toString();
+        if (tab != null && tab.isNotEmpty) {
+          return {
+            'tab': tab,
+            if (raw['id'] != null && raw['id'].toString().isNotEmpty)
+              'id': raw['id'].toString(),
+          };
+        }
+      }
+      return null;
+    } on MissingPluginException {
+      return null;
+    } on PlatformException {
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<String?> consumePendingQuickAddAction() async {
@@ -138,7 +219,10 @@ class HomeWidgetBridge {
   }
 
   static bool _isValidQuickAddType(String? value) =>
-      value == 'transaction' || value == 'task' || value == 'receipt';
+      value == 'transaction' ||
+      value == 'task' ||
+      value == 'receipt' ||
+      value == 'event';
 
   /// Susun snapshot deterministik dari Drift DB & status Mode Privasi.
   static Future<OrbitWidgetSnapshot> buildSnapshotFromDatabase(
@@ -171,6 +255,26 @@ class HomeWidgetBridge {
     final tasks = await (db.select(
       db.localTasks,
     )..where((t) => t.deletedAt.isNull())).get();
+    final txs = await (db.select(
+      db.localTransactions,
+    )..where((t) => t.deletedAt.isNull())).get();
+    final bills = await (db.select(
+      db.localRecurringBills,
+    )..where((b) => b.deletedAt.isNull())).get();
+
+    final todayExpenseTotal = txs
+        .where(
+          (t) =>
+              t.type == 'expense' &&
+              t.status == 'confirmed' &&
+              !t.occurredAt.isBefore(todayStartUtc) &&
+              t.occurredAt.isBefore(todayEndUtc),
+        )
+        .fold<double>(0.0, (sum, t) => sum + t.amount);
+    final todayExpenseDisplay = masked
+        ? PrivacyModeController.maskedPlaceholder
+        : formatRupiah(todayExpenseTotal);
+    final activeBillCount = bills.where((b) => b.active).length;
 
     // Kumpulkan item Hari Ini (event hari ini WIB + tugas due hari ini WIB).
     final todayItems = <OrbitWidgetTodayItem>[];
@@ -191,6 +295,7 @@ class HomeWidgetBridge {
       final mm = startWib.minute.toString().padLeft(2, '0');
       todayItems.add(
         OrbitWidgetTodayItem(
+          id: ev.id,
           title: ev.title,
           timeLabel: ev.allDay ? 'Seharian' : '$hh:$mm WIB',
           kind: ev.kind,
@@ -220,6 +325,7 @@ class HomeWidgetBridge {
         final mm = dueWib.minute.toString().padLeft(2, '0');
         todayItems.add(
           OrbitWidgetTodayItem(
+            id: task.id,
             title: task.title,
             timeLabel: 'Deadline $hh:$mm',
             kind: task.kind,
@@ -263,6 +369,7 @@ class HomeWidgetBridge {
         title: t.title,
         status: t.status,
         dueLabel: dueLabel,
+        progressPercent: t.progressPercent,
       );
     }).toList();
 
@@ -274,7 +381,11 @@ class HomeWidgetBridge {
       updatedAtLabelWib: 'Diperbarui $hh:$mm WIB',
       privacyMasked: masked,
       balanceDisplayText: balanceDisplay,
+      todayExpenseText: todayExpenseDisplay,
+      accentId: OrbitThemeController.instance.accent.id,
       activeTaskCount: activeTasks.length,
+      todayEventCount: todayEvents.length,
+      activeBillCount: activeBillCount,
       todayItems: todayItems,
       priorityTasks: priorityTasks,
     );

@@ -55,6 +55,9 @@ class _HomeScreenState extends State<HomeScreen> {
     HomeWidgetBridge.registerQuickAddHandler((actionType) {
       if (mounted) _handleQuickAddAction(actionType);
     });
+    HomeWidgetBridge.registerOpenRouteHandler((tab, entityId) {
+      if (mounted) _handleWidgetOpenRoute(tab, entityId);
+    });
     AndroidAutoCaptureBridge.instance.attachListener(
       onDraftsImported: (_) async {
         await HomeWidgetBridge.syncFromDatabase(AppDatabase.shared);
@@ -67,14 +70,66 @@ class _HomeScreenState extends State<HomeScreen> {
       await AndroidAutoCaptureBridge.instance.pushConfigToNative();
       final imported = await AndroidAutoCaptureBridge.instance
           .syncPendingAutoCaptures(AppDatabase.shared);
+
+      final completedFromWidget =
+          await HomeWidgetBridge.consumePendingCompletedTaskIds();
+      for (final taskId in completedFromWidget) {
+        try {
+          await SyncService.instance.changeTaskStatus(
+            taskId: taskId,
+            toStatus: 'done',
+          );
+        } catch (_) {}
+      }
+
       await HomeWidgetBridge.syncFromDatabase(AppDatabase.shared);
-      if (imported.draftsCreated > 0 && mounted) {
+      if ((imported.draftsCreated > 0 || completedFromWidget.isNotEmpty) &&
+          mounted) {
         _triggerRefresh();
       }
       final pendingQuickAdd =
           await HomeWidgetBridge.consumePendingQuickAddAction();
       if (pendingQuickAdd != null && mounted) {
         _handleQuickAddAction(pendingQuickAdd);
+      }
+      final pendingOpenRoute =
+          await HomeWidgetBridge.consumePendingOpenRoute();
+      if (pendingOpenRoute != null && mounted) {
+        _handleWidgetOpenRoute(
+          pendingOpenRoute['tab'] ?? 'today',
+          pendingOpenRoute['id'],
+        );
+      }
+    });
+  }
+
+  Future<void> _handleWidgetOpenRoute(String tab, String? entityId) async {
+    if (!mounted) return;
+    if (tab == 'task' && entityId != null && entityId.isNotEmpty) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => OrbitTaskDetailPage(taskId: entityId),
+        ),
+      );
+      await HomeWidgetBridge.syncFromDatabase(AppDatabase.shared);
+      if (mounted) _triggerRefresh();
+      return;
+    }
+    setState(() {
+      switch (tab) {
+        case 'schedule':
+          _currentIndex = 1;
+          _agendaMode = 'jadwal';
+          break;
+        case 'tasks':
+          _currentIndex = 1;
+          _agendaMode = 'tugas';
+          break;
+        case 'finance':
+          _currentIndex = 2;
+          break;
+        default:
+          _currentIndex = 0;
       }
     });
   }
@@ -101,6 +156,13 @@ class _HomeScreenState extends State<HomeScreen> {
           MaterialPageRoute(
             builder: (_) => const InboxScreen(initialOpenReceiptScanner: true),
           ),
+        );
+        await HomeWidgetBridge.syncFromDatabase(AppDatabase.shared);
+        if (mounted) _triggerRefresh();
+        break;
+      case 'event':
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const ScheduleScreen()),
         );
         await HomeWidgetBridge.syncFromDatabase(AppDatabase.shared);
         if (mounted) _triggerRefresh();
@@ -356,6 +418,12 @@ class _HomeScreenState extends State<HomeScreen> {
           _agendaMode = 'tugas';
           _selectedSavedViewId = viewId;
           _selectedTaskViewMode = viewMode;
+        });
+      },
+      switchTab: (tabIndex, {agendaMode}) {
+        setState(() {
+          _currentIndex = tabIndex.clamp(0, 3);
+          if (agendaMode != null) _agendaMode = agendaMode;
         });
       },
       child: PopScope(

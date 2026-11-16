@@ -29,6 +29,19 @@ export interface EditableTransaction {
   occurred_at: string;
 }
 
+export interface TransactionPrefill {
+  type?: TransactionType;
+  amount?: number;
+  note?: string;
+  merchant?: string;
+  source?: TransactionSource;
+  projectId?: string | null;
+  linkTarget?: {
+    type: 'task' | 'event' | 'project' | 'bill';
+    id: string;
+  };
+}
+
 interface TransactionFormModalProps {
   open: boolean;
   onClose: () => void;
@@ -37,6 +50,7 @@ interface TransactionFormModalProps {
   initialCategories?: CategoryOption[];
   workspaceId?: string | null;
   editingTransaction?: EditableTransaction | null;
+  prefill?: TransactionPrefill | null;
 }
 
 export function TransactionFormModal({
@@ -47,6 +61,7 @@ export function TransactionFormModal({
   initialCategories,
   workspaceId: propWorkspaceId,
   editingTransaction,
+  prefill,
 }: TransactionFormModalProps) {
   const supabase = createClient();
   const todayIso = new Date().toISOString().slice(0, 10);
@@ -92,13 +107,13 @@ export function TransactionFormModal({
       setTxDate(editingTransaction.occurred_at.slice(0, 10));
       setShowOptional(Boolean(editingTransaction.merchant || editingTransaction.note));
     } else {
-      setType('expense');
-      setAmountStr('');
-      setMerchant('');
-      setNote('');
-      setSource('personal');
+      setType(prefill?.type || 'expense');
+      setAmountStr(prefill?.amount && prefill.amount > 0 ? String(prefill.amount) : '');
+      setMerchant(prefill?.merchant || '');
+      setNote(prefill?.note || '');
+      setSource(prefill?.source || 'personal');
       setTxDate(new Date().toISOString().slice(0, 10));
-      setShowOptional(false);
+      setShowOptional(Boolean(prefill?.merchant || prefill?.note));
     }
 
     async function loadMetadataIfNeeded() {
@@ -137,7 +152,7 @@ export function TransactionFormModal({
     }
 
     loadMetadataIfNeeded();
-  }, [open, editingTransaction, propWorkspaceId, workspaceId, accounts.length, categories.length, supabase]);
+  }, [open, editingTransaction, prefill, propWorkspaceId, workspaceId, accounts.length, categories.length, supabase]);
 
   useEffect(() => {
     if (accounts.length > 0 && !accountId) {
@@ -218,24 +233,47 @@ export function TransactionFormModal({
         if (!categoryId) {
           throw new Error('Pilih kategori transaksi.');
         }
-        const { error } = await supabase.from('transactions').insert({
-          workspace_id: workspaceId,
-          account_id: selectedAcc.id,
-          category_id: categoryId,
-          type,
-          status: 'confirmed',
-          amount: numAmount,
-          amount_base: numAmount,
-          currency: selectedAcc.currency,
-          source,
-          merchant: merchant.trim() || null,
-          note: note.trim() || null,
-          occurred_at: occurredIso,
-          origin: 'manual',
-        });
+        const { data: insertedTx, error } = await supabase
+          .from('transactions')
+          .insert({
+            workspace_id: workspaceId,
+            account_id: selectedAcc.id,
+            category_id: categoryId,
+            project_id: prefill?.projectId || null,
+            type,
+            status: 'confirmed',
+            amount: numAmount,
+            amount_base: numAmount,
+            currency: selectedAcc.currency,
+            source,
+            merchant: merchant.trim() || null,
+            note: note.trim() || null,
+            occurred_at: occurredIso,
+            origin: 'manual',
+          })
+          .select('id')
+          .single();
         if (error) throw error;
+
+        if (insertedTx?.id && prefill?.linkTarget) {
+          try {
+            await supabase.from('entity_links').insert({
+              workspace_id: workspaceId,
+              source_type: 'transaction',
+              source_id: insertedTx.id,
+              target_type: prefill.linkTarget.type,
+              target_id: prefill.linkTarget.id,
+              relation_type: 'related',
+            });
+          } catch {
+            // Abaikan jika entity_links belum tersedia di cloud
+          }
+        }
       }
 
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('orbit:transaction-created'));
+      }
       onSuccess?.();
       onClose();
     } catch (err: any) {

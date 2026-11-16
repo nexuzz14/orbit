@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
 import 'package:orbit_app/core/database/database.dart';
 import 'package:orbit_app/core/services/sync_service.dart';
+import 'package:orbit_app/core/services/theme_controller.dart';
 
 /// Konteks navigasi Orbit Shell agar tab di dalam HomeScreen dapat
 /// membuka Workspace Drawer, Command Search, atau berpindah tab/view.
@@ -14,6 +15,7 @@ class OrbitShellScope extends InheritedWidget {
   final VoidCallback? openNewTransaction;
   final void Function(String savedViewId, {String? viewMode})?
       openSavedView;
+  final void Function(int tabIndex, {String? agendaMode})? switchTab;
 
   const OrbitShellScope({
     super.key,
@@ -22,6 +24,7 @@ class OrbitShellScope extends InheritedWidget {
     this.openNewTask,
     this.openNewTransaction,
     this.openSavedView,
+    this.switchTab,
     required super.child,
   });
 
@@ -35,7 +38,8 @@ class OrbitShellScope extends InheritedWidget {
         openCommandSearch != oldWidget.openCommandSearch ||
         openNewTask != oldWidget.openNewTask ||
         openNewTransaction != oldWidget.openNewTransaction ||
-        openSavedView != oldWidget.openSavedView;
+        openSavedView != oldWidget.openSavedView ||
+        switchTab != oldWidget.switchTab;
   }
 }
 
@@ -534,6 +538,16 @@ class _OrbitWorkspaceDrawerState extends State<OrbitWorkspaceDrawer> {
               onTap: () {
                 Navigator.of(context).pop();
                 widget.onOpenPlanning();
+              },
+            ),
+            _DrawerNavRow(
+              icon: Icons.palette_outlined,
+              iconColor: AppColors.accentColor(context),
+              label: 'Tema & Aksen',
+              trailingText: OrbitThemeController.instance.accent.label,
+              onTap: () {
+                Navigator.of(context).pop();
+                OrbitThemeController.showPickerSheet(context);
               },
             ),
             _DrawerNavRow(

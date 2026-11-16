@@ -24,6 +24,7 @@ import {
   LogOut,
   Menu,
   Moon,
+  Palette,
   PieChart,
   Plus,
   Receipt,
@@ -34,12 +35,14 @@ import {
   Target,
   Wallet,
   X,
+  Check,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getSavedViewHref } from '@/lib/task-v2';
 import { PrivacyProvider, usePrivacyMode } from '@/lib/privacy-mode';
+import { ORBIT_ACCENTS, ThemeAccentProvider, useThemeAccent } from '@/lib/theme-accent';
 import { Button, cn, KindBadge } from '@/components/ui';
-import { TransactionFormModal } from '@/components/transaction-form-modal';
+import { TransactionFormModal, type TransactionPrefill } from '@/components/transaction-form-modal';
 import { CommandPalette } from '@/components/command-palette';
 
 interface WorkspaceOption {
@@ -106,6 +109,7 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const { privacyMode, togglePrivacyMode, hasPin, lockSessionNow } = usePrivacyMode();
+  const { accent, setAccent } = useThemeAccent();
 
   const [isDark, setIsDark] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -113,7 +117,9 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [accentMenuOpen, setAccentMenuOpen] = useState(false);
   const [txModalOpen, setTxModalOpen] = useState(false);
+  const [txPrefill, setTxPrefill] = useState<TransactionPrefill | null>(null);
   const [wsMenuOpen, setWsMenuOpen] = useState(false);
 
   const [workspaces, setWorkspaces] = useState<WorkspaceOption[]>([]);
@@ -123,6 +129,7 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
   const [draftCount, setDraftCount] = useState(0);
 
   const addMenuRef = useRef<HTMLDivElement>(null);
+  const accentMenuRef = useRef<HTMLDivElement>(null);
   const wsMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -155,12 +162,25 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
       if (addMenuRef.current && !addMenuRef.current.contains(target)) {
         setAddMenuOpen(false);
       }
+      if (accentMenuRef.current && !accentMenuRef.current.contains(target)) {
+        setAccentMenuOpen(false);
+      }
       if (wsMenuRef.current && !wsMenuRef.current.contains(target)) {
         setWsMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const onOpenTxModal = (e: Event) => {
+      const detail = (e as CustomEvent<{ prefill?: TransactionPrefill }>).detail;
+      setTxPrefill(detail?.prefill ?? null);
+      setTxModalOpen(true);
+    };
+    window.addEventListener('orbit:open-new-transaction', onOpenTxModal);
+    return () => window.removeEventListener('orbit:open-new-transaction', onOpenTxModal);
   }, []);
 
   // Close mobile drawer on route change
@@ -787,8 +807,8 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
           collapsed ? 'md:pl-14' : 'md:pl-60'
         )}
       >
-        {/* Top Bar Tipis 48px */}
-        <header className="print:hidden sticky top-0 z-30 flex h-12 items-center justify-between gap-3 border-b border-border bg-background/95 px-3 md:px-6 backdrop-blur-sm">
+        {/* Top Bar Tipis 48px (Glass Command Center) */}
+        <header className="print:hidden sticky top-0 z-30 flex h-12 items-center justify-between gap-3 border-b border-border orbit-glass px-3 md:px-6">
           <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
@@ -913,6 +933,67 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
               {privacyMode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
 
+            <div className="relative shrink-0" ref={accentMenuRef}>
+              <button
+                type="button"
+                onClick={() => setAccentMenuOpen((prev) => !prev)}
+                aria-label="Pilih tema aksen interaktif"
+                aria-expanded={accentMenuOpen}
+                title="Tema Aksen Orbit"
+                className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs font-medium text-foreground hover:bg-hover transition-colors"
+              >
+                <span
+                  className="h-3 w-3 rounded-full ring-2 ring-primary/25"
+                  style={{
+                    backgroundColor: isDark
+                      ? ORBIT_ACCENTS.find((a) => a.id === accent)?.swatchDark
+                      : ORBIT_ACCENTS.find((a) => a.id === accent)?.swatchLight,
+                  }}
+                />
+                <Palette className="h-3.5 w-3.5 text-muted-foreground hidden sm:inline" />
+              </button>
+
+              {accentMenuOpen && (
+                <div
+                  role="menu"
+                  aria-label="Pilih warna aksen tema"
+                  className="absolute right-0 mt-1.5 w-48 rounded-lg border border-border bg-card p-1.5 shadow-peek z-50"
+                >
+                  <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Tema Aksen
+                  </div>
+                  {ORBIT_ACCENTS.map((item) => {
+                    const active = item.id === accent;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={active}
+                        onClick={() => {
+                          setAccent(item.id);
+                          setAccentMenuOpen(false);
+                        }}
+                        className={cn(
+                          'min-h-[40px] w-full flex items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors',
+                          active ? 'bg-primary-subtle text-primary font-semibold' : 'text-foreground hover:bg-hover'
+                        )}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="h-3.5 w-3.5 rounded-full border border-black/10"
+                            style={{ backgroundColor: isDark ? item.swatchDark : item.swatchLight }}
+                          />
+                          <span>{item.label}</span>
+                        </span>
+                        {active && <Check className="h-3.5 w-3.5 text-primary" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             <button
               type="button"
               onClick={toggleTheme}
@@ -1006,8 +1087,12 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
       {/* Modal Tambah Transaksi Global */}
       <TransactionFormModal
         open={txModalOpen}
-        onClose={() => setTxModalOpen(false)}
+        onClose={() => {
+          setTxModalOpen(false);
+          setTxPrefill(null);
+        }}
         workspaceId={activeWorkspaceId}
+        prefill={txPrefill}
         onSuccess={() => {
           window.dispatchEvent(new CustomEvent('orbit:transaction-created'));
           router.refresh();
@@ -1019,9 +1104,11 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
-    <PrivacyProvider>
-      <DashboardShellContent>{children}</DashboardShellContent>
-    </PrivacyProvider>
+    <ThemeAccentProvider>
+      <PrivacyProvider>
+        <DashboardShellContent>{children}</DashboardShellContent>
+      </PrivacyProvider>
+    </ThemeAccentProvider>
   );
 }
 

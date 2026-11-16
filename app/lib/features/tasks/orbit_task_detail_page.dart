@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
 import 'package:orbit_app/core/database/database.dart';
+import 'package:orbit_app/core/services/home_widget_bridge.dart';
 import 'package:orbit_app/core/services/sync_service.dart';
 import 'package:orbit_app/core/widgets/orbit_widgets.dart';
+import 'package:orbit_app/core/widgets/transaction_form_sheet.dart';
 import 'package:orbit_app/features/tasks/widgets/orbit_revision_dialog.dart';
 import 'package:orbit_app/features/tasks/widgets/orbit_time_tracker_block.dart';
+import 'package:uuid/uuid.dart';
 
 /// Halaman detail tugas bergaya Notion/Jira dengan properti inline,
 /// blok catatan, checklist, subtugas bersarang, tautan entitas, lampiran,
@@ -1376,6 +1379,106 @@ class _OrbitTaskDetailPageState extends State<OrbitTaskDetailPage> {
                   ],
                 ),
               ),
+            ),
+
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final wsId = (await SyncService.instance.getWorkspaceId()) ??
+                        task.workspaceId;
+                    final mins = (task.estimateMinutes ?? 60).clamp(30, 180);
+                    final now = DateTime.now();
+                    final targetDay = task.dueAt?.toLocal() ?? now;
+                    final startHour = (now.hour + 1).clamp(8, 22);
+                    final startsAt = DateTime(
+                      targetDay.year,
+                      targetDay.month,
+                      targetDay.day,
+                      startHour,
+                      0,
+                    );
+                    final endsAt = startsAt.add(Duration(minutes: mins));
+                    final eventId = const Uuid().v4();
+
+                    await _db.into(_db.localEvents).insert(
+                          LocalEventsCompanion.insert(
+                            id: eventId,
+                            workspaceId: wsId,
+                            projectId: Value(task.projectId),
+                            kind: task.kind,
+                            title: 'Fokus: ${task.title}',
+                            startsAt: startsAt,
+                            endsAt: endsAt,
+                          ),
+                        );
+                    await SyncService.instance.pushRecord(
+                      tableName: 'events',
+                      recordId: eventId,
+                      action: 'insert',
+                      payload: {
+                        'id': eventId,
+                        'workspace_id': wsId,
+                        if (task.projectId != null) 'project_id': task.projectId,
+                        'kind': task.kind,
+                        'title': 'Fokus: ${task.title}',
+                        'starts_at': startsAt.toUtc().toIso8601String(),
+                        'ends_at': endsAt.toUtc().toIso8601String(),
+                        'all_day': false,
+                        'timezone': 'Asia/Jakarta',
+                      },
+                    );
+                    try {
+                      await SyncService.instance.addEntityLink(
+                        sourceType: 'event',
+                        sourceId: eventId,
+                        targetType: 'task',
+                        targetId: task.id,
+                        relationType: 'related',
+                      );
+                    } catch (_) {}
+                    await HomeWidgetBridge.syncFromDatabase(_db);
+                    await _loadData();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Blok fokus "$mins mnt" ditambahkan ke Jadwal.',
+                        ),
+                      ),
+                    );
+                  },
+                  icon: Icon(
+                    Icons.calendar_today_outlined,
+                    size: 16,
+                    color: AppColors.accentColor(context),
+                  ),
+                  label: const Text('Jadwalkan Fokus'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    TransactionFormSheet.show(
+                      context,
+                      initialType: 'expense',
+                      initialNote: 'Biaya tugas: ${task.title}',
+                      initialSource: task.kind,
+                      initialProjectId: task.projectId,
+                      linkTargetType: 'task',
+                      linkTargetId: task.id,
+                      onSaved: _loadData,
+                    );
+                  },
+                  icon: Icon(
+                    Icons.receipt_long_outlined,
+                    size: 16,
+                    color: AppColors.accentColor(context),
+                  ),
+                  label: const Text('Catat Biaya'),
+                ),
+              ],
             ),
 
             // Alert Revisi / Overdue / Macet >5 hari

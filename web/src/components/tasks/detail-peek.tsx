@@ -6,10 +6,12 @@ import {
   AlertTriangle,
   ArrowLeft,
   BookmarkPlus,
+  CalendarPlus,
   Check,
   Maximize2,
   Minimize2,
   Plus,
+  Receipt,
   Repeat,
   RotateCcw,
   Trash2,
@@ -141,6 +143,7 @@ export function DetailPeek({
   const [deletingTask, setDeletingTask] = useState(false);
   const [savingMessage, setSavingMessage] = useState<string | null>(null);
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
+  const [schedulingBlock, setSchedulingBlock] = useState(false);
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [subtasksSupported, setSubtasksSupported] = useState(true);
@@ -1167,6 +1170,86 @@ export function DetailPeek({
               aria-label="Judul tugas"
               className="w-full min-w-0 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-lg font-semibold text-foreground hover:border-border focus:border-primary focus:bg-card focus:outline-none"
             />
+          </div>
+
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              disabled={schedulingBlock}
+              onClick={async () => {
+                setSchedulingBlock(true);
+                setErrorBanner(null);
+                const todayKey = getDateKeyInTimezone(new Date(), 'Asia/Jakarta');
+                const targetDay = task.due_at
+                  ? getDateKeyInTimezone(task.due_at, 'Asia/Jakarta')
+                  : todayKey;
+                const nowHr = new Date().getHours();
+                const startHr = Math.min(22, Math.max(8, nowHr + 1));
+                const mins = Math.max(30, Math.min(180, task.estimate_minutes || 60));
+                const startDt = new Date(`${targetDay}T${String(startHr).padStart(2, '0')}:00:00+07:00`);
+                const endDt = new Date(startDt.getTime() + mins * 60 * 1000);
+                const { data: ev, error } = await supabase
+                  .from('events')
+                  .insert({
+                    workspace_id: workspaceId,
+                    project_id: task.project_id,
+                    kind: task.kind,
+                    title: `Fokus: ${task.title}`,
+                    starts_at: startDt.toISOString(),
+                    ends_at: endDt.toISOString(),
+                    all_day: false,
+                    timezone: 'Asia/Jakarta',
+                  })
+                  .select('id')
+                  .single();
+                if (!error && ev?.id) {
+                  try {
+                    await supabase.from('entity_links').insert({
+                      workspace_id: workspaceId,
+                      source_type: 'event',
+                      source_id: ev.id,
+                      target_type: 'task',
+                      target_id: task.id,
+                      relation_type: 'related',
+                    });
+                  } catch {}
+                  setSavingMessage(`Masuk jadwal (${mins} mnt)`);
+                } else if (error) {
+                  setErrorBanner(error.message);
+                }
+                setSchedulingBlock(false);
+              }}
+              className="inline-flex min-h-8 items-center gap-1.5 rounded-md border border-border bg-subtle/70 px-2.5 py-1 text-xs font-medium text-foreground hover:border-primary/40 hover:text-primary transition-colors"
+            >
+              <CalendarPlus className="h-3.5 w-3.5 text-primary" />
+              <span>{schedulingBlock ? 'Menjadwalkan...' : 'Jadwalkan Blok Fokus'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const sourceVal =
+                  task.kind === 'intern' || task.kind === 'freelance' || task.kind === 'kuliah'
+                    ? task.kind
+                    : 'personal';
+                window.dispatchEvent(
+                  new CustomEvent('orbit:open-new-transaction', {
+                    detail: {
+                      prefill: {
+                        type: 'expense',
+                        note: `Biaya tugas: ${task.title}`,
+                        source: sourceVal,
+                        projectId: task.project_id,
+                        linkTarget: { type: 'task', id: task.id },
+                      },
+                    },
+                  })
+                );
+              }}
+              className="inline-flex min-h-8 items-center gap-1.5 rounded-md border border-border bg-subtle/70 px-2.5 py-1 text-xs font-medium text-foreground hover:border-primary/40 hover:text-primary transition-colors"
+            >
+              <Receipt className="h-3.5 w-3.5 text-primary" />
+              <span>Catat Biaya Tugas</span>
+            </button>
           </div>
 
           {showTemplatePrompt && (

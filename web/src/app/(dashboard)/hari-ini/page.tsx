@@ -8,6 +8,7 @@ import {
   ArrowRight,
   BellRing,
   Calendar,
+  CalendarPlus,
   CheckCircle2,
   CheckSquare,
   Circle,
@@ -20,6 +21,7 @@ import {
   Receipt,
   RotateCcw,
   Sparkles,
+  Timer,
   Wallet,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -45,7 +47,7 @@ import {
   isTaskOverdue,
   isTaskStagnant,
 } from '@/lib/task-v2';
-import type { ActivityKind, TaskPriority, TaskStatus } from '@/types/database';
+import type { ActivityKind, TaskPriority, TaskStatus, TransactionSource } from '@/types/database';
 import {
   AttentionBannerCard,
   type AttentionPreviewItem,
@@ -66,7 +68,15 @@ import {
   StatusBadge,
   TaskStatusBadge,
 } from '@/components/ui';
-import { TransactionFormModal } from '@/components/transaction-form-modal';
+import { TransactionFormModal, type TransactionPrefill } from '@/components/transaction-form-modal';
+import {
+  CommandHeroPulseBar,
+  InteractiveFocusTimerWidget,
+  InteractivePlanningPulseWidget,
+  type HariIniBillItem,
+  type HariIniBudgetItem,
+  type HariIniGoalItem,
+} from '@/components/dashboard/hari-ini-command-widgets';
 import {
   changeTaskStatusWithRpc,
   mapRawTaskRow,
@@ -182,6 +192,13 @@ export default function HariIniPage() {
   const [savingTask, setSavingTask] = useState(false);
 
   const [showTxModal, setShowTxModal] = useState(false);
+  const [txPrefill, setTxPrefill] = useState<TransactionPrefill | null>(null);
+  const [focusTaskId, setFocusTaskId] = useState<string>('');
+  const [crossFeedback, setCrossFeedback] = useState<string | null>(null);
+  const [todayFocusMinutes, setTodayFocusMinutes] = useState<number>(0);
+  const [savingsGoals, setSavingsGoals] = useState<HariIniGoalItem[]>([]);
+  const [detailedBudgets, setDetailedBudgets] = useState<HariIniBudgetItem[]>([]);
+  const [detailedBills, setDetailedBills] = useState<HariIniBillItem[]>([]);
 
   const [digestBudgets, setDigestBudgets] = useState<AlertBudgetInput[]>([]);
   const [digestBills, setDigestBills] = useState<AlertBillInput[]>([]);
@@ -245,6 +262,8 @@ export default function HariIniPage() {
         billsRes,
         weekTxRes,
         weekEventsRes,
+        goalsRes,
+        timeLogsRes,
       ] = await Promise.all([
         supabase
           .from('accounts')
@@ -315,7 +334,7 @@ export default function HariIniPage() {
           .eq('workspace_id', wsId),
         supabase
           .from('recurring_bills')
-          .select('id, name, amount, currency, active, schedule_type, schedule_value')
+          .select('id, name, amount, currency, category_id, account_id, active, schedule_type, schedule_value')
           .eq('workspace_id', wsId)
           .is('deleted_at', null),
         supabase
@@ -332,6 +351,18 @@ export default function HariIniPage() {
           .is('deleted_at', null)
           .gte('ends_at', new Date(nowMs - 2 * 60 * 60 * 1000).toISOString())
           .lte('starts_at', next7Iso),
+        supabase
+          .from('savings_goals')
+          .select('id, name, target_amount, current_amount, is_completed, target_date')
+          .eq('workspace_id', wsId)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('task_time_logs')
+          .select('duration_seconds')
+          .eq('workspace_id', wsId)
+          .is('deleted_at', null)
+          .gte('started_at', `${todayStr}T00:00:00+07:00`),
       ]);
 
       if (accRes.error) throw new Error(accRes.error.message);
@@ -413,7 +444,19 @@ export default function HariIniPage() {
       }
 
       setDigestBudgets(!budgetRes.error && Array.isArray(budgetRes.data) ? (budgetRes.data as AlertBudgetInput[]) : []);
+      setDetailedBudgets(!budgetRes.error && Array.isArray(budgetRes.data) ? (budgetRes.data as HariIniBudgetItem[]) : []);
       setDigestBills(!billsRes.error && Array.isArray(billsRes.data) ? (billsRes.data as AlertBillInput[]) : []);
+      setDetailedBills(!billsRes.error && Array.isArray(billsRes.data) ? (billsRes.data as HariIniBillItem[]) : []);
+      setSavingsGoals(!goalsRes.error && Array.isArray(goalsRes.data) ? (goalsRes.data as HariIniGoalItem[]) : []);
+      if (!timeLogsRes.error && Array.isArray(timeLogsRes.data)) {
+        const totalSec = timeLogsRes.data.reduce(
+          (acc, row) => acc + Math.max(0, Number((row as { duration_seconds?: number }).duration_seconds || 0)),
+          0
+        );
+        setTodayFocusMinutes(Math.round(totalSec / 60));
+      } else {
+        setTodayFocusMinutes(0);
+      }
       setDigestTransactions(
         !weekTxRes.error && Array.isArray(weekTxRes.data)
           ? (weekTxRes.data as DigestTransactionInput[])
@@ -745,7 +788,115 @@ export default function HariIniPage() {
     }
   };
 
+  const mapKindToTxSource = (kind: ActivityKind): TransactionSource => {
+    if (kind === 'intern' || kind === 'freelance' || kind === 'kuliah') return kind;
+    return 'personal';
+  };
+
+  const handleCreateTaskFromEvent = async (evt: AgendaItem) => {
+    if (!workspaceId) return;
+    setCrossFeedback(null);
+    const { data: created, error } = await supabase
+      .from('tasks')
+      .insert({
+        workspace_id: workspaceId,
+        project_id: evt.project_id,
+        kind: evt.kind,
+        title: `Tindak lanjut: ${evt.title}`,
+        priority: 'sedang',
+        due_at: evt.ends_at || new Date(`${todayStr}T23:59:59+07:00`).toISOString(),
+        due_is_date_only: evt.all_day,
+        status: 'todo',
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      setCrossFeedback(`Gagal membuat tugas dari jadwal: ${error.message}`);
+      return;
+    }
+
+    const eventId = evt.event_id || evt.id;
+    if (created?.id && eventId) {
+      try {
+        await supabase.from('entity_links').insert({
+          workspace_id: workspaceId,
+          source_type: 'task',
+          source_id: created.id,
+          target_type: 'event',
+          target_id: eventId,
+          relation_type: 'derived_from',
+        });
+      } catch {
+        // Abaikan jika entity_links belum tersedia
+      }
+    }
+    setCrossFeedback(`Tugas "Tindak lanjut: ${evt.title}" dibuat dan ditautkan ke jadwal.`);
+    void loadData();
+  };
+
+  const handleScheduleTaskFocusBlock = async (task: TaskRecord) => {
+    if (!workspaceId) return;
+    setCrossFeedback(null);
+
+    const baseDate = task.due_at ? getDateKeyInTimezone(task.due_at, 'Asia/Jakarta') : todayStr;
+    const nowHour = new Date().getHours();
+    const startHour = Math.min(22, Math.max(8, nowHour + 1));
+    const durationMins = Math.max(30, Math.min(180, task.estimate_minutes || 60));
+    const startsAt = new Date(`${baseDate}T${String(startHour).padStart(2, '0')}:00:00+07:00`);
+    const endsAt = new Date(startsAt.getTime() + durationMins * 60 * 1000);
+
+    const { data: createdEvent, error } = await supabase
+      .from('events')
+      .insert({
+        workspace_id: workspaceId,
+        project_id: task.project_id,
+        kind: task.kind,
+        title: `Fokus: ${task.title}`,
+        starts_at: startsAt.toISOString(),
+        ends_at: endsAt.toISOString(),
+        all_day: false,
+        timezone: 'Asia/Jakarta',
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      setCrossFeedback(`Gagal menjadwalkan blok fokus: ${error.message}`);
+      return;
+    }
+
+    if (createdEvent?.id) {
+      try {
+        await supabase.from('entity_links').insert({
+          workspace_id: workspaceId,
+          source_type: 'event',
+          source_id: createdEvent.id,
+          target_type: 'task',
+          target_id: task.id,
+          relation_type: 'related',
+        });
+      } catch {
+        // Abaikan jika entity_links belum tersedia
+      }
+    }
+    setCrossFeedback(`Blok fokus "${task.title}" (${durationMins} mnt) ditambahkan ke Jadwal.`);
+    void loadData();
+  };
+
   const scheduledEvents = agendaItems.filter((i) => i.item_type === 'event');
+  const activeWorkspaceTasks = useMemo(
+    () => kindFilteredWorkspaceTasks.filter((t) => !t.parent_task_id && t.status !== 'done'),
+    [kindFilteredWorkspaceTasks]
+  );
+  const doneTodayCount = useMemo(
+    () => kindFilteredWorkspaceTasks.filter((t) => !t.parent_task_id && t.status === 'done').length,
+    [kindFilteredWorkspaceTasks]
+  );
+  const totalMainTasksCount = useMemo(
+    () => kindFilteredWorkspaceTasks.filter((t) => !t.parent_task_id).length,
+    [kindFilteredWorkspaceTasks]
+  );
   const conflictEventIds = new Set(
     conflicts.flatMap((c) => [c.event1_id, c.event2_id]).filter(Boolean) as string[]
   );
@@ -777,12 +928,45 @@ export default function HariIniPage() {
             <Plus className="h-4 w-4" aria-hidden="true" />
             <span>Tambah Tugas</span>
           </Button>
-          <Button variant="primary" onClick={() => setShowTxModal(true)}>
+          <Button variant="primary" onClick={() => {
+            setTxPrefill(null);
+            setShowTxModal(true);
+          }}>
             <Receipt className="h-4 w-4" aria-hidden="true" />
             <span>Catat Transaksi</span>
           </Button>
         </div>
       </div>
+
+      {/* Bento Hero Command Pulse Bar (Progress Ring, Focus, Cashflow, Cross-Module Links) */}
+      {!loading && !errorMessage && (
+        <CommandHeroPulseBar
+          doneTasksCount={doneTodayCount}
+          totalTasksCount={totalMainTasksCount}
+          todayEventsCount={scheduledEvents.length}
+          todayFocusMinutes={todayFocusMinutes}
+          draftCount={draftCount}
+          activeBillsCount={detailedBills.filter((b) => b.active).length}
+          formatAmount={formatAmount}
+          todayNetCashflow={todayIncome - todayExpense}
+        />
+      )}
+
+      {crossFeedback && (
+        <div
+          role="status"
+          className="flex items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary-subtle/40 px-3.5 py-2.5 text-xs text-foreground"
+        >
+          <span>{crossFeedback}</span>
+          <button
+            type="button"
+            onClick={() => setCrossFeedback(null)}
+            className="font-semibold text-primary underline"
+          >
+            Tutup
+          </button>
+        </div>
+      )}
 
       {/* Filter Chip Jenis Kegiatan */}
       <div
@@ -954,8 +1138,7 @@ export default function HariIniPage() {
                               <StatusBadge variant="expense">Benturan Waktu</StatusBadge>
                             )}
                           </div>
-                          {(evt.location || evt.project_name) && (
-                            <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                               {evt.location && (
                                 <span className="inline-flex items-center gap-1">
                                   <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
@@ -963,10 +1146,41 @@ export default function HariIniPage() {
                                 </span>
                               )}
                               {evt.project_name && (
-                                <span>Kegiatan: {evt.project_name}</span>
+                                <Link
+                                  href={`/proyek`}
+                                  className="text-primary hover:underline font-medium"
+                                >
+                                  Kegiatan: {evt.project_name}
+                                </Link>
                               )}
                             </div>
-                          )}
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => void handleCreateTaskFromEvent(evt)}
+                              className="inline-flex items-center gap-1 rounded-md border border-border bg-subtle/60 px-2 py-1 text-[11px] font-medium text-foreground hover:border-primary/40 hover:text-primary transition-colors"
+                            >
+                              <Plus className="h-3 w-3" />
+                              <span>Buat Tugas</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTxPrefill({
+                                  type: 'expense',
+                                  note: `Biaya jadwal: ${evt.title}`,
+                                  source: mapKindToTxSource(evt.kind),
+                                  projectId: evt.project_id,
+                                  linkTarget: { type: 'event', id: evt.event_id || evt.id },
+                                });
+                                setShowTxModal(true);
+                              }}
+                              className="inline-flex items-center gap-1 rounded-md border border-border bg-subtle/60 px-2 py-1 text-[11px] font-medium text-foreground hover:border-primary/40 hover:text-primary transition-colors"
+                            >
+                              <Receipt className="h-3 w-3" />
+                              <span>Catat Biaya</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -1095,6 +1309,49 @@ export default function HariIniPage() {
                                 <ProgressControl value={progress.percent} compact />
                               </div>
                             </div>
+
+                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                              {!isDone && (
+                                <button
+                                  type="button"
+                                  onClick={() => setFocusTaskId(task.id)}
+                                  className={cn(
+                                    'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors',
+                                    focusTaskId === task.id
+                                      ? 'border-primary bg-primary-subtle text-primary'
+                                      : 'border-border bg-subtle/60 text-muted-foreground hover:border-primary/40 hover:text-primary'
+                                  )}
+                                >
+                                  <Timer className="h-3 w-3" />
+                                  <span>{focusTaskId === task.id ? 'Di Timer' : 'Fokus'}</span>
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => void handleScheduleTaskFocusBlock(task)}
+                                className="inline-flex items-center gap-1 rounded-md border border-border bg-subtle/60 px-2 py-0.5 text-[11px] font-medium text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+                              >
+                                <CalendarPlus className="h-3 w-3" />
+                                <span>Jadwalkan</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTxPrefill({
+                                    type: 'expense',
+                                    note: `Biaya tugas: ${task.title}`,
+                                    source: mapKindToTxSource(task.kind),
+                                    projectId: task.project_id,
+                                    linkTarget: { type: 'task', id: task.id },
+                                  });
+                                  setShowTxModal(true);
+                                }}
+                                className="inline-flex items-center gap-1 rounded-md border border-border bg-subtle/60 px-2 py-0.5 text-[11px] font-medium text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+                              >
+                                <Receipt className="h-3 w-3" />
+                                <span>Biaya</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
 
@@ -1133,8 +1390,18 @@ export default function HariIniPage() {
           </Card>
         </div>
 
-        {/* Kolom Kanan (5 kolom): Ringkasan Uang Hari Itu */}
+        {/* Kolom Kanan (5 kolom): Focus Timer, Ringkasan Uang & Perencanaan Interaktif */}
         <div className="lg:col-span-5 space-y-6">
+          {!loading && (
+            <InteractiveFocusTimerWidget
+              workspaceId={workspaceId}
+              activeTasks={activeWorkspaceTasks}
+              selectedTaskId={focusTaskId}
+              onSelectTaskId={setFocusTaskId}
+              onLogged={() => void loadData()}
+            />
+          )}
+
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -1207,6 +1474,17 @@ export default function HariIniPage() {
               )}
             </CardContent>
           </Card>
+
+          {!loading && (
+            <InteractivePlanningPulseWidget
+              workspaceId={workspaceId}
+              budgets={detailedBudgets}
+              bills={detailedBills}
+              goals={savingsGoals}
+              formatAmount={formatAmount}
+              onMutated={() => void loadData()}
+            />
+          )}
 
           {/* Kartu Piutang Jatuh Tempo */}
           {!loading && receivables.length > 0 && (
@@ -1609,9 +1887,13 @@ export default function HariIniPage() {
       {/* Modal Tambah Transaksi Mobile-First */}
       <TransactionFormModal
         open={showTxModal}
-        onClose={() => setShowTxModal(false)}
+        onClose={() => {
+          setShowTxModal(false);
+          setTxPrefill(null);
+        }}
         workspaceId={workspaceId}
         initialAccounts={accounts}
+        prefill={txPrefill}
         onSuccess={() => void loadData()}
       />
     </div>

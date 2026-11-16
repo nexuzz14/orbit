@@ -110,10 +110,19 @@ export const Textarea = React.forwardRef<
 ));
 Textarea.displayName = 'Textarea';
 
-export function Card({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+export function Card({
+  className,
+  interactive = true,
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & { interactive?: boolean }) {
   return (
     <div
-      className={cn('rounded-lg border border-border bg-card text-card-foreground shadow-card', className)}
+      className={cn(
+        'rounded-lg border border-border bg-card text-card-foreground shadow-card',
+        interactive && 'orbit-card-interactive',
+        className
+      )}
       {...props}
     >
       {children}

@@ -4,21 +4,23 @@
 
 :root {
   color-scheme: light;
-  --background: #ffffff;
-  --sidebar: #f7f7f5;
-  --foreground: #11181c;
+  --background: #f8fafc;
+  --sidebar: #f4f5f7;
+  --foreground: #0f172a;
   --card: #ffffff;
-  --card-foreground: #11181c;
-  --subtle: #efefed;
-  --hover: #f4f4f2;
-  --border: #e6e6e3;
-  --border-strong: #d1d1cc;
+  --card-foreground: #0f172a;
+  --subtle: #f1f5f9;
+  --hover: #eef2f6;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
   --primary: #0284c7;
   --primary-foreground: #ffffff;
   --primary-subtle: #e0f2fe;
-  --muted: #f7f7f5;
-  --muted-foreground: #555550;
-  --text-muted: #80807a;
+  --accent-glow: rgba(2, 132, 199, 0.14);
+  --surface-glass: rgba(255, 255, 255, 0.84);
+  --muted: #f1f5f9;
+  --muted-foreground: #475569;
+  --text-muted: #64748b;
 
   --status-todo-fg: #475569;
   --status-todo-bg: #f1f5f9;
@@ -65,23 +67,46 @@
   --kind-pribadi-border: #e4e4e7;
 }
 
+:root[data-accent="emerald"] {
+  --primary: #059669;
+  --primary-foreground: #ffffff;
+  --primary-subtle: #d1fae5;
+  --accent-glow: rgba(5, 150, 105, 0.14);
+}
+
+:root[data-accent="violet"] {
+  --primary: #7c3aed;
+  --primary-foreground: #ffffff;
+  --primary-subtle: #ede9fe;
+  --accent-glow: rgba(124, 58, 237, 0.14);
+}
+
+:root[data-accent="amber"] {
+  --primary: #d97706;
+  --primary-foreground: #ffffff;
+  --primary-subtle: #fef3c7;
+  --accent-glow: rgba(217, 119, 6, 0.14);
+}
+
 .dark {
   color-scheme: dark;
-  --background: #191919;
-  --sidebar: #202020;
-  --foreground: #f3f3f2;
-  --card: #242424;
-  --card-foreground: #f3f3f2;
-  --subtle: #2f2f2f;
-  --hover: #2a2a2a;
-  --border: #323232;
-  --border-strong: #454545;
+  --background: #0d1117;
+  --sidebar: #121720;
+  --foreground: #f1f5f9;
+  --card: #161b22;
+  --card-foreground: #f1f5f9;
+  --subtle: #1e2530;
+  --hover: #212834;
+  --border: #262f3d;
+  --border-strong: #374151;
   --primary: #38bdf8;
-  --primary-foreground: #0f172a;
+  --primary-foreground: #0b1218;
   --primary-subtle: #0c4a6e;
-  --muted: #202020;
-  --muted-foreground: #b3b3ae;
-  --text-muted: #7e7e78;
+  --accent-glow: rgba(56, 189, 248, 0.16);
+  --surface-glass: rgba(22, 27, 34, 0.82);
+  --muted: #181e27;
+  --muted-foreground: #94a3b8;
+  --text-muted: #64748b;
 
   --status-todo-fg: #cbd5e1;
   --status-todo-bg: #27272a;
@@ -128,12 +153,52 @@
   --kind-pribadi-border: #3f3f46;
 }
 
+.dark[data-accent="emerald"] {
+  --primary: #34d399;
+  --primary-foreground: #052e16;
+  --primary-subtle: #064e3b;
+  --accent-glow: rgba(52, 211, 153, 0.16);
+}
+
+.dark[data-accent="violet"] {
+  --primary: #a78bfa;
+  --primary-foreground: #1e1b4b;
+  --primary-subtle: #3b0764;
+  --accent-glow: rgba(167, 139, 250, 0.16);
+}
+
+.dark[data-accent="amber"] {
+  --primary: #fbbf24;
+  --primary-foreground: #271300;
+  --primary-subtle: #451a03;
+  --accent-glow: rgba(251, 191, 36, 0.16);
+}
+
 body {
   color: var(--foreground);
   background-color: var(--background);
+  background-image:
+    radial-gradient(640px 320px at 88% -6%, var(--accent-glow), transparent 70%),
+    radial-gradient(520px 280px at 8% 10%, var(--accent-glow), transparent 72%);
+  background-attachment: fixed;
   font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+}
+
+.orbit-card-interactive {
+  transition: transform 150ms ease-out, border-color 150ms ease-out, box-shadow 150ms ease-out, background-color 150ms ease-out;
+}
+
+.orbit-card-interactive:hover {
+  border-color: color-mix(in srgb, var(--primary) 42%, var(--border));
+  box-shadow: 0 8px 24px -10px var(--accent-glow), 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.orbit-glass {
+  background-color: var(--surface-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 /* Format angka uang tabular rata kanan */

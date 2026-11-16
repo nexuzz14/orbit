@@ -105,6 +105,14 @@ class MainActivity : FlutterFragmentActivity() {
                         OrbitAutoCaptureStore.pendingQuickAddAction = null
                         result.success(pending)
                     }
+                    "consumePendingOpenRoute" -> {
+                        val pending = OrbitAutoCaptureStore.pendingOpenRoute
+                        OrbitAutoCaptureStore.pendingOpenRoute = null
+                        result.success(pending)
+                    }
+                    "consumePendingCompletedTaskIds" -> {
+                        result.success(OrbitWidgetStore.drainPendingCompletedTaskIds(applicationContext))
+                    }
                     "openMailto" -> {
                         val subject = call.argument<String>("subject") ?: "Ringkasan Mingguan Orbit"
                         val body = call.argument<String>("body") ?: ""
@@ -311,12 +319,21 @@ class MainActivity : FlutterFragmentActivity() {
             val uri = incoming.data ?: return
             if (uri.scheme == "io.supabase.orbit" && uri.host == "quick-add") {
                 val quickType = uri.getQueryParameter("type")?.lowercase()?.trim()
-                if (quickType == "transaction" || quickType == "task" || quickType == "receipt") {
+                if (quickType == "transaction" || quickType == "task" || quickType == "receipt" || quickType == "event") {
                     if (fromOnNewIntent && homeWidgetChannel != null) {
                         homeWidgetChannel?.invokeMethod("onQuickAddAction", quickType)
                     } else {
                         OrbitAutoCaptureStore.pendingQuickAddAction = quickType
                     }
+                }
+            } else if (uri.scheme == "io.supabase.orbit" && uri.host == "open") {
+                val tab = uri.getQueryParameter("tab")?.lowercase()?.trim().orEmpty().ifEmpty { "today" }
+                val id = uri.getQueryParameter("id")?.trim()
+                val routePayload = mapOf("tab" to tab, "id" to id)
+                if (fromOnNewIntent && homeWidgetChannel != null) {
+                    homeWidgetChannel?.invokeMethod("onOpenWidgetRoute", routePayload)
+                } else {
+                    OrbitAutoCaptureStore.pendingOpenRoute = routePayload
                 }
             }
             return
