@@ -6,9 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
 import 'package:orbit_app/core/database/database.dart';
+import 'package:orbit_app/core/services/home_widget_bridge.dart';
 import 'package:orbit_app/core/services/ics_calendar_service.dart';
 import 'package:orbit_app/core/services/sync_service.dart';
 import 'package:orbit_app/core/widgets/orbit_widgets.dart';
+import 'package:orbit_app/core/widgets/transaction_form_sheet.dart';
 import 'package:orbit_app/features/tasks/orbit_task_detail_page.dart';
 import 'package:uuid/uuid.dart';
 
@@ -1626,6 +1628,81 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 ),
               ],
               const SizedBox(height: AppTokens.space4),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final taskId = await SyncService.instance.createTask(
+                          title: 'Tindak lanjut: ${event.title}',
+                          kind: event.kind,
+                          projectId: event.projectId,
+                          dueAt: event.endsAt,
+                          dueIsDateOnly: event.allDay,
+                        );
+                        try {
+                          await SyncService.instance.addEntityLink(
+                            sourceType: 'task',
+                            sourceId: taskId,
+                            targetType: 'event',
+                            targetId: event.id,
+                            relationType: 'derived_from',
+                          );
+                        } catch (_) {}
+                        await HomeWidgetBridge.syncFromDatabase(AppDatabase.shared);
+                        if (!ctx.mounted) return;
+                        Navigator.of(ctx).pop();
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Tugas "Tindak lanjut: ${event.title}" dibuat.',
+                            ),
+                          ),
+                        );
+                        _loadData();
+                      },
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, AppTokens.minTouchTarget),
+                      ),
+                      icon: Icon(
+                        Icons.add_task_rounded,
+                        size: 18,
+                        color: AppColors.accentColor(ctx),
+                      ),
+                      label: const Text('Buat Tugas'),
+                    ),
+                  ),
+                  const SizedBox(width: AppTokens.space2),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        TransactionFormSheet.show(
+                          context,
+                          initialType: 'expense',
+                          initialNote: 'Biaya jadwal: ${event.title}',
+                          initialSource: event.kind,
+                          initialProjectId: event.projectId,
+                          linkTargetType: 'event',
+                          linkTargetId: event.id,
+                          onSaved: _loadData,
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, AppTokens.minTouchTarget),
+                      ),
+                      icon: Icon(
+                        Icons.receipt_long_outlined,
+                        size: 18,
+                        color: AppColors.accentColor(ctx),
+                      ),
+                      label: const Text('Catat Biaya'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppTokens.space2),
               OutlinedButton.icon(
                 onPressed: () async {
                   final now = DateTime.now().toUtc();

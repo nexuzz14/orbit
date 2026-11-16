@@ -1,23 +1,30 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { formatDateIndo } from '@/lib/format';
 import { exportProjectReportToCsv } from '@/lib/finance-v2';
 import { usePrivacyMode } from '@/lib/privacy-mode';
 import { RealtimeStatusBadge, useOrbitRealtime } from '@/lib/use-orbit-realtime';
+import {
+  TransactionFormModal,
+  type TransactionPrefill,
+} from '@/components/transaction-form-modal';
 import type { ActivityKind, ProjectStatus, FeeMode } from '@/types/database';
 import {
   AlertTriangle,
   Briefcase,
   CalendarRange,
   CheckCircle2,
+  CheckSquare,
   Clock,
   Download,
   Edit2,
   Layers,
   Plus,
   Printer,
+  ReceiptText,
   Trash2,
   TrendingUp,
   Users,
@@ -143,9 +150,12 @@ type WorkspaceMemberProfile = {
 type ProyekTab = 'projects' | 'gantt' | 'workload' | 'finances';
 
 export default function ProyekPage() {
+  const router = useRouter();
   const supabase = createClient();
   const { formatAmount } = usePrivacyMode();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [txModalOpen, setTxModalOpen] = useState(false);
+  const [txPrefill, setTxPrefill] = useState<TransactionPrefill | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -918,7 +928,7 @@ export default function ProyekPage() {
                   : null;
 
               return (
-                <Card key={p.id} className="flex flex-col justify-between">
+                <Card key={p.id} className="orbit-card-interactive flex flex-col justify-between">
                   <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
                     <div className="space-y-3">
                       <div className="flex items-center justify-between gap-2">
@@ -1045,20 +1055,47 @@ export default function ProyekPage() {
                       )}
                     </div>
 
-                    <div className="pt-3 border-t border-border flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground tabular-nums">
-                        {p.deadline ? `Tenggat: ${formatDateIndo(p.deadline)}` : 'Tanpa tenggat'}
-                      </span>
-                      {p.kind === 'freelance' && (
-                        <Button
+                    <div className="pt-3 border-t border-border space-y-2 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground tabular-nums">
+                          {p.deadline ? `Tenggat: ${formatDateIndo(p.deadline)}` : 'Tanpa tenggat'}
+                        </span>
+                        {p.kind === 'freelance' && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openPaymentsModal(p)}
+                          >
+                            Milestone Pembayaran
+                          </Button>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <button
                           type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openPaymentsModal(p)}
+                          onClick={() => {
+                            setTxPrefill({
+                              type: 'expense',
+                              note: `Biaya proyek: ${p.name}`,
+                              projectId: p.id,
+                            });
+                            setTxModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-full bg-subtle border border-border px-2.5 py-1 text-[11px] font-medium text-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
                         >
-                          Milestone Pembayaran
-                        </Button>
-                      )}
+                          <ReceiptText className="w-3 h-3" />
+                          Catat Kas Proyek
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => router.push('/tugas')}
+                          className="inline-flex items-center gap-1 rounded-full bg-subtle border border-border px-2.5 py-1 text-[11px] font-medium text-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
+                        >
+                          <CheckSquare className="w-3 h-3" />
+                          Kelola Tugas ({tStat?.total ?? 0})
+                        </button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -1982,6 +2019,16 @@ export default function ProyekPage() {
           </div>
         </div>
       </Dialog>
+
+      <TransactionFormModal
+        open={txModalOpen}
+        prefill={txPrefill}
+        onClose={() => {
+          setTxModalOpen(false);
+          setTxPrefill(null);
+        }}
+        onSuccess={loadData}
+      />
     </div>
   );
 }

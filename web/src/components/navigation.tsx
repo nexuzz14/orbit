@@ -108,7 +108,7 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
-  const { privacyMode, togglePrivacyMode, hasPin, lockSessionNow } = usePrivacyMode();
+  const { privacyMode, formatAmount, togglePrivacyMode, hasPin, lockSessionNow } = usePrivacyMode();
   const { accent, setAccent } = useThemeAccent();
 
   const [isDark, setIsDark] = useState(false);
@@ -127,6 +127,8 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
   const [savedViews, setSavedViews] = useState<SidebarSavedView[]>([]);
   const [projects, setProjects] = useState<SidebarProject[]>([]);
   const [draftCount, setDraftCount] = useState(0);
+  const [sidebarLiquidBalance, setSidebarLiquidBalance] = useState<number | null>(null);
+  const [sidebarActiveTasks, setSidebarActiveTasks] = useState<number | null>(null);
 
   const addMenuRef = useRef<HTMLDivElement>(null);
   const accentMenuRef = useRef<HTMLDivElement>(null);
@@ -236,7 +238,7 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
         wsList.find((w) => w.id === savedWsId)?.id || wsList[0].id;
       setActiveWorkspaceId(resolvedWs);
 
-      const [viewsRes, projRes, draftRes] = await Promise.all([
+      const [viewsRes, projRes, draftRes, balRes, activeTasksRes] = await Promise.all([
         supabase
           .from('saved_views')
           .select('id, name, scope, is_pinned')
@@ -259,6 +261,16 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
           .eq('workspace_id', resolvedWs)
           .eq('status', 'draft')
           .is('deleted_at', null),
+        supabase
+          .from('v_account_balances')
+          .select('balance, is_liquid')
+          .eq('workspace_id', resolvedWs),
+        supabase
+          .from('tasks')
+          .select('*', { count: 'exact', head: true })
+          .eq('workspace_id', resolvedWs)
+          .neq('status', 'done')
+          .is('deleted_at', null),
       ]);
 
       if (!viewsRes.error && Array.isArray(viewsRes.data)) {
@@ -275,6 +287,17 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
 
       if (!draftRes.error && typeof draftRes.count === 'number') {
         setDraftCount(draftRes.count);
+      }
+
+      if (!balRes.error && Array.isArray(balRes.data)) {
+        const total = balRes.data
+          .filter((b) => (b as { is_liquid?: boolean }).is_liquid)
+          .reduce((sum, b) => sum + Number((b as { balance?: number }).balance || 0), 0);
+        setSidebarLiquidBalance(total);
+      }
+
+      if (!activeTasksRes.error && typeof activeTasksRes.count === 'number') {
+        setSidebarActiveTasks(activeTasksRes.count);
       }
     } catch {
       // Abaikan kegagalan metadata sidebar agar halaman utama tetap dapat dirender
@@ -497,6 +520,47 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
 
       {/* Daftar Navigasi Scrollable */}
       <nav aria-label="Menu workspace" className="flex-1 overflow-y-auto px-2 py-2.5 space-y-4">
+        {/* Live Workspace Pulse Widget (Cross-Module Sync) */}
+        {!isCompact && (sidebarLiquidBalance !== null || sidebarActiveTasks !== null) && (
+          <div className="mx-1 rounded-xl border border-primary/25 bg-gradient-to-br from-primary-subtle/55 via-card to-card p-2.5 space-y-2 shadow-card">
+            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-primary">
+              <span>Live Pulse</span>
+              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-income" />
+            </div>
+            {sidebarLiquidBalance !== null && (
+              <Link
+                href="/akun"
+                className="block rounded-md px-1.5 py-1 hover:bg-hover transition-colors"
+              >
+                <span className="block text-[10px] text-muted-foreground">Saldo Likuid</span>
+                <span className="block text-xs font-bold tabular-nums text-foreground truncate">
+                  {formatAmount(sidebarLiquidBalance)}
+                </span>
+              </Link>
+            )}
+            <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+              <Link
+                href="/tugas"
+                className="rounded-md border border-border bg-card/80 px-2 py-1 hover:border-primary/40 transition-colors"
+              >
+                <span className="block text-[10px] text-muted-foreground">Tugas</span>
+                <span className="text-xs font-bold tabular-nums text-foreground">
+                  {sidebarActiveTasks ?? 0} aktif
+                </span>
+              </Link>
+              <Link
+                href="/inbox"
+                className="rounded-md border border-border bg-card/80 px-2 py-1 hover:border-primary/40 transition-colors"
+              >
+                <span className="block text-[10px] text-muted-foreground">Inbox</span>
+                <span className="text-xs font-bold tabular-nums text-foreground">
+                  {draftCount} draft
+                </span>
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* 1. Utama */}
         <div className="space-y-0.5">
           {!isCompact && (
@@ -515,10 +579,10 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
                 aria-label={isCompact ? item.label : undefined}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'min-h-[44px] flex items-center gap-2.5 rounded-sm px-2.5 py-2 text-sm font-medium transition-colors duration-150',
+                  'min-h-[44px] flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-all duration-150',
                   isCompact ? 'justify-center px-0' : 'justify-start',
                   active
-                    ? 'bg-primary-subtle text-primary font-semibold'
+                    ? 'border-l-2 border-primary bg-gradient-to-r from-primary-subtle to-primary-subtle/35 text-primary font-semibold'
                     : 'text-muted-foreground hover:bg-hover hover:text-foreground'
                 )}
               >
@@ -940,17 +1004,20 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
                 aria-label="Pilih tema aksen interaktif"
                 aria-expanded={accentMenuOpen}
                 title="Tema Aksen Orbit"
-                className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs font-medium text-foreground hover:bg-hover transition-colors"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-primary/30 bg-primary-subtle/45 px-3 text-xs font-semibold text-foreground hover:bg-primary-subtle/75 transition-colors"
               >
                 <span
-                  className="h-3 w-3 rounded-full ring-2 ring-primary/25"
+                  className="h-3 w-3 rounded-full ring-2 ring-primary/30"
                   style={{
                     backgroundColor: isDark
                       ? ORBIT_ACCENTS.find((a) => a.id === accent)?.swatchDark
                       : ORBIT_ACCENTS.find((a) => a.id === accent)?.swatchLight,
                   }}
                 />
-                <Palette className="h-3.5 w-3.5 text-muted-foreground hidden sm:inline" />
+                <span className="hidden lg:inline">
+                  {ORBIT_ACCENTS.find((a) => a.id === accent)?.label || 'Tema'}
+                </span>
+                <Palette className="h-3.5 w-3.5 text-primary" />
               </button>
 
               {accentMenuOpen && (
@@ -1015,7 +1082,7 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
       {/* Bottom Navigation Bar Mobile (< 768px): 4 Tab (Hari Ini, Agenda, Tugas, Uang) */}
       <nav
         aria-label="Navigasi bawah mobile"
-        className="print:hidden md:hidden fixed inset-x-0 bottom-0 z-40 flex h-16 items-center justify-around border-t border-border bg-card px-1"
+        className="print:hidden md:hidden fixed inset-x-0 bottom-0 z-40 flex h-16 items-center justify-around border-t border-border orbit-glass px-1"
       >
         <Link
           href="/hari-ini"

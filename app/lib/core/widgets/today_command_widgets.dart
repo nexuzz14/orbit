@@ -7,6 +7,7 @@ import 'package:orbit_app/core/database/database.dart';
 import 'package:orbit_app/core/services/home_widget_bridge.dart';
 import 'package:orbit_app/core/services/privacy_and_lock_service.dart';
 import 'package:orbit_app/core/services/sync_service.dart';
+import 'package:orbit_app/core/services/theme_controller.dart';
 import 'package:orbit_app/core/widgets/orbit_privacy_widgets.dart';
 import 'package:orbit_app/core/widgets/orbit_widgets.dart';
 import 'package:uuid/uuid.dart';
@@ -37,20 +38,18 @@ class TodayHeroCommandCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = AppColors.accentColor(context);
-    final subtle = AppColors.accentSubtleColor(context);
+    final themeAccent = OrbitThemeController.instance.accent;
+    final startColor = themeAccent.lightPrimary;
+    final endColor = themeAccent.lightGradientEnd;
     final ratio = totalTasks > 0 ? (doneTasks / totalTasks).clamp(0.0, 1.0) : 0.0;
     final pct = (ratio * 100).round();
 
     return OrbitCard(
-      borderColor: accent.withValues(alpha: 0.32),
+      borderColor: Colors.white.withValues(alpha: 0.18),
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [
-          AppColors.surfaceColor(context),
-          subtle.withValues(alpha: 0.42),
-        ],
+        colors: [startColor, endColor],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -72,8 +71,9 @@ class TodayHeroCommandCard extends StatelessWidget {
                         builder: (context, val, _) => CircularProgressIndicator(
                           value: val,
                           strokeWidth: 6,
-                          backgroundColor: AppColors.subtleColor(context),
-                          valueColor: AlwaysStoppedAnimation<Color>(accent),
+                          backgroundColor: Colors.white.withValues(alpha: 0.24),
+                          valueColor:
+                              const AlwaysStoppedAnimation<Color>(Colors.white),
                           strokeCap: StrokeCap.round,
                         ),
                       ),
@@ -82,7 +82,8 @@ class TodayHeroCommandCard extends StatelessWidget {
                       '$pct%',
                       style: const TextStyle(
                         fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
                         fontFeatures: [FontFeature.tabularFigures()],
                       ),
                     ),
@@ -99,16 +100,17 @@ class TodayHeroCommandCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: 0.8,
-                        color: accent,
+                        letterSpacing: 0.9,
+                        color: Colors.white.withValues(alpha: 0.85),
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '$doneTasks/$totalTasks Tugas • $todayFocusMinutes mnt Fokus',
                       style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
                         fontFeatures: [FontFeature.tabularFigures()],
                       ),
                     ),
@@ -125,7 +127,7 @@ class TodayHeroCommandCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
-                            color: AppColors.textSecondaryColor(context),
+                            color: Colors.white.withValues(alpha: 0.9),
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         );
@@ -182,9 +184,8 @@ class _QuickModuleChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = AppColors.accentColor(context);
     return Material(
-      color: AppColors.surfaceColor(context),
+      color: Colors.white.withValues(alpha: 0.16),
       borderRadius: BorderRadius.circular(AppTokens.radiusMd),
       child: InkWell(
         onTap: onTap,
@@ -194,18 +195,19 @@ class _QuickModuleChip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-            border: Border.all(color: AppColors.borderColor(context)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 15, color: accent),
+              Icon(icon, size: 15, color: Colors.white),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: const TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
                 ),
               ),
             ],

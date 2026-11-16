@@ -119,7 +119,7 @@ export function Card({
   return (
     <div
       className={cn(
-        'rounded-lg border border-border bg-card text-card-foreground shadow-card',
+        'rounded-xl border border-border bg-card text-card-foreground shadow-card',
         interactive && 'orbit-card-interactive',
         className
       )}

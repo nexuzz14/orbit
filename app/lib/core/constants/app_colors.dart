@@ -11,9 +11,9 @@ class AppTokens {
   static const double space8 = 32.0;
 
   static const double radiusXs = 4.0;
-  static const double radiusSm = 6.0;
-  static const double radiusMd = 8.0;
-  static const double radiusLg = 12.0;
+  static const double radiusSm = 8.0;
+  static const double radiusMd = 12.0;
+  static const double radiusLg = 16.0;
 
   static const double minTouchTarget = 44.0;
   static const Duration animFast = Duration(milliseconds: 150);
@@ -37,26 +37,26 @@ class AppColors {
     end: Alignment.bottomRight,
   );
 
-  // Permukaan Mode Terang (Interactive Command Center Slate-White)
-  static const Color lightBackground = Color(0xFFF8FAFC);
-  static const Color lightSidebar = Color(0xFFF4F5F7);
+  // Permukaan Mode Terang (Interactive Command Center Cool-Slate)
+  static const Color lightBackground = Color(0xFFEEF3FA);
+  static const Color lightSidebar = Color(0xFFF6F9FE);
   static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightSubtle = Color(0xFFF1F5F9);
-  static const Color lightHover = Color(0xFFEEF2F6);
-  static const Color lightBorder = Color(0xFFE2E8F0);
-  static const Color lightBorderStrong = Color(0xFFCBD5E1);
-  static const Color lightTextPrimary = Color(0xFF0F172A);
+  static const Color lightSubtle = Color(0xFFE7EEF8);
+  static const Color lightHover = Color(0xFFE1EAF6);
+  static const Color lightBorder = Color(0xFFD5E0EF);
+  static const Color lightBorderStrong = Color(0xFFB6C8E0);
+  static const Color lightTextPrimary = Color(0xFF0B1324);
   static const Color lightTextSecondary = Color(0xFF475569);
   static const Color lightTextMuted = Color(0xFF64748B);
 
-  // Permukaan Mode Gelap (Interactive Command Center Deep Slate)
-  static const Color darkBackground = Color(0xFF0D1117);
-  static const Color darkSidebar = Color(0xFF121720);
-  static const Color darkSurface = Color(0xFF161B22);
-  static const Color darkSubtle = Color(0xFF1E2530);
-  static const Color darkHover = Color(0xFF212834);
-  static const Color darkBorder = Color(0xFF262F3D);
-  static const Color darkBorderStrong = Color(0xFF374151);
+  // Permukaan Mode Gelap (Interactive Command Center Cosmic Midnight)
+  static const Color darkBackground = Color(0xFF070B14);
+  static const Color darkSidebar = Color(0xFF0C1220);
+  static const Color darkSurface = Color(0xFF101726);
+  static const Color darkSubtle = Color(0xFF182235);
+  static const Color darkHover = Color(0xFF1D2940);
+  static const Color darkBorder = Color(0xFF223049);
+  static const Color darkBorderStrong = Color(0xFF324669);
   static const Color darkTextPrimary = Color(0xFFF1F5F9);
   static const Color darkTextSecondary = Color(0xFF94A3B8);
   static const Color darkTextMuted = Color(0xFF64748B);

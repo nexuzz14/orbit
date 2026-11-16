@@ -13,6 +13,7 @@ import {
   ListChecks,
   MapPin,
   Plus,
+  Receipt,
   RefreshCw,
   Repeat,
   Trash2,
@@ -1258,7 +1259,79 @@ export default function JadwalPage() {
                           </div>
 
                           {item.item_type === 'event' && (
-                            <div className="flex items-center gap-1.5 shrink-0">
+                            <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={async () => {
+                                  if (!workspaceId) return;
+                                  const { data: created, error } = await supabase
+                                    .from('tasks')
+                                    .insert({
+                                      workspace_id: workspaceId,
+                                      kind: item.kind === 'personal' ? 'pribadi' : item.kind,
+                                      title: `Tindak lanjut: ${item.title}`,
+                                      priority: 'sedang',
+                                      due_at: item.ends_at || new Date().toISOString(),
+                                      due_is_date_only: item.all_day,
+                                      status: 'todo',
+                                    })
+                                    .select('id')
+                                    .single();
+                                  if (!error && created?.id && (item.event_id || item.id)) {
+                                    try {
+                                      await supabase.from('entity_links').insert({
+                                        workspace_id: workspaceId,
+                                        source_type: 'task',
+                                        source_id: created.id,
+                                        target_type: 'event',
+                                        target_id: item.event_id || item.id,
+                                        relation_type: 'derived_from',
+                                      });
+                                    } catch {}
+                                  }
+                                  setSyncMessage(
+                                    error
+                                      ? `Gagal buat tugas: ${error.message}`
+                                      : `Tugas "Tindak lanjut: ${item.title}" dibuat & tertaut.`
+                                  );
+                                }}
+                                title="Buat tugas tindak lanjut"
+                              >
+                                <Plus className="w-3.5 h-3.5 text-primary" />
+                                <span>Tugas</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const sourceVal =
+                                    item.kind === 'intern' ||
+                                    item.kind === 'freelance' ||
+                                    item.kind === 'kuliah'
+                                      ? item.kind
+                                      : 'personal';
+                                  window.dispatchEvent(
+                                    new CustomEvent('orbit:open-new-transaction', {
+                                      detail: {
+                                        prefill: {
+                                          type: 'expense',
+                                          note: `Biaya jadwal: ${item.title}`,
+                                          source: sourceVal,
+                                          linkTarget: {
+                                            type: 'event',
+                                            id: item.event_id || item.id,
+                                          },
+                                        },
+                                      },
+                                    })
+                                  );
+                                }}
+                                title="Catat biaya untuk jadwal ini"
+                              >
+                                <Receipt className="w-3.5 h-3.5 text-primary" />
+                                <span>Biaya</span>
+                              </Button>
                               {item.is_recurring && (
                                 <Button
                                   variant="secondary"

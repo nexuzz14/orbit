@@ -220,6 +220,18 @@ function TransaksiPageContent() {
     });
   }, [transactions, filterAccount, filterType, filterSource, searchQuery]);
 
+  const summaryTotals = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    for (const t of filtered) {
+      if (t.deleted_at) continue;
+      const amt = Number(t.amount ?? 0);
+      if (t.type === 'income') income += amt;
+      if (t.type === 'expense') expense += amt;
+    }
+    return { income, expense, net: income - expense };
+  }, [filtered]);
+
   // Kelompokkan transaksi per hari beserta subtotal harian
   const groupedByDay = useMemo<DailyTransactionGroup[]>(() => {
     const map = new Map<string, DailyTransactionGroup>();
@@ -340,6 +352,62 @@ function TransaksiPageContent() {
 
       {/* Sub-navigasi Grup Uang (Transaksi | Akun | Ringkasan + Pintasan Inbox, Anggaran, Tagihan, Target) */}
       <MoneySubNav draftCount={draftCount} />
+
+      {/* Strip Ringkasan Interaktif (Klik kartu untuk filter langsung) */}
+      {!loading && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 print:hidden">
+          <button
+            type="button"
+            onClick={() => setFilterType((prev) => (prev === 'income' ? 'all' : 'income'))}
+            className={cn(
+              'text-left rounded-xl border p-4 transition-all orbit-card-interactive',
+              filterType === 'income'
+                ? 'border-income bg-income-subtle/60'
+                : 'border-border bg-card'
+            )}
+          >
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Pemasukan (Klik Filter)
+            </span>
+            <div className="mt-1 text-lg font-bold tabular-nums text-income">
+              +{formatAmount(summaryTotals.income)}
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterType((prev) => (prev === 'expense' ? 'all' : 'expense'))}
+            className={cn(
+              'text-left rounded-xl border p-4 transition-all orbit-card-interactive',
+              filterType === 'expense'
+                ? 'border-expense bg-expense-subtle/60'
+                : 'border-border bg-card'
+            )}
+          >
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Pengeluaran (Klik Filter)
+            </span>
+            <div className="mt-1 text-lg font-bold tabular-nums text-expense">
+              -{formatAmount(summaryTotals.expense)}
+            </div>
+          </button>
+
+          <div className="rounded-xl border border-primary/25 bg-gradient-to-br from-card to-primary-subtle/35 p-4 orbit-card-interactive">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-primary">
+              Arus Kas Bersih
+            </span>
+            <div
+              className={cn(
+                'mt-1 text-lg font-bold tabular-nums',
+                summaryTotals.net >= 0 ? 'text-income' : 'text-expense'
+              )}
+            >
+              {summaryTotals.net >= 0 ? '+' : '-'}
+              {formatAmount(Math.abs(summaryTotals.net))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bar Pencarian & Filter */}
       <Card className="p-4 print:hidden">

@@ -164,6 +164,13 @@ object OrbitWidgetStore {
         if (balanceIds.isNotEmpty()) updateBalanceWidgets(context, manager, balanceIds)
     }
 
+    private fun headerDrawable(accentId: String): Int = when (accentId) {
+        "emerald" -> R.drawable.orbit_widget_header_emerald
+        "violet" -> R.drawable.orbit_widget_header_violet
+        "amber" -> R.drawable.orbit_widget_header_amber
+        else -> R.drawable.orbit_widget_header_ocean
+    }
+
     private fun btnPrimaryDrawable(accentId: String): Int = when (accentId) {
         "emerald" -> R.drawable.orbit_widget_btn_emerald
         "violet" -> R.drawable.orbit_widget_btn_violet
@@ -196,9 +203,8 @@ object OrbitWidgetStore {
 
         for (id in widgetIds) {
             val views = RemoteViews(context.packageName, R.layout.widget_today)
+            views.setInt(R.id.widget_today_header, "setBackgroundResource", headerDrawable(accentId))
             views.setTextViewText(R.id.widget_today_date, dateLabel)
-            views.setInt(R.id.widget_today_date, "setBackgroundResource", chipDrawable(accentId))
-            views.setInt(R.id.widget_today_add_btn, "setBackgroundResource", btnPrimaryDrawable(accentId))
             views.setTextViewText(
                 R.id.widget_today_stats,
                 "$taskCount Tugas \u2022 $eventCount Jadwal \u2022 $billCount Tagihan"
@@ -257,9 +263,8 @@ object OrbitWidgetStore {
 
         for (id in widgetIds) {
             val views = RemoteViews(context.packageName, R.layout.widget_tasks)
+            views.setInt(R.id.widget_tasks_header, "setBackgroundResource", headerDrawable(accentId))
             views.setTextViewText(R.id.widget_tasks_count, count.toString())
-            views.setInt(R.id.widget_tasks_count, "setBackgroundResource", chipDrawable(accentId))
-            views.setInt(R.id.widget_tasks_add_btn, "setBackgroundResource", btnPrimaryDrawable(accentId))
 
             if (array.length() == 0) {
                 views.setViewVisibility(R.id.widget_tasks_empty, View.VISIBLE)
@@ -349,6 +354,7 @@ object OrbitWidgetStore {
 
         for (id in widgetIds) {
             val views = RemoteViews(context.packageName, R.layout.widget_balance)
+            views.setInt(R.id.widget_balance_header, "setBackgroundResource", headerDrawable(accentId))
             views.setTextViewText(R.id.widget_balance_amount, balanceText)
             views.setTextViewText(
                 R.id.widget_balance_privacy_tag,
@@ -358,8 +364,6 @@ object OrbitWidgetStore {
                 R.id.widget_balance_meta,
                 "Keluar: $expenseText \u2022 $billCount Tagihan"
             )
-            views.setInt(R.id.widget_balance_privacy_tag, "setBackgroundResource", chipDrawable(accentId))
-            views.setInt(R.id.widget_balance_add_btn, "setBackgroundResource", btnPrimaryDrawable(accentId))
 
             views.setOnClickPendingIntent(
                 R.id.widget_balance_privacy_tag,

@@ -4,21 +4,21 @@
 
 :root {
   color-scheme: light;
-  --background: #f8fafc;
-  --sidebar: #f4f5f7;
-  --foreground: #0f172a;
+  --background: #eef3fa;
+  --sidebar: #f6f9fe;
+  --foreground: #0b1324;
   --card: #ffffff;
-  --card-foreground: #0f172a;
-  --subtle: #f1f5f9;
-  --hover: #eef2f6;
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
+  --card-foreground: #0b1324;
+  --subtle: #e7eef8;
+  --hover: #e1eaf6;
+  --border: #d5e0ef;
+  --border-strong: #b6c8e0;
   --primary: #0284c7;
   --primary-foreground: #ffffff;
-  --primary-subtle: #e0f2fe;
-  --accent-glow: rgba(2, 132, 199, 0.14);
+  --primary-subtle: #dcf0fd;
+  --accent-glow: rgba(2, 132, 199, 0.22);
   --surface-glass: rgba(255, 255, 255, 0.84);
-  --muted: #f1f5f9;
+  --muted: #eaf0f8;
   --muted-foreground: #475569;
   --text-muted: #64748b;
 
@@ -71,40 +71,40 @@
   --primary: #059669;
   --primary-foreground: #ffffff;
   --primary-subtle: #d1fae5;
-  --accent-glow: rgba(5, 150, 105, 0.14);
+  --accent-glow: rgba(5, 150, 105, 0.22);
 }
 
 :root[data-accent="violet"] {
   --primary: #7c3aed;
   --primary-foreground: #ffffff;
   --primary-subtle: #ede9fe;
-  --accent-glow: rgba(124, 58, 237, 0.14);
+  --accent-glow: rgba(124, 58, 237, 0.22);
 }
 
 :root[data-accent="amber"] {
   --primary: #d97706;
   --primary-foreground: #ffffff;
   --primary-subtle: #fef3c7;
-  --accent-glow: rgba(217, 119, 6, 0.14);
+  --accent-glow: rgba(217, 119, 6, 0.22);
 }
 
 .dark {
   color-scheme: dark;
-  --background: #0d1117;
-  --sidebar: #121720;
+  --background: #070b14;
+  --sidebar: #0c1220;
   --foreground: #f1f5f9;
-  --card: #161b22;
+  --card: #101726;
   --card-foreground: #f1f5f9;
-  --subtle: #1e2530;
-  --hover: #212834;
-  --border: #262f3d;
-  --border-strong: #374151;
+  --subtle: #182235;
+  --hover: #1d2940;
+  --border: #223049;
+  --border-strong: #324669;
   --primary: #38bdf8;
-  --primary-foreground: #0b1218;
+  --primary-foreground: #07121f;
   --primary-subtle: #0c4a6e;
-  --accent-glow: rgba(56, 189, 248, 0.16);
-  --surface-glass: rgba(22, 27, 34, 0.82);
-  --muted: #181e27;
+  --accent-glow: rgba(56, 189, 248, 0.24);
+  --surface-glass: rgba(16, 23, 38, 0.82);
+  --muted: #111827;
   --muted-foreground: #94a3b8;
   --text-muted: #64748b;
 
@@ -157,29 +157,31 @@
   --primary: #34d399;
   --primary-foreground: #052e16;
   --primary-subtle: #064e3b;
-  --accent-glow: rgba(52, 211, 153, 0.16);
+  --accent-glow: rgba(52, 211, 153, 0.24);
 }
 
 .dark[data-accent="violet"] {
   --primary: #a78bfa;
   --primary-foreground: #1e1b4b;
   --primary-subtle: #3b0764;
-  --accent-glow: rgba(167, 139, 250, 0.16);
+  --accent-glow: rgba(167, 139, 250, 0.24);
 }
 
 .dark[data-accent="amber"] {
   --primary: #fbbf24;
   --primary-foreground: #271300;
   --primary-subtle: #451a03;
-  --accent-glow: rgba(251, 191, 36, 0.16);
+  --accent-glow: rgba(251, 191, 36, 0.24);
 }
 
 body {
   color: var(--foreground);
   background-color: var(--background);
   background-image:
-    radial-gradient(640px 320px at 88% -6%, var(--accent-glow), transparent 70%),
-    radial-gradient(520px 280px at 8% 10%, var(--accent-glow), transparent 72%);
+    radial-gradient(820px 420px at 92% -4%, var(--accent-glow), transparent 68%),
+    radial-gradient(660px 360px at 4% 14%, var(--accent-glow), transparent 72%),
+    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--border-strong) 40%, transparent) 1px, transparent 0);
+  background-size: auto, auto, 24px 24px;
   background-attachment: fixed;
   font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   min-height: 100vh;
@@ -187,18 +189,27 @@ body {
 }
 
 .orbit-card-interactive {
-  transition: transform 150ms ease-out, border-color 150ms ease-out, box-shadow 150ms ease-out, background-color 150ms ease-out;
+  background-color: var(--surface-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px -8px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 160ms ease-out, border-color 160ms ease-out, box-shadow 160ms ease-out, background-color 160ms ease-out;
+}
+
+.dark .orbit-card-interactive {
+  box-shadow: 0 10px 28px -12px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .orbit-card-interactive:hover {
-  border-color: color-mix(in srgb, var(--primary) 42%, var(--border));
-  box-shadow: 0 8px 24px -10px var(--accent-glow), 0 2px 6px rgba(0, 0, 0, 0.04);
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--primary) 52%, var(--border));
+  box-shadow: 0 14px 30px -12px var(--accent-glow), 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .orbit-glass {
   background-color: var(--surface-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 /* Format angka uang tabular rata kanan */
