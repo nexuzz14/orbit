@@ -1,11 +1,26 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { formatCurrency, formatDateOnly } from '@/lib/format';
-import type { Database } from '@/types/database';
-import { TrendingUp, TrendingDown, Scale, Calendar, BarChart3 } from 'lucide-react';
+import { formatDateOnly } from '@/lib/format';
+import { usePrivacyMode } from '@/lib/privacy-mode';
 import {
+  buildCategoryBreakdown,
+  buildMonthlyCashflowSeries,
+  escapeCsvCell,
+} from '@/lib/finance-v2';
+import type { Database } from '@/types/database';
+import {
+  TrendingUp,
+  TrendingDown,
+  Scale,
+  Calendar,
+  BarChart3,
+  Download,
+  Printer,
+} from 'lucide-react';
+import {
+  Button,
   Card,
   CardHeader,
   CardTitle,
@@ -16,10 +31,12 @@ import {
   ErrorState,
   MoneySubNav,
 } from '@/components/ui';
+import { RingkasanCharts } from '@/components/finance/ringkasan-charts';
 
 type MonthlySummaryRow = Database['public']['Views']['v_monthly_summary']['Row'];
 
 type CategorySummaryRow = {
+  category_id?: string | null;
   category_name: string | null;
   type: string;
   total: number;
@@ -28,6 +45,7 @@ type CategorySummaryRow = {
 
 export default function RingkasanPage() {
   const supabase = createClient();
+  const { formatAmount } = usePrivacyMode();
   const [summaries, setSummaries] = useState<MonthlySummaryRow[]>([]);
   const [categorySummaries, setCategorySummaries] = useState<CategorySummaryRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +68,7 @@ export default function RingkasanPage() {
 
       const { data: catData, error: catErr } = await supabase
         .from('v_monthly_category_summary')
-        .select('category_name, type, total, txn_count')
+        .select('category_id, category_name, type, total, txn_count')
         .order('total', { ascending: false });
 
       if (catErr) throw catErr;
@@ -68,19 +86,131 @@ export default function RingkasanPage() {
     loadData();
   }, [loadData]);
 
-  const currentTotal = summaries.find((s) => s.is_total);
-  const currentSources = summaries.filter((s) => !s.is_total && s.month_start === currentTotal?.month_start);
+  const totalSummaries = useMemo(
+    () => summaries.filter((s) => s.is_total),
+    [summaries]
+  );
+  const currentTotal = totalSummaries[0];
+  const currentSources = summaries.filter(
+    (s) => !s.is_total && s.month_start === currentTotal?.month_start
+  );
+
+  const monthlySeries = useMemo(
+    () =>
+      buildMonthlyCashflowSeries(
+        (totalSummaries.length > 0 ? totalSummaries : summaries).map((s) => ({
+          month_start: s.month_start ?? '',
+          income: Number(s.income ?? 0),
+          expense: Number(s.expense ?? 0),
+          net: Number(s.net ?? 0),
+        })),
+        6
+      ),
+    [totalSummaries, summaries]
+  );
+
+  const expenseBreakdown = useMemo(
+    () =>
+      buildCategoryBreakdown(
+        categorySummaries.map((c) => ({
+          category_id: c.category_id ?? null,
+          category_name: c.category_name,
+          type: c.type,
+          total: Number(c.total ?? 0),
+          txn_count: Number(c.txn_count ?? 0),
+        })),
+        'expense',
+        6
+      ),
+    [categorySummaries]
+  );
+
+  const incomeBreakdown = useMemo(
+    () =>
+      buildCategoryBreakdown(
+        categorySummaries.map((c) => ({
+          category_id: c.category_id ?? null,
+          category_name: c.category_name,
+          type: c.type,
+          total: Number(c.total ?? 0),
+          txn_count: Number(c.txn_count ?? 0),
+        })),
+        'income',
+        6
+      ),
+    [categorySummaries]
+  );
 
   const expenseCategories = categorySummaries.filter((c) => c.type === 'expense');
   const incomeCategories = categorySummaries.filter((c) => c.type === 'income');
 
+  const handleExportSummaryCsv = () => {
+    const lines: string[] = [
+      ['Tipe Baris', 'Periode / Kategori', 'Sumber / Jenis', 'Pemasukan', 'Pengeluaran', 'Selisih Bersih', 'Jumlah Txn']
+        .map(escapeCsvCell)
+        .join(','),
+    ];
+
+    for (const pt of monthlySeries) {
+      lines.push(
+        ['Bulanan', pt.monthKey, 'Total', pt.income, pt.expense, pt.net, '-']
+          .map(escapeCsvCell)
+          .join(',')
+      );
+    }
+
+    for (const c of categorySummaries) {
+      lines.push(
+        [
+          'Kategori',
+          c.category_name || 'Tanpa Kategori',
+          c.type,
+          c.type === 'income' ? Number(c.total ?? 0) : 0,
+          c.type === 'expense' ? Number(c.total ?? 0) : 0,
+          c.type === 'income' ? Number(c.total ?? 0) : -Number(c.total ?? 0),
+          Number(c.txn_count ?? 0),
+        ]
+          .map(escapeCsvCell)
+          .join(',')
+      );
+    }
+
+    const csv = `\uFEFF${lines.join('\r\n')}\r\n`;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `orbit-ringkasan-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Uang</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Ringkasan arus kas bulanan dan komposisi per sumber kegiatan
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Uang</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Ringkasan arus kas bulanan, grafik komposisi kategori, dan ekspor laporan
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
+          <Button
+            variant="secondary"
+            onClick={handleExportSummaryCsv}
+            disabled={summaries.length === 0 && categorySummaries.length === 0}
+          >
+            <Download className="w-4 h-4" />
+            <span>Ekspor CSV</span>
+          </Button>
+          <Button variant="secondary" onClick={() => window.print()}>
+            <Printer className="w-4 h-4" />
+            <span>Cetak / PDF</span>
+          </Button>
+        </div>
       </div>
 
       <MoneySubNav />
@@ -129,7 +259,7 @@ export default function RingkasanPage() {
                   <TrendingUp className="w-4 h-4 text-income" />
                 </div>
                 <div className="text-2xl font-bold tabular-nums text-income">
-                  +{formatCurrency(currentTotal?.income || 0, currentTotal?.currency ?? 'IDR')}
+                  +{formatAmount(currentTotal?.income || 0, currentTotal?.currency ?? 'IDR')}
                 </div>
                 <div className="text-xs text-muted-foreground tabular-nums">
                   {currentTotal?.txn_count || 0} transaksi terkonfirmasi
@@ -144,7 +274,7 @@ export default function RingkasanPage() {
                   <TrendingDown className="w-4 h-4 text-expense" />
                 </div>
                 <div className="text-2xl font-bold tabular-nums text-expense">
-                  -{formatCurrency(currentTotal?.expense || 0, currentTotal?.currency ?? 'IDR')}
+                  -{formatAmount(currentTotal?.expense || 0, currentTotal?.currency ?? 'IDR')}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   Tidak termasuk transfer antar akun
@@ -164,7 +294,7 @@ export default function RingkasanPage() {
                   }`}
                 >
                   {(currentTotal?.net || 0) >= 0 ? '+' : ''}
-                  {formatCurrency(currentTotal?.net || 0, currentTotal?.currency ?? 'IDR')}
+                  {formatAmount(currentTotal?.net || 0, currentTotal?.currency ?? 'IDR')}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   Pemasukan dikurangi pengeluaran
@@ -173,15 +303,23 @@ export default function RingkasanPage() {
             </Card>
           </div>
 
+          {/* Grafik Arus Kas & Komposisi Kategori SVG */}
+          <RingkasanCharts
+            monthlySeries={monthlySeries}
+            expenseBreakdown={expenseBreakdown}
+            incomeBreakdown={incomeBreakdown}
+            currency={currentTotal?.currency ?? 'IDR'}
+          />
+
           {/* Rincian per Sumber Kegiatan */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden print-avoid-break">
             <CardHeader>
               <CardTitle>Rincian per Sumber Kegiatan</CardTitle>
             </CardHeader>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr className="border-b border-border bg-subtle text-left text-xs uppercase tracking-wider text-muted-foreground">
                     <th className="p-3.5 font-semibold">Sumber Kegiatan</th>
                     <th className="p-3.5 font-semibold text-right">Pemasukan</th>
                     <th className="p-3.5 font-semibold text-right">Pengeluaran</th>
@@ -198,15 +336,15 @@ export default function RingkasanPage() {
                     </tr>
                   ) : (
                     currentSources.map((s) => (
-                      <tr key={s.source} className="hover:bg-muted/20">
+                      <tr key={s.source} className="hover:bg-hover">
                         <td className="p-3.5">
                           <KindBadge kind={s.source || 'pribadi'} />
                         </td>
                         <td className="p-3.5 text-right tabular-nums text-income font-medium">
-                          +{formatCurrency(Number(s.income ?? 0), s.currency ?? 'IDR')}
+                          +{formatAmount(Number(s.income ?? 0), s.currency ?? 'IDR')}
                         </td>
                         <td className="p-3.5 text-right tabular-nums text-expense font-medium">
-                          -{formatCurrency(Number(s.expense ?? 0), s.currency ?? 'IDR')}
+                          -{formatAmount(Number(s.expense ?? 0), s.currency ?? 'IDR')}
                         </td>
                         <td
                           className={`p-3.5 text-right tabular-nums font-semibold ${
@@ -214,7 +352,7 @@ export default function RingkasanPage() {
                           }`}
                         >
                           {Number(s.net ?? 0) >= 0 ? '+' : ''}
-                          {formatCurrency(Number(s.net ?? 0), s.currency ?? 'IDR')}
+                          {formatAmount(Number(s.net ?? 0), s.currency ?? 'IDR')}
                         </td>
                         <td className="p-3.5 text-right text-xs text-muted-foreground tabular-nums">
                           {s.txn_count}
@@ -244,7 +382,7 @@ export default function RingkasanPage() {
                       <span className="font-medium text-foreground">{c.category_name || 'Tanpa Kategori'}</span>
                       <div className="text-right">
                         <div className="tabular-nums font-semibold text-expense">
-                          -{formatCurrency(Number(c.total))}
+                          -{formatAmount(Number(c.total))}
                         </div>
                         <div className="text-xs text-muted-foreground tabular-nums">{c.txn_count} transaksi</div>
                       </div>
@@ -269,7 +407,7 @@ export default function RingkasanPage() {
                       <span className="font-medium text-foreground">{c.category_name || 'Tanpa Kategori'}</span>
                       <div className="text-right">
                         <div className="tabular-nums font-semibold text-income">
-                          +{formatCurrency(Number(c.total))}
+                          +{formatAmount(Number(c.total))}
                         </div>
                         <div className="text-xs text-muted-foreground tabular-nums">{c.txn_count} transaksi</div>
                       </div>

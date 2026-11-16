@@ -205,7 +205,7 @@ export default function LoginPage() {
           {errorMessage && (
             <div
               role="alert"
-              className="p-3.5 text-xs rounded-lg bg-expense/10 text-expense border border-expense/25 flex items-start gap-2.5"
+              className="p-3.5 text-xs rounded-lg bg-expense-subtle text-expense border border-expense-border flex items-start gap-2.5"
             >
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{errorMessage}</span>
@@ -215,7 +215,7 @@ export default function LoginPage() {
           {successMessage && (
             <div
               role="status"
-              className="p-3.5 text-xs rounded-lg bg-income/10 text-income border border-income/25 flex items-start gap-2.5"
+              className="p-3.5 text-xs rounded-lg bg-income-subtle text-income border border-income-border flex items-start gap-2.5"
             >
               <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{successMessage}</span>

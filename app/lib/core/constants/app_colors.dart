@@ -9,6 +9,7 @@ class AppTokens {
   static const double space6 = 24.0;
   static const double space8 = 32.0;
 
+  static const double radiusXs = 4.0;
   static const double radiusSm = 6.0;
   static const double radiusMd = 8.0;
   static const double radiusLg = 12.0;
@@ -35,21 +36,29 @@ class AppColors {
     end: Alignment.bottomRight,
   );
 
-  // Permukaan Mode Terang (Putih & Abu Slate)
-  static const Color lightBackground = Color(0xFFF8FAFC);
+  // Permukaan Mode Terang (Netral Notion Warm/Zinc - Opsi A dikunci)
+  static const Color lightBackground = Color(0xFFFFFFFF);
+  static const Color lightSidebar = Color(0xFFF7F7F5);
   static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightSubtle = Color(0xFFF1F5F9);
-  static const Color lightBorder = Color(0xFFE2E8F0);
-  static const Color lightTextPrimary = Color(0xFF0F172A);
-  static const Color lightTextSecondary = Color(0xFF475569);
+  static const Color lightSubtle = Color(0xFFEFEFED);
+  static const Color lightHover = Color(0xFFF4F4F2);
+  static const Color lightBorder = Color(0xFFE6E6E3);
+  static const Color lightBorderStrong = Color(0xFFD1D1CC);
+  static const Color lightTextPrimary = Color(0xFF11181C);
+  static const Color lightTextSecondary = Color(0xFF555550);
+  static const Color lightTextMuted = Color(0xFF80807A);
 
-  // Permukaan Mode Gelap (Slate Netral)
-  static const Color darkBackground = Color(0xFF0F172A);
-  static const Color darkSurface = Color(0xFF1E293B);
-  static const Color darkSubtle = Color(0xFF334155);
-  static const Color darkBorder = Color(0xFF334155);
-  static const Color darkTextPrimary = Color(0xFFF8FAFC);
-  static const Color darkTextSecondary = Color(0xFFCBD5E1);
+  // Permukaan Mode Gelap (Netral Notion Dark - Opsi A dikunci)
+  static const Color darkBackground = Color(0xFF191919);
+  static const Color darkSidebar = Color(0xFF202020);
+  static const Color darkSurface = Color(0xFF242424);
+  static const Color darkSubtle = Color(0xFF2F2F2F);
+  static const Color darkHover = Color(0xFF2A2A2A);
+  static const Color darkBorder = Color(0xFF323232);
+  static const Color darkBorderStrong = Color(0xFF454545);
+  static const Color darkTextPrimary = Color(0xFFF3F3F2);
+  static const Color darkTextSecondary = Color(0xFFB3B3AE);
+  static const Color darkTextMuted = Color(0xFF7E7E78);
 
   // Warna Semantik Keuangan
   static const Color income = Color(0xFF15803D);
@@ -71,7 +80,7 @@ class AppColors {
   static const Color kindIntern = Color(0xFF0369A1);
   static const Color kindFreelance = Color(0xFF6D28D9);
   static const Color kindKuliah = Color(0xFFB45309);
-  static const Color kindPribadi = Color(0xFF334155);
+  static const Color kindPribadi = Color(0xFF3F3F46);
 
   static Color getKindColor(String kind, {bool isDark = false}) {
     switch (kind.toLowerCase()) {
@@ -84,7 +93,7 @@ class AppColors {
       case 'pribadi':
       case 'personal':
       default:
-        return isDark ? const Color(0xFFCBD5E1) : kindPribadi;
+        return isDark ? const Color(0xFFD4D4D8) : kindPribadi;
     }
   }
 
@@ -99,9 +108,111 @@ class AppColors {
       case 'pribadi':
       case 'personal':
       default:
-        return isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+        return isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5);
     }
   }
+
+  static Color getKindBorderColor(String kind, {bool isDark = false}) {
+    switch (kind.toLowerCase()) {
+      case 'intern':
+        return isDark ? const Color(0xFF075985) : const Color(0xFFBAE6FD);
+      case 'freelance':
+        return isDark ? const Color(0xFF4C1D95) : const Color(0xFFDDD6FE);
+      case 'kuliah':
+        return isDark ? const Color(0xFF78350F) : const Color(0xFFFDE68A);
+      case 'pribadi':
+      case 'personal':
+      default:
+        return isDark ? const Color(0xFF3F3F46) : const Color(0xFFE4E4E7);
+    }
+  }
+
+  // Token Warna Status Tugas D.2 (Jira Workflow)
+  static String getTaskStatusLabel(String status) {
+    switch (status.toLowerCase()) {
+      case 'doing':
+        return 'Dikerjakan';
+      case 'revisi':
+        return 'Revisi';
+      case 'done':
+        return 'Selesai';
+      case 'todo':
+      default:
+        return 'Belum dikerjakan';
+    }
+  }
+
+  static Color getTaskStatusFg(String status, {bool isDark = false}) {
+    switch (status.toLowerCase()) {
+      case 'doing':
+        return isDark ? const Color(0xFF7DD3FC) : const Color(0xFF0369A1);
+      case 'revisi':
+        return isDark ? const Color(0xFFFCD34D) : const Color(0xFFB45309);
+      case 'done':
+        return isDark ? incomeDark : income;
+      case 'todo':
+      default:
+        return isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569);
+    }
+  }
+
+  static Color getTaskStatusBg(String status, {bool isDark = false}) {
+    switch (status.toLowerCase()) {
+      case 'doing':
+        return isDark ? const Color(0xFF0C4A6E) : const Color(0xFFE0F2FE);
+      case 'revisi':
+        return isDark ? warningSubtleDark : warningSubtleLight;
+      case 'done':
+        return isDark ? incomeSubtleDark : incomeSubtleLight;
+      case 'todo':
+      default:
+        return isDark ? const Color(0xFF27272A) : const Color(0xFFF1F5F9);
+    }
+  }
+
+  static Color getTaskStatusBorder(String status, {bool isDark = false}) {
+    switch (status.toLowerCase()) {
+      case 'doing':
+        return isDark ? const Color(0xFF075985) : const Color(0xFFBAE6FD);
+      case 'revisi':
+        return isDark ? const Color(0xFF78350F) : const Color(0xFFFDE68A);
+      case 'done':
+        return isDark ? const Color(0xFF14532D) : const Color(0xFFBBF7D0);
+      case 'todo':
+      default:
+        return isDark ? const Color(0xFF3F3F46) : const Color(0xFFE2E8F0);
+    }
+  }
+
+  static bool isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+
+  static Color canvasColor(BuildContext context) =>
+      isDark(context) ? darkBackground : lightBackground;
+
+  static Color sidebarColor(BuildContext context) =>
+      isDark(context) ? darkSidebar : lightSidebar;
+
+  static Color surfaceColor(BuildContext context) =>
+      isDark(context) ? darkSurface : lightSurface;
+
+  static Color subtleColor(BuildContext context) =>
+      isDark(context) ? darkSubtle : lightSubtle;
+
+  static Color hoverColor(BuildContext context) =>
+      isDark(context) ? darkHover : lightHover;
+
+  static Color borderColor(BuildContext context) =>
+      isDark(context) ? darkBorder : lightBorder;
+
+  static Color textPrimaryColor(BuildContext context) =>
+      isDark(context) ? darkTextPrimary : lightTextPrimary;
+
+  static Color textSecondaryColor(BuildContext context) =>
+      isDark(context) ? darkTextSecondary : lightTextSecondary;
+
+  static Color textMutedColor(BuildContext context) =>
+      isDark(context) ? darkTextMuted : lightTextMuted;
 
   static String getKindLabel(String kind) {
     switch (kind.toLowerCase()) {
@@ -197,6 +308,16 @@ class AppTheme {
           ),
         ),
       ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(AppTokens.minTouchTarget, AppTokens.minTouchTarget),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          minimumSize: const Size(AppTokens.minTouchTarget, AppTokens.minTouchTarget),
+        ),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.lightSurface,
@@ -283,6 +404,16 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTokens.radiusMd),
           ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(AppTokens.minTouchTarget, AppTokens.minTouchTarget),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          minimumSize: const Size(AppTokens.minTouchTarget, AppTokens.minTouchTarget),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(

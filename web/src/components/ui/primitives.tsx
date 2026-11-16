@@ -3,61 +3,27 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { AlertCircle, Inbox, PiggyBank, Receipt, RefreshCw, Target, X } from 'lucide-react';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { Inbox, PiggyBank, Receipt, Target, X } from 'lucide-react';
+import { cn } from './cn';
 
-export function cn(...inputs: Array<string | undefined | null | false>) {
-  return twMerge(clsx(inputs));
-}
-
-export type ActivityKind = 'intern' | 'freelance' | 'kuliah' | 'pribadi' | 'personal';
-
-export const ACTIVITY_KIND_META: Record<
-  ActivityKind,
-  { label: string; style: React.CSSProperties }
-> = {
-  intern: {
-    label: 'Intern',
-    style: {
-      color: 'var(--kind-intern-fg)',
-      backgroundColor: 'var(--kind-intern-bg)',
-      borderColor: 'var(--kind-intern-border)',
-    },
-  },
-  freelance: {
-    label: 'Freelance',
-    style: {
-      color: 'var(--kind-freelance-fg)',
-      backgroundColor: 'var(--kind-freelance-bg)',
-      borderColor: 'var(--kind-freelance-border)',
-    },
-  },
-  kuliah: {
-    label: 'Kuliah',
-    style: {
-      color: 'var(--kind-kuliah-fg)',
-      backgroundColor: 'var(--kind-kuliah-bg)',
-      borderColor: 'var(--kind-kuliah-border)',
-    },
-  },
-  pribadi: {
-    label: 'Pribadi',
-    style: {
-      color: 'var(--kind-pribadi-fg)',
-      backgroundColor: 'var(--kind-pribadi-bg)',
-      borderColor: 'var(--kind-pribadi-border)',
-    },
-  },
-  personal: {
-    label: 'Pribadi',
-    style: {
-      color: 'var(--kind-pribadi-fg)',
-      backgroundColor: 'var(--kind-pribadi-bg)',
-      borderColor: 'var(--kind-pribadi-border)',
-    },
-  },
-};
+export { cn } from './cn';
+export {
+  ACTIVITY_KIND_META,
+  TASK_STATUS_META,
+  KindBadge,
+  StatusBadge,
+  TaskStatusBadge,
+  type ActivityKind,
+  type TaskWorkflowStatus,
+} from './status-badge';
+export { PropertyChip, PropertyRow, BlockContainer } from './property-chip';
+export { ProgressControl } from './progress-control';
+export { Skeleton, EmptyState, ErrorState } from './state-views';
+export {
+  AttentionBannerCard,
+  type AttentionBannerCardProps,
+  type AttentionPreviewItem,
+} from './attention-card';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
@@ -129,6 +95,21 @@ export const Select = React.forwardRef<
 ));
 Select.displayName = 'Select';
 
+export const Textarea = React.forwardRef<
+  HTMLTextAreaElement,
+  React.TextareaHTMLAttributes<HTMLTextAreaElement>
+>(({ className, ...props }, ref) => (
+  <textarea
+    ref={ref}
+    className={cn(
+      'min-h-[88px] w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50',
+      className,
+    )}
+    {...props}
+  />
+));
+Textarea.displayName = 'Textarea';
+
 export function Card({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
@@ -161,55 +142,6 @@ export function CardContent({ className, children, ...props }: React.HTMLAttribu
     <div className={cn('p-4', className)} {...props}>
       {children}
     </div>
-  );
-}
-
-export function KindBadge({ kind, className }: { kind?: string | null; className?: string }) {
-  const normalized = (kind?.toLowerCase() || 'pribadi') as ActivityKind;
-  const meta = ACTIVITY_KIND_META[normalized] || ACTIVITY_KIND_META.pribadi;
-  return (
-    <span
-      style={meta.style}
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-sm border px-2 py-0.5 text-xs font-medium leading-4',
-        className
-      )}
-    >
-      <span
-        aria-hidden="true"
-        className="h-1.5 w-1.5 rounded-full"
-        style={{ backgroundColor: meta.style.color }}
-      />
-      <span>{meta.label}</span>
-    </span>
-  );
-}
-
-export function StatusBadge({
-  variant = 'neutral',
-  children,
-  className,
-}: {
-  variant?: 'neutral' | 'income' | 'expense' | 'warning';
-  children: React.ReactNode;
-  className?: string;
-}) {
-  const styles: Record<string, string> = {
-    neutral: 'bg-subtle text-muted-foreground border-border',
-    income: 'bg-income-subtle text-income border-income-border',
-    expense: 'bg-expense-subtle text-expense border-expense-border',
-    warning: 'bg-warning-subtle text-warning border-warning-border',
-  };
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium leading-4',
-        styles[variant],
-        className
-      )}
-    >
-      {children}
-    </span>
   );
 }
 
@@ -262,64 +194,6 @@ export function SegmentedControl<T extends string>({
   );
 }
 
-export function Skeleton({ className }: { className?: string }) {
-  return <div aria-hidden="true" className={cn('animate-pulse rounded-md bg-subtle', className)} />;
-}
-
-export function EmptyState({
-  title,
-  description,
-  actionLabel,
-  onAction,
-  icon,
-}: {
-  title: string;
-  description: string;
-  actionLabel?: string;
-  onAction?: () => void;
-  icon?: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-card px-6 py-10 text-center">
-      {icon && <div className="mb-3 text-muted-foreground">{icon}</div>}
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      <p className="mt-1 max-w-sm text-xs text-muted-foreground">{description}</p>
-      {actionLabel && onAction && (
-        <Button variant="primary" size="default" onClick={onAction} className="mt-4">
-          {actionLabel}
-        </Button>
-      )}
-    </div>
-  );
-}
-
-export function ErrorState({
-  message = 'Tidak dapat memuat data. Periksa koneksi Anda dan coba kembali.',
-  onRetry,
-}: {
-  message?: string;
-  onRetry: () => void;
-}) {
-  return (
-    <div
-      role="alert"
-      className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-lg border border-expense-border bg-expense-subtle p-4"
-    >
-      <div className="flex items-start gap-3">
-        <AlertCircle className="h-5 w-5 text-expense shrink-0 mt-0.5" aria-hidden="true" />
-        <div>
-          <h3 className="text-sm font-semibold text-expense">Gagal Memuat Data</h3>
-          <p className="mt-0.5 text-xs text-foreground/90">{message}</p>
-        </div>
-      </div>
-      <Button variant="outline" size="default" onClick={onRetry} className="shrink-0">
-        <RefreshCw className="h-4 w-4" aria-hidden="true" />
-        <span>Coba Lagi</span>
-      </Button>
-    </div>
-  );
-}
-
 export function Dialog({
   open,
   onClose,
@@ -367,6 +241,70 @@ export function Dialog({
   );
 }
 
+export interface ViewSwitcherOption<T extends string> {
+  value: T;
+  label: string;
+  badge?: string | number;
+}
+
+export function ViewSwitcher<T extends string>({
+  options,
+  value,
+  onChange,
+  ariaLabel = 'Pilih tampilan',
+  rightSlot,
+  className,
+}: {
+  options: Array<ViewSwitcherOption<T>>;
+  value: T;
+  onChange: (value: T) => void;
+  ariaLabel?: string;
+  rightSlot?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        'flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 print:hidden',
+        className
+      )}
+    >
+      <div
+        role="tablist"
+        aria-label={ariaLabel}
+        className="inline-flex w-full sm:w-auto items-center rounded-md bg-subtle p-1 border border-border overflow-x-auto"
+      >
+        {options.map((opt) => {
+          const active = opt.value === value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => onChange(opt.value)}
+              className={cn(
+                'min-h-11 shrink-0 flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 rounded-sm px-3.5 py-2 text-sm font-medium transition-colors duration-150',
+                active
+                  ? 'bg-card text-primary shadow-card border border-border font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <span>{opt.label}</span>
+              {opt.badge !== undefined && (
+                <span className="rounded-sm bg-subtle border border-border px-1.5 py-0.5 text-[11px] font-semibold text-foreground tabular-nums">
+                  {opt.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      {rightSlot && <div className="flex flex-wrap items-center gap-2">{rightSlot}</div>}
+    </div>
+  );
+}
+
 export function MoneySubNav({ draftCount = 0 }: { draftCount?: number }) {
   const pathname = usePathname();
 
@@ -383,7 +321,7 @@ export function MoneySubNav({ draftCount = 0 }: { draftCount?: number }) {
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 print:hidden">
       <div
         role="navigation"
         aria-label="Sub-navigasi Uang"
@@ -466,7 +404,7 @@ export function AgendaSubNav() {
     <div
       role="navigation"
       aria-label="Sub-navigasi Agenda"
-      className="inline-flex w-full sm:w-auto items-center rounded-md bg-subtle p-1 border border-border"
+      className="print:hidden inline-flex w-full sm:w-auto items-center rounded-md bg-subtle p-1 border border-border"
     >
       {tabs.map((t) => {
         const active = pathname === t.href || pathname.startsWith(`${t.href}/`);
@@ -501,7 +439,7 @@ export function LainnyaSubNav() {
     <div
       role="navigation"
       aria-label="Sub-navigasi Lainnya"
-      className="inline-flex w-full sm:w-auto items-center rounded-md bg-subtle p-1 border border-border overflow-x-auto [mask-image:linear-gradient(to_right,black_calc(100%-24px),transparent)] sm:[mask-image:none]"
+      className="print:hidden inline-flex w-full sm:w-auto items-center rounded-md bg-subtle p-1 border border-border overflow-x-auto [mask-image:linear-gradient(to_right,black_calc(100%-24px),transparent)] sm:[mask-image:none]"
     >
       {tabs.map((t) => {
         const active = pathname === t.href || pathname.startsWith(`${t.href}/`);

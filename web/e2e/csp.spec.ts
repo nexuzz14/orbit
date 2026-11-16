@@ -16,6 +16,9 @@ const routes = [
   '/inbox',
   '/ringkasan',
   '/pengaturan',
+  '/offline',
+  '/manifest.webmanifest',
+  '/sw.js',
 ];
 
 for (const route of routes) {

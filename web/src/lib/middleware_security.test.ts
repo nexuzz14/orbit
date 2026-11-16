@@ -74,6 +74,18 @@ describe('Security: Authentication Bypass Guard in Middleware', () => {
     assert.equal(res.headers.get('location'), null);
   });
 
+  test('Public PWA routes (/manifest.webmanifest, /sw.js, /offline) are never redirected to /login', async () => {
+    (process.env as any).NODE_ENV = 'production';
+    delete process.env.E2E_AUTH_BYPASS;
+
+    for (const route of ['/manifest.webmanifest', '/sw.js', '/offline']) {
+      const req = new NextRequest(new Request(`http://localhost:3000${route}`));
+      const res = await updateSession(req);
+      assert.equal(res.status, 200, `${route} must return 200 without auth redirect`);
+      assert.equal(res.headers.get('location'), null, `${route} must not have redirect location`);
+    }
+  });
+
   // Cleanup
   test('Restore environment variables', () => {
     (process.env as any).NODE_ENV = originalNodeEnv;

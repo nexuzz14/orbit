@@ -1,4 +1,4 @@
-# Orbit: PRD dan Instruksi Pembangunan (Versi 5.1)
+# Orbit: PRD dan Instruksi Pembangunan (Versi 5.3)
 
 ## 0. Instruksi untuk AI Agent (baca dulu)
 
@@ -231,9 +231,10 @@ Kriteria: total laporan sama persis dengan penjumlahan transaksi, tanpa selisih 
 - Field khusus freelance (hanya terisi bila kind = freelance): klien, nilai kontrak, mata uang, persen potongan platform, mode potongan.
 - Field khusus kuliah (opsional): semester, kode mata kuliah, SKS.
 - Field khusus magang (opsional): instansi, nominal uang saku, tanggal uang saku. Bila diisi, sistem membuat expected_incomes berulang untuk uang saku (M7e).
-- Tugas (tabel tasks) tidak wajib punya proyek. Tugas lepas tetap punya jenis. Field: judul, deskripsi (Markdown), jenis, proyek (opsional), status (todo/doing/done), prioritas (rendah/sedang/tinggi), tenggat (tanggal saja atau tanggal+jam), estimasi menit (opsional), tag, checklist (item centang), milestone pembayaran (opsional), urutan.
-- Tampilan tugas: daftar (filter jenis, proyek, status, prioritas, rentang tenggat, pencarian) dan papan todo/doing/done per proyek. Tugas belum selesai yang lewat tenggat berstatus "terlambat" dan tampil di atas di Hari Ini.
-- Penambahan tugas cepat: field satu baris. Parser aturan untuk tenggat relatif yang sama dengan M6 ("kamis 23.59", "besok", "tgl 20") menghasilkan pratinjau yang dapat diedit sebelum disimpan (tanpa Inbox). Dikerjakan di Fase 4.
+- Tugas (tabel tasks) tidak wajib punya proyek. Tugas lepas tetap punya jenis. Field: judul, deskripsi (Markdown + blok terstruktur opsional description_blocks), jenis, proyek (opsional), status (todo/doing/revisi/done), prioritas (rendah/sedang/tinggi), progress_percent (0..100, otomatis dari checklist/subtugas atau slider kelipatan 5), revision_count, status_changed_at, tenggat (tanggal saja atau tanggal+jam), estimasi menit (opsional), subtugas bertingkat (parent_task_id), aturan pengulangan (recurrence_rule), penanggung jawab (assignee_id), tag, checklist (item centang), milestone pembayaran (opsional), urutan.
+- Transisi status ke revisi menaikkan revision_count dan mewajibkan catatan alasan singkat; setiap perpindahan status tercatat permanen (append-only) di task_status_history. Status done otomatis menetapkan progress_percent = 100 dan completed_at.
+- Tampilan tugas terpadu: pengalih Daftar | Papan Kanban | Kalender (plus Linimasa proyek), panel detail Side Peek (Web) / layar penuh (Mobile) gaya Notion+Jira berisi properti inline, blok deskripsi, checklist, komentar (comments), lampiran (attachments), tautan (entity_links), dan pelacak waktu (task_time_logs). Tugas belum selesai yang lewat tenggat berstatus "terlambat", dan tugas stagnan > 5 hari di status non-done ditandai "macet > 5 hari" di Hari Ini.
+- Penambahan tugas cepat & template (task_templates): mendukung pola berulang dan template lintas proyek/kuliah/magang.
 - Menyelesaikan tugas bertanda milestone menawarkan "tandai pembayaran termin X" (butuh konfirmasi, tidak otomatis) lewat fn_complete_task.
 - Pembayaran proyek freelance (DP/termin/pelunasan): label, nominal, jatuh tempo, status (belum/sebagian/lunas), jumlah dibayar, tanggal bayar, akun penerima.
 - Menandai lunas membuat transaksi income otomatis (confirmed) ke akun terpilih, kategori Proyek Freelance. Membatalkan status lunas membatalkan transaksinya (atomik).
@@ -254,13 +255,13 @@ Kriteria: tugas dapat dibuat dengan maksimal 3 interaksi; tugas jatuh tempo hari
 - Impor/ekspor ICS bersifat opsional dan dikerjakan di Fase 7.
 Kriteria: jadwal mingguan tampil benar untuk 8 minggu ke depan; kejadian yang di-skip tidak muncul; benturan terdeteksi lintas jenis; hasil identik di web dan app untuk set uji yang sama.
 
-### M10c. Hari Ini dan Agenda
-- Hari Ini (beranda). Bagian waktu: jadwal hari ini dan tugas bertenggat hari ini, urut waktu; tugas terlambat di bagian atas. Bagian perhatian: benturan jadwal, tagihan jatuh tempo dalam 3 hari, pembayaran proyek jatuh tempo atau terlambat, pemasukan yang diharapkan. Bagian uang: safe to spend, jumlah draft di Inbox, status listener. Bagian "Besok" ringkas.
-- Agenda 7 hari: daftar per hari berisi jadwal, tenggat tugas, tagihan, dan pembayaran masuk, dengan indikator beban jam per hari.
+### M10c. Hari Ini, Pencarian Global, dan Tampilan Tersimpan
+- Hari Ini (beranda): strip progres tugas 4 status (todo, doing, revisi, done 14 hari terakhir), kartu perhatian (terlambat, revisi, macet > 5 hari, benturan jadwal, tagihan H-3, pembayaran jatuh tempo, pemasukan diharapkan), jadwal hari ini, safe to spend, draft Inbox, dan status listener.
+- Agenda: tampilan Daftar, Papan, Kalender, dan Linimasa/Gantt dengan opsi sinkronisasi dua arah Google Calendar (calendar_connections).
+- Pencarian global & command palette (Ctrl+K Web, ikon cari Mobile) menembus seluruh entitas serta tampilan tersimpan (saved_views) yang dapat disematkan di sidebar/drawer.
 - Filter chip per jenis (intern, freelance, kuliah, pribadi) di Hari Ini dan agenda.
-- Satu panggilan fn_agenda(workspace_id, dari, sampai) mengembalikan semua item; client hanya menampilkan.
-- Ringkasan pagi: notifikasi pada jam yang diatur (default 06.30) berisi jumlah jadwal, tugas, dan tenggat hari itu, tanpa judul.
-Kriteria: Hari Ini terbuka kurang dari 2 detik dari cache lokal; semua item berasal dari fn_agenda; menyelesaikan tugas langsung memperbarui tampilan tanpa muat ulang.
+- Ringkasan pagi: notifikasi terjadwal pada jam yang diatur (default 06.30 WIB) memuat jumlah jadwal, tugas, dan tenggat tanpa judul sensitif pada layar kunci, dipulihkan otomatis setelah reboot.
+Kriteria: Hari Ini terbuka kurang dari 2 detik dari cache lokal; semua pengingat tetap aktif pasca-reboot; menyelesaikan tugas langsung memperbarui tampilan tanpa muat ulang.
 
 ### M11. Budget, Tagihan Rutin, Target Tabungan, Auto-split
 - Budget bulanan per kategori mengikuti siklus bulan, opsi rollover. Indikator di 80% dan 100%.
@@ -575,3 +576,23 @@ Fase 1 sampai 3 harus sudah dipakai harian oleh pembuatnya sebelum Fase 4 dimula
 - Apakah iOS masuk rilis kelak; bila ya, fitur khusus Android didokumentasikan sebagai tidak tersedia di iOS.
 - Tinjauan hukum atas kebijakan privasi dan kewajiban UU PDP sebelum aplikasi dibuka untuk pengguna lain.
 - Contoh jadwal kuliah dan magang (hari, jam, pola berulang) untuk set uji agenda.
+
+---
+
+## 20. Orbit v2 (Versi 5.2 dan 5.3 — Rombak Total Gaya Notion & Jira)
+
+Sejak versi 5.2 dan 5.3, Orbit merombak seluruh antarmuka Web (web/) dan Android (app/) dengan gaya visual Notion dan Jira serta sistem desain tunggal Opsi A (Biru Tenang Orbit #0284C7 / #38BDF8) sesuai kontrak docs/design/:
+
+### Ringkasan Lingkup v5.2 (Siklus Kerja D.2 & Desain v2)
+- Penambahan nilai revisi pada enum task_status, kolom progress_percent (0..100), revision_count, status_changed_at, sort_order, dan tabel append-only task_status_history (catatan alasan wajib saat pindah ke revisi).
+- Navigasi terpadu: sidebar Web dapat dilipat + Tampilan Tersimpan + Side Peek (480 px), serta Mobile 4 tab + Drawer Workspace.
+- Papan Kanban 4 kolom dengan drag-and-drop (@dnd-kit) dan pengurutan manual di Web serta papan horizontal + menu aksi cepat di Mobile. Kolom Selesai dibatasi 14 hari terakhir plus pintasan lihat semua.
+- Perbaikan penuh notifikasi Android: izin runtime POST_NOTIFICATIONS, pemulihan jadwal pasca-boot RECEIVE_BOOT_COMPLETED, penjadwalan Asia/Jakarta (zonedSchedule inexact), deep-link payload tab, dan privasi layar kunci default.
+
+### Ringkasan Lingkup v5.3 (16 Fitur Lanjutan v2)
+1. Pencarian global & Command Palette (Ctrl+K Web, cari cepat Mobile) dan saved_views.
+2. Halaman detail kaya: blok editor terstruktur (description_blocks), subtugas bertingkat (parent_task_id), komentar (comments), lampiran privat (attachments), dan tautan antar objek (entity_links).
+3. Tugas berulang (recurrence_rule), template tugas (task_templates), pelacak waktu & mode fokus (task_time_logs), peta beban kerja, dan linimasa/Gantt proyek.
+4. Keuangan lanjut: impor CSV mutasi bank beserta wizard pemetaan kolom, ekspor CSV/PDF/XLSX netral formula, dan grafik pada Ringkasan.
+5. Sinkronisasi dua arah Google Calendar (calendar_connections) serta kolaborasi anggota (assignee_id, workspace_members, workspace_invites).
+6. Android Homescreen Widgets (home_widget native 4x2 Hari Ini, 2x2 Tugas, 4x1 Tambah Cepat, 2x1 Saldo/Privasi), PWA & Web Push (user_devices), ringkasan mingguan otomatis, Share Target & OCR struk lokal ML Kit, pembaca notifikasi bank NotificationListenerService (khusus sideload pribadi), Realtime + sinkronisasi latar WorkManager, serta kunci biometrik & mode privasi nominal.

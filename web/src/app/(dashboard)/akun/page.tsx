@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { formatCurrency, formatDateIndo } from '@/lib/format';
+import { formatDateIndo } from '@/lib/format';
+import { usePrivacyMode } from '@/lib/privacy-mode';
 import type { Database, AccountType, AccountVisibility } from '@/types/database';
 import { Wallet, Plus, Edit2, Archive, CheckCircle2, Lock } from 'lucide-react';
 import {
@@ -23,6 +24,7 @@ type AccountBalanceRow = Database['public']['Views']['v_account_balances']['Row'
 
 export default function AkunPage() {
   const supabase = createClient();
+  const { formatAmount } = usePrivacyMode();
   const [accounts, setAccounts] = useState<AccountBalanceRow[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -199,10 +201,10 @@ export default function AkunPage() {
               Total Saldo Likuid (IDR)
             </div>
             <div className="text-2xl font-bold tabular-nums mt-1 text-foreground">
-              {formatCurrency(totalLiquid, 'IDR')}
+              {formatAmount(totalLiquid, 'IDR')}
             </div>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+          <div className="w-11 h-11 rounded-xl bg-primary-subtle flex items-center justify-center text-primary">
             <Wallet className="w-5 h-5" />
           </div>
         </CardContent>
@@ -231,7 +233,7 @@ export default function AkunPage() {
             <Card
               key={a.account_id}
               className={`flex flex-col justify-between ${
-                a.archived ? 'opacity-60 bg-muted/20' : ''
+                a.archived ? 'opacity-60 bg-subtle/60' : ''
               }`}
             >
               <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
@@ -255,7 +257,7 @@ export default function AkunPage() {
                   <div className="mt-4">
                     <div className="text-xs text-muted-foreground">Saldo Saat Ini</div>
                     <div className="text-xl font-bold tabular-nums mt-0.5 text-foreground">
-                      {formatCurrency(Number(a.balance ?? 0), a.currency ?? 'IDR')}
+                      {formatAmount(Number(a.balance ?? 0), a.currency ?? 'IDR')}
                     </div>
                   </div>
                 </div>
@@ -304,7 +306,7 @@ export default function AkunPage() {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           {formError && (
-            <div className="p-3 text-xs rounded-lg bg-expense/10 text-expense border border-expense/20">
+            <div className="p-3 text-xs rounded-lg bg-expense-subtle text-expense border border-expense-border">
               {formError}
             </div>
           )}

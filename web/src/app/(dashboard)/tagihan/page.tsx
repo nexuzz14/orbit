@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { formatCurrency } from '@/lib/format';
+import { usePrivacyMode } from '@/lib/privacy-mode';
 import type { RecurringBill, Category, Account } from '@/types/database';
 import {
   CalendarClock,
@@ -38,6 +38,7 @@ interface ExtendedRecurringBill extends RecurringBill {
 
 export default function TagihanPage() {
   const supabase = createClient();
+  const { formatAmount } = usePrivacyMode();
   const [bills, setBills] = useState<ExtendedRecurringBill[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -317,7 +318,7 @@ export default function TagihanPage() {
       {statusMessage && (
         <div
           role="status"
-          className="p-3.5 text-xs bg-muted border border-border rounded-lg flex items-center justify-between"
+          className="p-3.5 text-xs bg-subtle border border-border rounded-lg flex items-center justify-between"
         >
           <span className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-primary" />
@@ -326,7 +327,7 @@ export default function TagihanPage() {
           <button
             onClick={() => setStatusMessage(null)}
             type="button"
-            className="text-muted-foreground hover:text-foreground p-1"
+            className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground"
             aria-label="Tutup pesan"
           >
             <X className="w-4 h-4" />
@@ -359,7 +360,7 @@ export default function TagihanPage() {
               Estimasi Komitmen Bulanan
             </div>
             <div className="text-2xl font-bold mt-1 tracking-tight text-expense tabular-nums">
-              {formatCurrency(totalMonthlyCommitment)}
+              {formatAmount(totalMonthlyCommitment)}
             </div>
             <div className="text-xs text-muted-foreground mt-1">
               Total biaya berulang yang harus dialokasikan
@@ -423,7 +424,7 @@ export default function TagihanPage() {
               return (
                 <div
                   key={bill.id}
-                  className={`p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:bg-muted/20 transition-colors ${
+                  className={`p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:bg-hover transition-colors ${
                     !bill.active ? 'opacity-60' : ''
                   }`}
                 >
@@ -447,7 +448,7 @@ export default function TagihanPage() {
                   <div className="flex items-center justify-between sm:justify-end gap-4">
                     <div className="text-right">
                       <div className="text-base font-bold tabular-nums text-expense">
-                        -{formatCurrency(bill.amount)}
+                        -{formatAmount(bill.amount)}
                       </div>
                     </div>
 
@@ -487,7 +488,7 @@ export default function TagihanPage() {
       >
         <form onSubmit={handleSave} className="space-y-4">
           {formError && (
-            <div className="p-3 text-xs bg-expense/10 text-expense border border-expense/20 rounded-lg">
+            <div className="p-3 text-xs bg-expense-subtle text-expense border border-expense-border rounded-lg">
               {formError}
             </div>
           )}

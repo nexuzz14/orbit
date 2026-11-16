@@ -1,35 +1,35 @@
-import 'package:drift/drift.dart' hide Column;
+import 'dart:io';
+
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
 import 'package:orbit_app/core/database/database.dart';
+import 'package:orbit_app/core/services/finance_csv_service.dart';
 import 'package:orbit_app/core/services/sync_service.dart';
+import 'package:orbit_app/core/widgets/orbit_privacy_widgets.dart';
 import 'package:orbit_app/core/widgets/orbit_widgets.dart';
 import 'package:orbit_app/core/widgets/transaction_form_sheet.dart';
 import 'package:orbit_app/features/accounts/accounts_screen.dart';
 import 'package:orbit_app/features/inbox/inbox_screen.dart';
 import 'package:orbit_app/features/planning/planning_screen.dart';
-
-class _DailyGroup {
-  final DateTime date;
-  final String dateKey;
-  double subtotalNet = 0;
-  final List<LocalTransaction> items;
-
-  _DailyGroup({
-    required this.date,
-    required this.dateKey,
-    required this.items,
-  });
-}
+import 'package:orbit_app/features/transactions/widgets/finance_summary_charts.dart';
+import 'package:orbit_app/features/transactions/widgets/transaction_row_card.dart';
+import 'package:uuid/uuid.dart';
 
 class TransactionsScreen extends StatefulWidget {
+  final bool embedded;
   final bool forceLoading;
-  final String? forceError;
+  final bool forceError;
+  final String initialSubTab;
 
   const TransactionsScreen({
     super.key,
+    this.embedded = false,
     this.forceLoading = false,
-    this.forceError,
+    this.forceError = false,
+    this.initialSubTab = 'transaksi',
   });
 
   @override
@@ -37,555 +37,1215 @@ class TransactionsScreen extends StatefulWidget {
 }
 
 class _TransactionsScreenState extends State<TransactionsScreen> {
-  AppDatabase get _db => AppDatabase.shared;
-
-  String _activeSubTab = 'transaksi'; // transaksi | akun | ringkasan
+  late String _subTab;
   bool _loading = true;
   String? _errorMessage;
 
-  List<LocalTransaction> _transactions = [];
-  Map<String, String> _accountNames = {};
-  int _draftCount = 0;
+  List<LocalTransaction> _transactions = const [];
+  List<LocalAccount> _accounts = const [];
+  List<LocalProject> _projects = const [];
+  Map<String, String> _accountNames = const {};
+  Map<String, String> _categoryNames = const {};
+  Map<String, String> _projectNames = const {};
 
   @override
   void initState() {
     super.initState();
+    _subTab = widget.initialSubTab;
     if (widget.forceLoading) {
       _loading = true;
-    } else if (widget.forceError != null) {
+    } else if (widget.forceError) {
       _loading = false;
-      _errorMessage = widget.forceError;
+      _errorMessage = 'Gagal memuat data transaksi lokal.';
     } else {
-      _loadTransactions();
-      SyncService.instance.pullAllFromSupabase().then((_) {
-        if (mounted) _loadTransactions();
+      _loadData();
+    }
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final db = AppDatabase.shared;
+      final txs =
+          await (db.select(db.localTransactions)
+                ..where((t) => t.deletedAt.isNull())
+                ..orderBy([(t) => drift.OrderingTerm.desc(t.occurredAt)]))
+              .get();
+
+      final accounts = await (db.select(
+        db.localAccounts,
+      )..where((a) => a.archived.equals(false))).get();
+      final categories = await (db.select(
+        db.localCategories,
+      )..where((c) => c.archived.equals(false))).get();
+      final projects = await (db.select(
+        db.localProjects,
+      )..where((p) => p.deletedAt.isNull())).get();
+
+      if (!mounted) return;
+      setState(() {
+        _transactions = txs;
+        _accounts = accounts;
+        _projects = projects;
+        _accountNames = {for (final a in accounts) a.id: a.name};
+        _categoryNames = {for (final c in categories) c.id: c.name};
+        _projectNames = {for (final p in projects) p.id: p.name};
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _errorMessage = 'Gagal memuat transaksi: $e';
       });
     }
   }
 
-  Future<void> _loadTransactions({bool pull = false}) async {
-    if (widget.forceLoading) return;
-    setState(() {
-      _loading = true;
-      _errorMessage = widget.forceError;
-    });
-
-    if (widget.forceError != null) {
-      setState(() => _loading = false);
-      return;
-    }
-
-    if (pull) {
-      await SyncService.instance.pullAllFromSupabase();
-    }
-
-    try {
-      final accs = await _db.select(_db.localAccounts).get();
-      final txs = await (_db.select(_db.localTransactions)
-            ..orderBy([
-              (t) => OrderingTerm(
-                    expression: t.occurredAt,
-                    mode: OrderingMode.desc,
-                  ),
-            ]))
-          .get();
-
-      final accMap = <String, String>{};
-      for (final a in accs) {
-        accMap[a.id] = a.name;
-      }
-
-      final activeTxs = txs.where((t) => t.deletedAt == null).toList();
-      final drafts = activeTxs.where((t) => t.status == 'draft').length;
-
-      if (mounted) {
-        setState(() {
-          _accountNames = accMap;
-          _transactions = activeTxs;
-          _draftCount = drafts;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _errorMessage = 'Gagal memuat daftar transaksi: $e');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
-    }
-  }
-
-  Future<void> _deleteTransaction(String id) async {
-    await (_db.update(_db.localTransactions)..where((t) => t.id.equals(id)))
-        .write(LocalTransactionsCompanion(deletedAt: Value(DateTime.now())));
-    await _loadTransactions();
-  }
-
-  List<_DailyGroup> _groupTransactionsByDay() {
-    final map = <String, _DailyGroup>{};
-    for (final tx in _transactions) {
-      // Pastikan pengelompokan tanggal memakai zona waktu profil (Asia/Jakarta, UTC+7)
-      final local = tx.occurredAt.toUtc().add(const Duration(hours: 7));
-      final key =
-          '${local.year.toString().padLeft(4, '0')}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')}';
-      final group = map.putIfAbsent(
-        key,
-        () => _DailyGroup(
-          date: DateTime(local.year, local.month, local.day),
-          dateKey: key,
-          items: [],
-        ),
-      );
-      group.items.add(tx);
-      if (tx.type == 'income') {
-        group.subtotalNet += tx.amount;
-      } else if (tx.type == 'expense') {
-        group.subtotalNet -= tx.amount;
-      }
-    }
-    final list = map.values.toList()
-      ..sort((a, b) => b.dateKey.compareTo(a.dateKey));
-    return list;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final groups = _groupTransactionsByDay();
+    final hasShell = OrbitShellScope.maybeOf(context) != null;
+
+    final content = Column(
+      children: [
+        _buildSubHeader(context),
+        Expanded(child: _buildBody(context)),
+      ],
+    );
+
+    if (widget.embedded) {
+      return Scaffold(
+        backgroundColor: AppColors.canvasColor(context),
+        body: content,
+      );
+    }
 
     return Scaffold(
+      backgroundColor: AppColors.canvasColor(context),
       appBar: AppBar(
-        title: const Text(
-          'Uang',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-        ),
+        leading: hasShell ? const OrbitShellMenuButton() : null,
+        title: const Text('Keuangan'),
         actions: [
+          const OrbitPrivacyToggleButton(),
+          if (hasShell) const OrbitShellSearchButton(),
           IconButton(
-            onPressed: () {
-              TransactionFormSheet.show(context, onSaved: _loadTransactions);
-            },
-            tooltip: 'Tambah Transaksi',
+            tooltip: 'Catat Transaksi',
             constraints: const BoxConstraints(
               minWidth: AppTokens.minTouchTarget,
               minHeight: AppTokens.minTouchTarget,
             ),
+            onPressed: _openAddTransactionSheet,
             icon: const Icon(Icons.add),
-          ),
-          IconButton(
-            onPressed: () => _loadTransactions(pull: true),
-            tooltip: 'Segarkan daftar transaksi',
-            constraints: const BoxConstraints(
-              minWidth: AppTokens.minTouchTarget,
-              minHeight: AppTokens.minTouchTarget,
-            ),
-            icon: const Icon(Icons.refresh),
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => _loadTransactions(pull: true),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppTokens.space4,
-            AppTokens.space3,
-            AppTokens.space4,
-            96,
+      body: content,
+    );
+  }
+
+  Widget _buildSubHeader(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        AppTokens.space4,
+        AppTokens.space3,
+        AppTokens.space4,
+        AppTokens.space2,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceColor(context),
+        border: Border(
+          bottom: BorderSide(color: AppColors.borderColor(context)),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          OrbitViewSwitcher(
+            activeViewMode: _subTab,
+            onChanged: (mode) => setState(() => _subTab = mode),
+            options: const [
+              OrbitViewOption(
+                id: 'transaksi',
+                label: 'Transaksi',
+                icon: Icons.receipt_long_outlined,
+              ),
+              OrbitViewOption(
+                id: 'akun',
+                label: 'Akun',
+                icon: Icons.account_balance_wallet_outlined,
+              ),
+              OrbitViewOption(
+                id: 'ringkasan',
+                label: 'Ringkasan',
+                icon: Icons.bar_chart_outlined,
+              ),
+            ],
           ),
-          children: [
-            // SegmentedButton Atas: Transaksi | Akun | Ringkasan
-            SegmentedButton<String>(
-              showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(value: 'transaksi', label: Text('Transaksi')),
-                ButtonSegment(value: 'akun', label: Text('Akun')),
-                ButtonSegment(value: 'ringkasan', label: Text('Ringkasan')),
+          const SizedBox(height: AppTokens.space2),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _FinanceActionChip(
+                  icon: Icons.upload_file_outlined,
+                  label: 'Impor CSV Mutasi',
+                  onTap: _showImportCsvSheet,
+                ),
+                const SizedBox(width: AppTokens.space2),
+                _FinanceActionChip(
+                  icon: Icons.download_outlined,
+                  label: 'Ekspor CSV / PDF',
+                  onTap: _showExportOptionsSheet,
+                ),
+                const SizedBox(width: AppTokens.space2),
+                TransactionShortcutButton(
+                  icon: Icons.inbox_outlined,
+                  label: 'Inbox',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const InboxScreen()),
+                  ),
+                ),
+                const SizedBox(width: AppTokens.space2),
+                TransactionShortcutButton(
+                  icon: Icons.pie_chart_outline,
+                  label: 'Anggaran',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const PlanningScreen(initialTab: 'anggaran'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppTokens.space2),
+                TransactionShortcutButton(
+                  icon: Icons.receipt_outlined,
+                  label: 'Tagihan',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const PlanningScreen(initialTab: 'tagihan'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppTokens.space2),
+                TransactionShortcutButton(
+                  icon: Icons.savings_outlined,
+                  label: 'Target',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const PlanningScreen(initialTab: 'target'),
+                    ),
+                  ),
+                ),
               ],
-              selected: {_activeSubTab},
-              onSelectionChanged: (sel) {
-                final next = sel.first;
-                if (next == 'akun') {
-                  Navigator.of(context)
-                      .push(
-                        MaterialPageRoute(builder: (_) => const AccountsScreen()),
-                      )
-                      .then((_) => _loadTransactions());
-                } else {
-                  setState(() => _activeSubTab = next);
-                }
-              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    if (_loading) {
+      return ListView(
+        padding: const EdgeInsets.all(AppTokens.space4),
+        children: const [
+          OrbitSkeleton(height: 84),
+          SizedBox(height: AppTokens.space3),
+          OrbitSkeleton(height: 70),
+          SizedBox(height: AppTokens.space2),
+          OrbitSkeleton(height: 70),
+        ],
+      );
+    }
+
+    if (_errorMessage != null) {
+      return OrbitErrorState(message: _errorMessage!, onRetry: _loadData);
+    }
+
+    if (_subTab == 'akun') {
+      return _buildInlineAccountsTab(context);
+    }
+
+    if (_subTab == 'ringkasan') {
+      return RefreshIndicator(
+        onRefresh: _loadData,
+        child: ListView(
+          padding: const EdgeInsets.all(AppTokens.space4),
+          children: [
+            TransactionSummaryCard(transactions: _transactions),
+            const SizedBox(height: AppTokens.space3),
+            FinanceSummaryCharts(
+              transactions: _transactions,
+              categoryNames: _categoryNames,
             ),
             const SizedBox(height: AppTokens.space3),
-
-            // Baris Pintasan di Bawahnya: Inbox (Lencana Draft), Anggaran, Tagihan, Target
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
+            OrbitCard(
+              padding: const EdgeInsets.all(AppTokens.space4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildShortcutButton(
-                    context,
-                    icon: Icons.inbox_outlined,
-                    label: 'Inbox',
-                    badgeCount: _draftCount,
-                    onTap: () {
-                      Navigator.of(context)
-                          .push(
-                            MaterialPageRoute(
-                              builder: (_) => const InboxScreen(),
+                  Text(
+                    'Ekspor & Pelaporan',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimaryColor(context),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Ekspor buku kas ke CSV atau salin ringkasan siap cetak untuk dokumentasi PDF.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondaryColor(context),
+                    ),
+                  ),
+                  const SizedBox(height: AppTokens.space3),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _exportTransactionsToCsv,
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(
+                              0,
+                              AppTokens.minTouchTarget,
                             ),
-                          )
-                          .then((_) => _loadTransactions());
-                    },
-                  ),
-                  const SizedBox(width: AppTokens.space2),
-                  _buildShortcutButton(
-                    context,
-                    icon: Icons.pie_chart_outline,
-                    label: 'Anggaran',
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const PlanningScreen(initialTab: 'anggaran'),
+                          ),
+                          icon: const Icon(Icons.table_chart_outlined, size: 18),
+                          label: const Text('Ekspor CSV'),
                         ),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: AppTokens.space2),
-                  _buildShortcutButton(
-                    context,
-                    icon: Icons.receipt_long_outlined,
-                    label: 'Tagihan',
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const PlanningScreen(initialTab: 'tagihan'),
+                      ),
+                      const SizedBox(width: AppTokens.space2),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _copyPdfReadySummary,
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(
+                              0,
+                              AppTokens.minTouchTarget,
+                            ),
+                          ),
+                          icon: const Icon(Icons.copy_all_outlined, size: 18),
+                          label: const Text('Salin Laporan'),
                         ),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: AppTokens.space2),
-                  _buildShortcutButton(
-                    context,
-                    icon: Icons.flag_outlined,
-                    label: 'Target',
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const PlanningScreen(initialTab: 'target'),
-                        ),
-                      );
-                    },
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: AppTokens.space4),
+            const SizedBox(height: AppTokens.space8),
+          ],
+        ),
+      );
+    }
 
-            if (_errorMessage != null) ...[
-              OrbitErrorState(
-                message: _errorMessage!,
-                onRetry: _loadTransactions,
-              ),
-              const SizedBox(height: AppTokens.space4),
-            ],
+    if (_transactions.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _loadData,
+        child: ListView(
+          children: [
+            const SizedBox(height: 36),
+            OrbitEmptyState(
+              icon: Icons.receipt_long_outlined,
+              title: 'Belum ada transaksi tercatat',
+              description:
+                  'Catat transaksi manual atau impor mutasi bank melalui file CSV.',
+              actionLabel: 'Catat Transaksi',
+              onAction: _openAddTransactionSheet,
+            ),
+          ],
+        ),
+      );
+    }
 
-            if (_loading) ...[
-              const OrbitSkeleton(height: 88),
-              const SizedBox(height: AppTokens.space3),
-              const OrbitSkeleton(height: 88),
-              const SizedBox(height: AppTokens.space3),
-              const OrbitSkeleton(height: 88),
-            ] else if (_activeSubTab == 'ringkasan') ...[
-              _buildSummaryView(context),
-            ] else if (groups.isEmpty) ...[
-              OrbitEmptyState(
-                icon: Icons.receipt_long_outlined,
-                title: 'Belum ada transaksi tercatat',
-                description:
-                    'Catat pemasukan atau pengeluaran pertama Anda dengan cepat.',
-                actionLabel: 'Tambah Transaksi',
-                onAction: () {
-                  TransactionFormSheet.show(context, onSaved: _loadTransactions);
-                },
-              ),
-            ] else ...[
-              for (final group in groups) ...[
-                OrbitCard(
-                  padding: EdgeInsets.zero,
+    // Kelompokkan transaksi per tanggal WIB (+7)
+    final grouped = <String, List<LocalTransaction>>{};
+    for (final tx in _transactions) {
+      final wib = tx.occurredAt.toUtc().add(const Duration(hours: 7));
+      final key =
+          '${wib.year.toString().padLeft(4, '0')}-'
+          '${wib.month.toString().padLeft(2, '0')}-'
+          '${wib.day.toString().padLeft(2, '0')}';
+      grouped.putIfAbsent(key, () => []).add(tx);
+    }
+    final keys = grouped.keys.toList();
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(AppTokens.space4),
+        itemCount: keys.length + 1,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppTokens.space3),
+              child: TransactionSummaryCard(transactions: _transactions),
+            );
+          }
+          final key = keys[index - 1];
+          final items = grouped[key]!;
+          final sampleDate = items.first.occurredAt;
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: AppTokens.space3),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    formatTransactionGroupDate(sampleDate),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textMutedColor(context),
+                    ),
+                  ),
+                ),
+                ...items.map((tx) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppTokens.space2),
+                    child: InkWell(
+                      onTap: () => _showTransactionDetailSheet(tx),
+                      borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+                      child: TransactionRowTile(
+                        transaction: tx,
+                        accountName: _accountNames[tx.accountId] ?? 'Akun',
+                        onDelete: () => _deleteTransaction(tx),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _deleteTransaction(LocalTransaction tx) async {
+    final now = DateTime.now().toUtc();
+    await (AppDatabase.shared.update(AppDatabase.shared.localTransactions)
+          ..where((t) => t.id.equals(tx.id)))
+        .write(LocalTransactionsCompanion(deletedAt: drift.Value(now)));
+    await SyncService.instance.pushRecord(
+      tableName: 'transactions',
+      recordId: tx.id,
+      action: 'delete',
+      payload: {'deleted_at': now.toIso8601String()},
+    );
+    await _loadData();
+  }
+
+  Widget _buildInlineAccountsTab(BuildContext context) {
+    final totalBalance = _accounts.fold<double>(
+      0,
+      (sum, a) => sum + a.currentBalance,
+    );
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: ListView(
+        padding: const EdgeInsets.all(AppTokens.space4),
+        children: [
+          OrbitCard(
+            padding: const EdgeInsets.all(AppTokens.space4),
+            child: Row(
+              children: [
+                Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header Tanggal & Subtotal Harian
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppTokens.space4,
-                          vertical: AppTokens.space2,
+                      Text(
+                        'Total Saldo Likuid',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textMutedColor(context),
                         ),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.darkSubtle
-                              : AppColors.lightSubtle,
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(AppTokens.radiusLg),
-                          ),
+                      ),
+                      const SizedBox(height: 4),
+                      OrbitAmountText(
+                        amount: totalBalance,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                          color: AppColors.textPrimaryColor(context),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      ),
+                    ],
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AccountsScreen()),
+                    );
+                    _loadData();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, AppTokens.minTouchTarget),
+                  ),
+                  child: const Text('Kelola Akun'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppTokens.space3),
+          if (_accounts.isEmpty)
+            OrbitEmptyState(
+              icon: Icons.account_balance_wallet_outlined,
+              title: 'Belum ada akun keuangan',
+              description: 'Buat akun kas, rekening bank, atau dompet digital.',
+              actionLabel: 'Kelola Akun',
+              onAction: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AccountsScreen()),
+                );
+                _loadData();
+              },
+            )
+          else
+            ..._accounts.map((acc) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppTokens.space2),
+                child: OrbitCard(
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AccountsScreen()),
+                    );
+                    _loadData();
+                  },
+                  padding: const EdgeInsets.all(AppTokens.space3),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.account_balance_outlined,
+                        size: 20,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: AppTokens.space3),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Text(
-                                formatTransactionGroupDateKey(group.dateKey),
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            Text(
+                              acc.name,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimaryColor(context),
                               ),
                             ),
-                            const SizedBox(width: AppTokens.space2),
-                            Flexible(
-                              child: Text(
-                                'Subtotal: ${group.subtotalNet >= 0 ? '+' : '-'}${formatRupiah(group.subtotalNet.abs())}',
-                                textAlign: TextAlign.right,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: group.subtotalNet >= 0
-                                      ? AppColors.incomeColor(context)
-                                      : AppColors.expenseColor(context),
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
-                                ),
+                            Text(
+                              acc.type.toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textMutedColor(context),
                               ),
                             ),
                           ],
                         ),
                       ),
-                      for (int i = 0; i < group.items.length; i++) ...[
-                        const Divider(height: 1),
-                        _buildTransactionRow(context, group.items[i]),
-                      ],
+                      OrbitAmountText(
+                        amount: acc.currentBalance,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                          color: AppColors.textPrimaryColor(context),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(height: AppTokens.space4),
-              ],
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildShortcutButton(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    int badgeCount = 0,
-    VoidCallback? onTap,
-  }) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppTokens.space3,
-          vertical: AppTokens.space2,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16),
-          const SizedBox(width: AppTokens.space2),
-          Text(label, style: const TextStyle(fontSize: 12)),
-          if (badgeCount > 0) ...[
-            const SizedBox(width: AppTokens.space2),
-            OrbitStatusBadge(
-              label: '$badgeCount',
-              variant: OrbitBadgeVariant.warning,
-            ),
-          ],
+              );
+            }),
         ],
       ),
     );
   }
 
-  Widget _buildTransactionRow(BuildContext context, LocalTransaction tx) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isExpense = tx.type == 'expense' ||
-        (tx.type == 'transfer' && tx.transferDirection == 'out');
-    final isDraft = tx.status == 'draft';
-    final accountName = _accountNames[tx.accountId] ?? 'BCA Utama';
-    final title = tx.type == 'transfer'
-        ? 'Transfer Antar Akun'
-        : (tx.merchant ?? tx.categoryId ?? 'Transaksi');
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppTokens.space4,
-        vertical: AppTokens.space3,
+  Future<void> _openAddTransactionSheet() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: isExpense
-                  ? (isDark
-                      ? AppColors.expenseSubtleDark
-                      : AppColors.expenseSubtleLight)
-                  : (isDark
-                      ? AppColors.incomeSubtleDark
-                      : AppColors.incomeSubtleLight),
-              borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-            ),
-            child: Icon(
-              tx.type == 'transfer'
-                  ? Icons.swap_horiz
-                  : isExpense
-                      ? Icons.arrow_outward
-                      : Icons.arrow_downward,
-              size: 18,
-              color: isExpense
-                  ? AppColors.expenseColor(context)
-                  : AppColors.incomeColor(context),
-            ),
-          ),
-          const SizedBox(width: AppTokens.space3),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+      builder: (_) => TransactionFormSheet(onSaved: _loadData),
+    );
+  }
+
+  Future<void> _showTransactionDetailSheet(LocalTransaction tx) async {
+    String? selectedProjectId = tx.projectId;
+    final accountName = _accountNames[tx.accountId] ?? tx.accountId;
+    final categoryName = tx.categoryId == null
+        ? 'Tanpa Kategori'
+        : (_categoryNames[tx.categoryId] ?? tx.categoryId!);
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: const EdgeInsets.all(AppTokens.space4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      OrbitStatusBadge(
+                        label: tx.type == 'income'
+                            ? 'Pemasukan'
+                            : (tx.type == 'expense'
+                                ? 'Pengeluaran'
+                                : 'Transfer'),
+                        variant: tx.type == 'income'
+                            ? OrbitBadgeVariant.income
+                            : (tx.type == 'expense'
+                                ? OrbitBadgeVariant.expense
+                                : OrbitBadgeVariant.neutral),
+                      ),
+                      const SizedBox(width: AppTokens.space2),
+                      Text(
+                        tx.origin,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textMutedColor(ctx),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: AppTokens.space1),
-                Wrap(
-                  spacing: AppTokens.space2,
-                  runSpacing: AppTokens.space1,
-                  crossAxisAlignment: WrapCrossAlignment.center,
+                  const SizedBox(height: AppTokens.space2),
+                  Text(
+                    tx.merchant ?? tx.note ?? 'Transaksi',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimaryColor(ctx),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  OrbitAmountText(
+                    amount: tx.amount,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      color: tx.type == 'income'
+                          ? AppColors.incomeColor(ctx)
+                          : (tx.type == 'expense'
+                              ? AppColors.expenseColor(ctx)
+                              : AppColors.textPrimaryColor(ctx)),
+                    ),
+                  ),
+                  const SizedBox(height: AppTokens.space3),
+                  Text(
+                    'Akun: $accountName   Kategori: $categoryName',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondaryColor(ctx),
+                    ),
+                  ),
+                  if (_projects.isNotEmpty) ...[
+                    const SizedBox(height: AppTokens.space3),
+                    DropdownButtonFormField<String?>(
+                      initialValue: _projects.any(
+                        (p) => p.id == selectedProjectId,
+                      )
+                          ? selectedProjectId
+                          : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Tautkan ke Proyek (Margin Proyek)',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Tidak terhubung proyek'),
+                        ),
+                        ..._projects.map(
+                          (p) => DropdownMenuItem<String?>(
+                            value: p.id,
+                            child: Text(p.name),
+                          ),
+                        ),
+                      ],
+                      onChanged: (val) async {
+                        setSheetState(() => selectedProjectId = val);
+                        await (AppDatabase.shared.update(
+                          AppDatabase.shared.localTransactions,
+                        )..where((t) => t.id.equals(tx.id))).write(
+                          LocalTransactionsCompanion(
+                            projectId: drift.Value(val),
+                          ),
+                        );
+                        await SyncService.instance.pushRecord(
+                          tableName: 'transactions',
+                          recordId: tx.id,
+                          action: 'update',
+                          payload: {
+                            'id': tx.id,
+                            'workspace_id': tx.workspaceId,
+                            'account_id': tx.accountId,
+                            'category_id': tx.categoryId,
+                            'project_id': val,
+                            'type': tx.type,
+                            'status': tx.status,
+                            'amount': tx.amount,
+                            'currency': tx.currency,
+                            'source': tx.source,
+                            'merchant': tx.merchant,
+                            'note': tx.note,
+                            'occurred_at': tx.occurredAt
+                                .toUtc()
+                                .toIso8601String(),
+                            'origin': tx.origin,
+                          },
+                        );
+                        _loadData();
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: AppTokens.space3),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, AppTokens.minTouchTarget),
+                    ),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('Tutup'),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showImportCsvSheet() async {
+    final csvController = TextEditingController();
+    String? selectedAccountId = _accounts.isNotEmpty ? _accounts.first.id : null;
+    List<ParsedBankMutationItem> preview = const [];
+    bool saving = false;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppTokens.space4,
+                AppTokens.space4,
+                AppTokens.space4,
+                MediaQuery.of(ctx).viewInsets.bottom + AppTokens.space4,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      accountName,
+                      'Impor CSV Mutasi Bank',
                       style: TextStyle(
-                        fontSize: 12,
-                        color: isDark
-                            ? AppColors.darkTextSecondary
-                            : AppColors.lightTextSecondary,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimaryColor(ctx),
                       ),
                     ),
-                    if (tx.source != null && tx.source!.isNotEmpty)
-                      OrbitKindBadge(kind: tx.source!),
-                    if (isDraft)
-                      const OrbitStatusBadge(
-                        label: 'Draft',
-                        variant: OrbitBadgeVariant.warning,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Mendukung pemisah koma (,) atau titik koma (;), kolom Tanggal, Keterangan, Nominal, Debit, dan Kredit.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondaryColor(ctx),
                       ),
+                    ),
+                    const SizedBox(height: AppTokens.space2),
+                    Wrap(
+                      spacing: AppTokens.space2,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            setSheetState(() {
+                              csvController.text =
+                                  FinanceCsvService.sampleBankMutationCsv;
+                              preview =
+                                  FinanceCsvService.parseBankMutationCsv(
+                                    csvController.text,
+                                  );
+                            });
+                          },
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(
+                              0,
+                              AppTokens.minTouchTarget,
+                            ),
+                          ),
+                          icon: const Icon(
+                            Icons.auto_awesome_outlined,
+                            size: 16,
+                          ),
+                          label: const Text('Muat Contoh Mutasi'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final data = await Clipboard.getData(
+                              Clipboard.kTextPlain,
+                            );
+                            final text = data?.text ?? '';
+                            setSheetState(() {
+                              csvController.text = text;
+                              preview =
+                                  FinanceCsvService.parseBankMutationCsv(text);
+                            });
+                          },
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(
+                              0,
+                              AppTokens.minTouchTarget,
+                            ),
+                          ),
+                          icon: const Icon(
+                            Icons.content_paste_outlined,
+                            size: 16,
+                          ),
+                          label: const Text('Tempel Clipboard'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppTokens.space2),
+                    if (_accounts.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(AppTokens.space3),
+                        decoration: BoxDecoration(
+                          color: AppColors.warningColor(ctx).withValues(
+                            alpha: 0.1,
+                          ),
+                          borderRadius: BorderRadius.circular(
+                            AppTokens.radiusMd,
+                          ),
+                        ),
+                        child: const Text(
+                          'Buat minimal 1 akun terlebih dahulu di tab Akun sebelum mengimpor mutasi.',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      )
+                    else
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedAccountId,
+                        decoration: const InputDecoration(
+                          labelText: 'Simpan ke Akun',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: _accounts
+                            .map(
+                              (a) => DropdownMenuItem(
+                                value: a.id,
+                                child: Text(a.name),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) =>
+                            setSheetState(() => selectedAccountId = v),
+                      ),
+                    const SizedBox(height: AppTokens.space2),
+                    TextField(
+                      controller: csvController,
+                      minLines: 4,
+                      maxLines: 6,
+                      onChanged: (value) {
+                        setSheetState(() {
+                          preview =
+                              FinanceCsvService.parseBankMutationCsv(value);
+                        });
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Konten CSV Mutasi',
+                        hintText: 'Tanggal;Keterangan;Debit;Kredit',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    if (preview.isNotEmpty) ...[
+                      const SizedBox(height: AppTokens.space3),
+                      Text(
+                        'Pratinjau (${preview.length} baris siap disimpan)',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimaryColor(ctx),
+                        ),
+                      ),
+                      const SizedBox(height: AppTokens.space1),
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 160),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.borderColor(ctx)),
+                          borderRadius: BorderRadius.circular(
+                            AppTokens.radiusMd,
+                          ),
+                        ),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: preview.length,
+                          separatorBuilder: (_, __) => Divider(
+                            height: 1,
+                            color: AppColors.borderColor(ctx),
+                          ),
+                          itemBuilder: (_, idx) {
+                            final item = preview[idx];
+                            final isIncome = item.type == 'income';
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 8,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.merchant,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        Text(
+                                          DateFormat(
+                                            'dd/MM/yyyy',
+                                          ).format(item.date),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: AppColors.textMutedColor(
+                                              ctx,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    '${isIncome ? '+' : '-'}${formatRupiah(item.amount)}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                      color: isIncome
+                                          ? AppColors.incomeColor(ctx)
+                                          : AppColors.expenseColor(ctx),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: AppTokens.space3),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(0, AppTokens.minTouchTarget),
+                      ),
+                      onPressed:
+                          (saving ||
+                              preview.isEmpty ||
+                              selectedAccountId == null)
+                          ? null
+                          : () async {
+                              setSheetState(() => saving = true);
+                              final db = AppDatabase.shared;
+                              final wsId =
+                                  (await SyncService.instance.getWorkspaceId()) ?? 'personal-ws';
+                              double balanceDelta = 0;
+
+                              for (final item in preview) {
+                                final txId = const Uuid().v4();
+                                final occurredAtUtc = item.date.toUtc();
+                                await db
+                                    .into(db.localTransactions)
+                                    .insertOnConflictUpdate(
+                                      LocalTransactionsCompanion.insert(
+                                        id: txId,
+                                        workspaceId: wsId,
+                                        accountId: selectedAccountId!,
+                                        type: item.type,
+                                        status: 'confirmed',
+                                        amount: item.amount,
+                                        currency: 'IDR',
+                                        source: const drift.Value('personal'),
+                                        merchant: drift.Value(item.merchant),
+                                        note: drift.Value(item.note),
+                                        occurredAt: occurredAtUtc,
+                                        origin: const drift.Value('csv_import'),
+                                      ),
+                                    );
+                                await SyncService.instance.pushRecord(
+                                  tableName: 'transactions',
+                                  recordId: txId,
+                                  action: 'insert',
+                                  payload: {
+                                    'id': txId,
+                                    'workspace_id': wsId,
+                                    'account_id': selectedAccountId!,
+                                    'type': item.type,
+                                    'status': 'confirmed',
+                                    'amount': item.amount,
+                                    'currency': 'IDR',
+                                    'source': 'personal',
+                                    'merchant': item.merchant,
+                                    'note': item.note,
+                                    'occurred_at': occurredAtUtc
+                                        .toIso8601String(),
+                                    'origin': 'csv_import',
+                                  },
+                                );
+                                balanceDelta += item.type == 'income'
+                                    ? item.amount
+                                    : -item.amount;
+                              }
+
+                              final acc =
+                                  await (db.select(db.localAccounts)..where(
+                                        (a) => a.id.equals(selectedAccountId!),
+                                      ))
+                                      .getSingleOrNull();
+                              if (acc != null) {
+                                final nextBalance =
+                                    acc.currentBalance + balanceDelta;
+                                await (db.update(db.localAccounts)..where(
+                                      (a) => a.id.equals(selectedAccountId!),
+                                    ))
+                                    .write(
+                                      LocalAccountsCompanion(
+                                        currentBalance: drift.Value(nextBalance),
+                                      ),
+                                    );
+                                await SyncService.instance.pushRecord(
+                                  tableName: 'accounts',
+                                  recordId: acc.id,
+                                  action: 'update',
+                                  payload: {
+                                    'id': acc.id,
+                                    'workspace_id': acc.workspaceId,
+                                    'name': acc.name,
+                                    'type': acc.type,
+                                    'currency': acc.currency,
+                                    'current_balance': nextBalance,
+                                  },
+                                );
+                              }
+
+                              if (!ctx.mounted) return;
+                              Navigator.of(ctx).pop();
+                              await _loadData();
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      '${preview.length} mutasi CSV berhasil diimpor.',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                      child: Text(
+                        saving
+                            ? 'Menyimpan...'
+                            : 'Simpan Batch (${preview.length})',
+                      ),
+                    ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showExportOptionsSheet() async {
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.all(AppTokens.space4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Ekspor Data Keuangan',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimaryColor(ctx),
+                ),
+              ),
+              const SizedBox(height: AppTokens.space3),
+              ListTile(
+                minVerticalPadding: 12,
+                leading: const Icon(Icons.table_chart_outlined),
+                title: const Text('Ekspor CSV Transaksi'),
+                subtitle: const Text(
+                  'Salin CSV aman (anti-formula injection) & simpan file sementara.',
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _exportTransactionsToCsv();
+                },
+              ),
+              ListTile(
+                minVerticalPadding: 12,
+                leading: const Icon(Icons.description_outlined),
+                title: const Text('Salin Laporan PDF-Ready'),
+                subtitle: const Text(
+                  'Ringkasan pemasukan, pengeluaran, arus kas, dan top kategori.',
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _copyPdfReadySummary();
+                },
+              ),
+            ],
           ),
-          const SizedBox(width: AppTokens.space2),
-          // Nominal Rata Kanan dengan Angka Tabular
-          Text(
-            '${isExpense ? '-' : '+'}${formatRupiah(tx.amount, currency: tx.currency)}',
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: isExpense
-                  ? AppColors.expenseColor(context)
-                  : AppColors.incomeColor(context),
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
+        );
+      },
+    );
+  }
+
+  Future<void> _exportTransactionsToCsv() async {
+    final csv = FinanceCsvService.exportTransactionsCsv(
+      _transactions,
+      _accountNames,
+      _categoryNames,
+      projectNames: _projectNames,
+    );
+    await Clipboard.setData(ClipboardData(text: csv));
+    String? tempPath;
+    try {
+      final file = File(
+        '${Directory.systemTemp.path}${Platform.pathSeparator}'
+        'orbit_transaksi_${DateTime.now().millisecondsSinceEpoch}.csv',
+      );
+      await file.writeAsString(csv);
+      tempPath = file.path;
+    } catch (_) {
+      tempPath = null;
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          tempPath != null
+              ? 'CSV disalin ke clipboard dan ditulis ke $tempPath'
+              : 'CSV transaksi berhasil disalin ke clipboard.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _copyPdfReadySummary() async {
+    final report = FinanceCsvService.buildTextSummaryReport(
+      transactions: _transactions,
+      accountNames: _accountNames,
+      categoryNames: _categoryNames,
+    );
+    await Clipboard.setData(ClipboardData(text: report));
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Laporan Keuangan Disalin'),
+        content: SingleChildScrollView(
+          child: Text(
+            report,
+            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
           ),
-          IconButton(
-            onPressed: () => _deleteTransaction(tx.id),
-            tooltip: 'Hapus transaksi',
-            constraints: const BoxConstraints(
-              minWidth: AppTokens.minTouchTarget,
-              minHeight: AppTokens.minTouchTarget,
-            ),
-            icon: const Icon(Icons.delete_outline, size: 18),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Tutup'),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildSummaryView(BuildContext context) {
-    double totalIn = 0;
-    double totalOut = 0;
-    for (final tx in _transactions) {
-      if (tx.status == 'draft') continue;
-      if (tx.type == 'income') totalIn += tx.amount;
-      if (tx.type == 'expense') totalOut += tx.amount;
-    }
+class _FinanceActionChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
 
-    return OrbitCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Ringkasan Arus Kas',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: AppTokens.space3),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Total Pemasukan'),
-              Text(
-                '+${formatRupiah(totalIn)}',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.incomeColor(context),
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+  const _FinanceActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: AppTokens.minTouchTarget),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.subtleColor(context),
+          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+          border: Border.all(color: AppColors.borderColor(context)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: AppColors.primary),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimaryColor(context),
               ),
-            ],
-          ),
-          const SizedBox(height: AppTokens.space2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Total Pengeluaran'),
-              Text(
-                '-${formatRupiah(totalOut)}',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.expenseColor(context),
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
-          ),
-          const Divider(height: AppTokens.space6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Selisih Bersih',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-              Text(
-                '${(totalIn - totalOut) >= 0 ? '+' : '-'}${formatRupiah((totalIn - totalOut).abs())}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

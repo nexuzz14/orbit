@@ -1,17 +1,26 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { formatCurrency, formatDateIndo } from '@/lib/format';
+import { formatDateIndo } from '@/lib/format';
+import { exportProjectReportToCsv } from '@/lib/finance-v2';
+import { usePrivacyMode } from '@/lib/privacy-mode';
+import { RealtimeStatusBadge, useOrbitRealtime } from '@/lib/use-orbit-realtime';
 import type { ActivityKind, ProjectStatus, FeeMode } from '@/types/database';
 import {
+  AlertTriangle,
   Briefcase,
-  Plus,
-  Trash2,
-  Edit2,
-  TrendingUp,
-  Clock,
+  CalendarRange,
   CheckCircle2,
+  Clock,
+  Download,
+  Edit2,
+  Layers,
+  Plus,
+  Printer,
+  Trash2,
+  TrendingUp,
+  Users,
 } from 'lucide-react';
 import {
   Card,
@@ -22,14 +31,15 @@ import {
   Input,
   Select,
   Dialog,
-  SegmentedControl,
   KindBadge,
   StatusBadge,
   Skeleton,
   EmptyState,
   ErrorState,
   LainnyaSubNav,
+  ViewSwitcher,
   ACTIVITY_KIND_META,
+  cn,
 } from '@/components/ui';
 
 type ProjectRow = {
@@ -104,19 +114,53 @@ type AccountItem = {
   name: string;
 };
 
+type ProjectTaskItem = {
+  id: string;
+  title: string;
+  project_id: string | null;
+  status: string;
+  due_at: string | null;
+  estimate_minutes: number | null;
+  progress_percent: number;
+  assignee_id: string | null;
+  created_at: string;
+};
+
+type ProjectTransactionItem = {
+  id: string;
+  project_id: string | null;
+  type: 'income' | 'expense' | 'transfer';
+  amount_base: number;
+  status: string;
+};
+
+type WorkspaceMemberProfile = {
+  user_id: string;
+  role: string;
+  display_name: string;
+};
+
+type ProyekTab = 'projects' | 'gantt' | 'workload' | 'finances';
+
 export default function ProyekPage() {
   const supabase = createClient();
+  const { formatAmount } = usePrivacyMode();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'projects' | 'finances'>('projects');
+  const [activeTab, setActiveTab] = useState<ProyekTab>('projects');
   const [filterKind, setFilterKind] = useState<ActivityKind | 'all'>('all');
+  const [ganttZoom, setGanttZoom] = useState<'week' | 'month'>('month');
 
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [profitData, setProfitData] = useState<ProjectProfitRow[]>([]);
   const [receivables, setReceivables] = useState<ReceivableRow[]>([]);
   const [accounts, setAccounts] = useState<AccountItem[]>([]);
+  const [projectTasks, setProjectTasks] = useState<ProjectTaskItem[]>([]);
+  const [allPayments, setAllPayments] = useState<PaymentRow[]>([]);
+  const [projectTransactions, setProjectTransactions] = useState<ProjectTransactionItem[]>([]);
+  const [members, setMembers] = useState<WorkspaceMemberProfile[]>([]);
 
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
@@ -222,6 +266,57 @@ export default function ProyekPage() {
       if (recRows) {
         setReceivables(recRows as unknown as ReceivableRow[]);
       }
+
+      const [tasksRes, paymentsRes, txRes, membersRes] = await Promise.all([
+        supabase
+          .from('tasks')
+          .select('id, title, project_id, status, due_at, estimate_minutes, progress_percent, assignee_id, created_at')
+          .eq('workspace_id', wsId)
+          .is('deleted_at', null),
+        supabase
+          .from('project_payments')
+          .select('id, project_id, label, amount, due_date, status, paid_amount, paid_at, account_id')
+          .eq('workspace_id', wsId)
+          .is('deleted_at', null),
+        supabase
+          .from('transactions')
+          .select('id, project_id, type, amount_base, status')
+          .eq('workspace_id', wsId)
+          .not('project_id', 'is', null)
+          .is('deleted_at', null),
+        supabase
+          .from('workspace_members')
+          .select('user_id, role')
+          .eq('workspace_id', wsId),
+      ]);
+
+      setProjectTasks((tasksRes.data as unknown as ProjectTaskItem[]) ?? []);
+      setAllPayments((paymentsRes.data as unknown as PaymentRow[]) ?? []);
+      setProjectTransactions((txRes.data as unknown as ProjectTransactionItem[]) ?? []);
+
+      const memberRows = (membersRes.data as Array<{ user_id: string; role: string }>) ?? [];
+      if (memberRows.length > 0) {
+        const { data: profData } = await supabase
+          .from('profiles')
+          .select('id, display_name')
+          .in(
+            'id',
+            memberRows.map((m) => m.user_id)
+          );
+        const nameMap = new Map<string, string>();
+        for (const prof of profData ?? []) {
+          if (prof.display_name) nameMap.set(prof.id, prof.display_name);
+        }
+        setMembers(
+          memberRows.map((m) => ({
+            user_id: m.user_id,
+            role: m.role,
+            display_name: nameMap.get(m.user_id) || `Anggota ${m.user_id.slice(0, 6)}`,
+          }))
+        );
+      } else {
+        setMembers([]);
+      }
     } catch (err: unknown) {
       setLoadError(err instanceof Error ? err.message : 'Gagal memuat daftar kegiatan dan piutang.');
     } finally {
@@ -232,6 +327,12 @@ export default function ProyekPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const { status: realtimeStatus } = useOrbitRealtime({
+    workspaceId,
+    tables: ['tasks', 'project_payments', 'transactions'],
+    onChange: loadData,
+  });
 
   const loadProjectPayments = async (projId: string) => {
     const { data } = await supabase
@@ -462,69 +563,330 @@ export default function ProyekPage() {
     }
   };
 
-  const filteredProjects = projects.filter((p) =>
-    filterKind === 'all' ? true : p.kind === filterKind
+  const filteredProjects = useMemo(
+    () => projects.filter((p) => (filterKind === 'all' ? true : p.kind === filterKind)),
+    [projects, filterKind]
   );
+
+  const taskStatsByProject = useMemo(() => {
+    const map = new Map<
+      string,
+      { total: number; done: number; activeEstimateMin: number; tasks: ProjectTaskItem[] }
+    >();
+    for (const t of projectTasks) {
+      if (!t.project_id) continue;
+      const cur = map.get(t.project_id) ?? {
+        total: 0,
+        done: 0,
+        activeEstimateMin: 0,
+        tasks: [],
+      };
+      cur.total += 1;
+      if (t.status === 'done') {
+        cur.done += 1;
+      } else {
+        cur.activeEstimateMin += Number(t.estimate_minutes ?? 0);
+      }
+      cur.tasks.push(t);
+      map.set(t.project_id, cur);
+    }
+    return map;
+  }, [projectTasks]);
+
+  const ganttRange = useMemo(() => {
+    const now = new Date();
+    if (ganttZoom === 'week') {
+      const start = new Date(now.getTime() - 3 * 86400_000);
+      const end = new Date(now.getTime() + 27 * 86400_000);
+      return { start, end, totalMs: Math.max(86400_000, end.getTime() - start.getTime()) };
+    }
+
+    let minMs = now.getTime() - 14 * 86400_000;
+    let maxMs = now.getTime() + 60 * 86400_000;
+    for (const p of projects) {
+      if (p.started_on) minMs = Math.min(minMs, new Date(p.started_on).getTime());
+      if (p.deadline) maxMs = Math.max(maxMs, new Date(p.deadline).getTime());
+    }
+    const start = new Date(minMs);
+    const end = new Date(Math.max(maxMs, minMs + 30 * 86400_000));
+    return { start, end, totalMs: Math.max(86400_000, end.getTime() - start.getTime()) };
+  }, [projects, ganttZoom]);
+
+  const workloadByAssignee = useMemo(() => {
+    const memberMap = new Map(members.map((m) => [m.user_id, m]));
+    const nowMs = Date.now();
+    const weekHorizonMs = nowMs + 7 * 86400_000;
+
+    type AssigneeBucket = {
+      key: string;
+      label: string;
+      role: string;
+      activeTasks: number;
+      doneTasks: number;
+      totalEstimateMin: number;
+      weeklyEstimateMin: number;
+      dailyBuckets: Map<string, number>;
+    };
+
+    const buckets = new Map<string, AssigneeBucket>();
+    for (const m of members) {
+      buckets.set(m.user_id, {
+        key: m.user_id,
+        label: m.display_name,
+        role: m.role,
+        activeTasks: 0,
+        doneTasks: 0,
+        totalEstimateMin: 0,
+        weeklyEstimateMin: 0,
+        dailyBuckets: new Map(),
+      });
+    }
+
+    for (const t of projectTasks) {
+      const key = t.assignee_id || 'unassigned';
+      let bucket = buckets.get(key);
+      if (!bucket) {
+        const mem = t.assignee_id ? memberMap.get(t.assignee_id) : undefined;
+        bucket = {
+          key,
+          label: mem?.display_name || (t.assignee_id ? `Anggota ${t.assignee_id.slice(0, 6)}` : 'Belum Ditugaskan'),
+          role: mem?.role || '-',
+          activeTasks: 0,
+          doneTasks: 0,
+          totalEstimateMin: 0,
+          weeklyEstimateMin: 0,
+          dailyBuckets: new Map(),
+        };
+        buckets.set(key, bucket);
+      }
+
+      if (t.status === 'done') {
+        bucket.doneTasks += 1;
+        continue;
+      }
+
+      const est = Number(t.estimate_minutes ?? 0);
+      bucket.activeTasks += 1;
+      bucket.totalEstimateMin += est;
+
+      if (t.due_at) {
+        const dueMs = new Date(t.due_at).getTime();
+        if (dueMs <= weekHorizonMs) {
+          bucket.weeklyEstimateMin += est;
+        }
+        const dayKey = t.due_at.slice(0, 10);
+        bucket.dailyBuckets.set(dayKey, (bucket.dailyBuckets.get(dayKey) ?? 0) + est);
+      } else {
+        bucket.weeklyEstimateMin += est;
+      }
+    }
+
+    return Array.from(buckets.values())
+      .map((b) => {
+        const peakDailyMin = Math.max(0, ...Array.from(b.dailyBuckets.values()));
+        const isOverloaded = b.weeklyEstimateMin > 40 * 60 || peakDailyMin > 8 * 60;
+        const isHeavy = !isOverloaded && (b.weeklyEstimateMin > 25 * 60 || peakDailyMin > 6 * 60);
+        return {
+          ...b,
+          peakDailyMin,
+          isOverloaded,
+          isHeavy,
+        };
+      })
+      .sort((a, b) => b.totalEstimateMin - a.totalEstimateMin || b.activeTasks - a.activeTasks);
+  }, [projectTasks, members]);
+
+  const projectFinancialReports = useMemo(() => {
+    const profitMap = new Map(profitData.map((pr) => [pr.project_id, pr]));
+
+    return projects.map((p) => {
+      const vp = profitMap.get(p.id);
+      const pPayments = allPayments.filter((pm) => pm.project_id === p.id);
+      const pTxns = projectTransactions.filter((tx) => tx.project_id === p.id && tx.status === 'confirmed');
+
+      const paymentInvoiced = pPayments.reduce((acc, pm) => acc + Number(pm.amount || 0), 0);
+      const paymentPaid = pPayments.reduce((acc, pm) => acc + Number(pm.paid_amount || 0), 0);
+      const txIncome = pTxns
+        .filter((tx) => tx.type === 'income')
+        .reduce((acc, tx) => acc + Number(tx.amount_base || 0), 0);
+      const txExpense = pTxns
+        .filter((tx) => tx.type === 'expense')
+        .reduce((acc, tx) => acc + Number(tx.amount_base || 0), 0);
+
+      const contractValue = Number(vp?.contract_value ?? p.contract_value ?? 0);
+      const totalInvoiced = Number(vp?.total_invoiced ?? paymentInvoiced);
+      const totalPaid = Number(vp?.total_paid ?? (paymentPaid > 0 ? paymentPaid : txIncome));
+      const remainingInvoiced = Number(
+        vp?.remaining_invoiced ?? Math.max(0, totalInvoiced - totalPaid)
+      );
+      const totalExpense =
+        Number(vp?.total_expense ?? txExpense) + Number(vp?.platform_fee_deducted ?? 0);
+      const netProfit = vp ? Number(vp.net_profit) : totalPaid - totalExpense;
+      const marginPercent =
+        vp?.margin_percent !== undefined && vp?.margin_percent !== null
+          ? Number(vp.margin_percent)
+          : totalPaid > 0
+          ? Math.round((netProfit / totalPaid) * 1000) / 10
+          : 0;
+
+      return {
+        project_id: p.id,
+        project_name: p.name,
+        kind: p.kind,
+        client_name: p.client_name,
+        status: p.status,
+        currency: p.currency || vp?.currency || 'IDR',
+        contract_value: contractValue,
+        total_invoiced: totalInvoiced,
+        total_paid: totalPaid,
+        remaining_invoiced: remainingInvoiced,
+        total_expense: totalExpense,
+        net_profit: netProfit,
+        margin_percent: marginPercent,
+      };
+    });
+  }, [projects, profitData, allPayments, projectTransactions]);
+
+  const handleExportProjectReportCsv = () => {
+    const csv = exportProjectReportToCsv(
+      projectFinancialReports.map((r) => ({
+        project_name: r.project_name,
+        kind: ACTIVITY_KIND_META[r.kind]?.label || r.kind,
+        client_name: r.client_name,
+        status: r.status,
+        currency: r.currency,
+        contract_value: r.contract_value,
+        total_invoiced: r.total_invoiced,
+        total_paid: r.total_paid,
+        remaining_invoiced: r.remaining_invoiced,
+        total_expense: r.total_expense,
+        net_profit: r.net_profit,
+        margin_percent: r.margin_percent,
+      }))
+    );
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `orbit-laporan-proyek-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Lainnya</h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Lainnya</h1>
+            <RealtimeStatusBadge status={realtimeStatus} />
+          </div>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Kelola kegiatan magang, proyek freelance, mata kuliah, dan piutang
+            Daftar kegiatan, linimasa Gantt, beban kerja anggota, serta laporan margin &amp; piutang
           </p>
         </div>
 
-        <Button onClick={openCreateModal}>
-          <Plus className="w-4 h-4" />
-          <span>Tambah Kegiatan</span>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
+          {activeTab === 'finances' && (
+            <>
+              <Button
+                variant="secondary"
+                onClick={handleExportProjectReportCsv}
+                disabled={projectFinancialReports.length === 0}
+              >
+                <Download className="w-4 h-4" />
+                <span>Ekspor CSV</span>
+              </Button>
+              <Button variant="secondary" onClick={() => window.print()}>
+                <Printer className="w-4 h-4" />
+                <span>Cetak PDF</span>
+              </Button>
+            </>
+          )}
+          <Button onClick={openCreateModal}>
+            <Plus className="w-4 h-4" />
+            <span>Tambah Kegiatan</span>
+          </Button>
+        </div>
       </div>
 
       <LainnyaSubNav />
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <SegmentedControl
-          ariaLabel="Sub-menu Kegiatan & Piutang"
-          value={activeTab}
-          onChange={setActiveTab}
-          options={[
-            { value: 'projects', label: `Kegiatan (${projects.length})` },
-            { value: 'finances', label: `Piutang & Profit (${receivables.length})` },
-          ]}
-        />
-
-        {activeTab === 'projects' && (
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-            <button
-              type="button"
-              onClick={() => setFilterKind('all')}
-              className={`min-h-11 px-3.5 py-2 rounded-lg text-xs font-medium transition-colors border ${
-                filterKind === 'all'
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-card text-muted-foreground border-border hover:text-foreground'
-              }`}
-            >
-              Semua
-            </button>
-            {(['intern', 'freelance', 'kuliah', 'pribadi'] as ActivityKind[]).map((k) => (
+      <ViewSwitcher<ProyekTab>
+        ariaLabel="Sub-menu Proyek dan Kegiatan"
+        value={activeTab}
+        onChange={setActiveTab}
+        options={[
+          { value: 'projects', label: 'Daftar Proyek', badge: projects.length },
+          { value: 'gantt', label: 'Linimasa Gantt' },
+          { value: 'workload', label: 'Beban Kerja' },
+          { value: 'finances', label: 'Laporan & Piutang', badge: receivables.length },
+        ]}
+        rightSlot={
+          activeTab === 'gantt' ? (
+            <div className="inline-flex rounded-md border border-border bg-subtle p-0.5">
               <button
-                key={k}
                 type="button"
-                onClick={() => setFilterKind(k)}
-                className={`min-h-11 px-3.5 py-2 rounded-lg text-xs font-medium transition-colors border ${
-                  filterKind === k
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-card text-muted-foreground border-border hover:text-foreground'
-                }`}
+                onClick={() => setGanttZoom('week')}
+                className={cn(
+                  'min-h-11 px-3 rounded-sm text-xs font-medium transition-colors',
+                  ganttZoom === 'week'
+                    ? 'bg-card text-primary border border-border shadow-card font-semibold'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
               >
-                {ACTIVITY_KIND_META[k].label}
+                Mingguan (30H)
               </button>
-            ))}
-          </div>
-        )}
-      </div>
+              <button
+                type="button"
+                onClick={() => setGanttZoom('month')}
+                className={cn(
+                  'min-h-11 px-3 rounded-sm text-xs font-medium transition-colors',
+                  ganttZoom === 'month'
+                    ? 'bg-card text-primary border border-border shadow-card font-semibold'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                Bulanan
+              </button>
+            </div>
+          ) : undefined
+        }
+      />
+
+      {activeTab === 'projects' && (
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 print:hidden">
+          <button
+            type="button"
+            onClick={() => setFilterKind('all')}
+            className={cn(
+              'min-h-11 px-3.5 py-2 rounded-md text-xs font-medium transition-colors border shrink-0',
+              filterKind === 'all'
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-card text-muted-foreground border-border hover:text-foreground hover:bg-hover'
+            )}
+          >
+            Semua
+          </button>
+          {(['intern', 'freelance', 'kuliah', 'pribadi'] as ActivityKind[]).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setFilterKind(k)}
+              className={cn(
+                'min-h-11 px-3.5 py-2 rounded-md text-xs font-medium transition-colors border shrink-0',
+                filterKind === k
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-card text-muted-foreground border-border hover:text-foreground hover:bg-hover'
+              )}
+            >
+              {ACTIVITY_KIND_META[k].label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loadError ? (
         <ErrorState message={loadError} onRetry={loadData} />
@@ -547,6 +909,13 @@ export default function ProyekPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredProjects.map((p) => {
               const profitInfo = profitData.find((pr) => pr.project_id === p.id);
+              const tStat = taskStatsByProject.get(p.id);
+              const taskDonePct =
+                tStat && tStat.total > 0 ? Math.round((tStat.done / tStat.total) * 100) : 0;
+              const contractPct =
+                p.contract_value && p.contract_value > 0 && profitInfo
+                  ? Math.min(100, Math.round((profitInfo.total_paid / p.contract_value) * 100))
+                  : null;
 
               return (
                 <Card key={p.id} className="flex flex-col justify-between">
@@ -592,12 +961,28 @@ export default function ProyekPage() {
                         )}
                       </div>
 
+                      {/* Progress Tugas Proyek */}
+                      <div className="rounded-md bg-subtle border border-border p-3 space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Progres Tugas</span>
+                          <span className="font-semibold text-foreground tabular-nums">
+                            {tStat ? `${tStat.done}/${tStat.total} (${taskDonePct}%)` : '0/0'}
+                          </span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-card border border-border overflow-hidden">
+                          <div
+                            className="h-full bg-primary transition-all duration-150"
+                            style={{ width: `${taskDonePct}%` }}
+                          />
+                        </div>
+                      </div>
+
                       {p.kind === 'freelance' && (
-                        <div className="p-3 rounded-lg bg-muted/40 border border-border text-xs space-y-1 tabular-nums">
+                        <div className="p-3 rounded-md bg-subtle border border-border text-xs space-y-1.5 tabular-nums">
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Nilai Kontrak:</span>
                             <span className="font-semibold text-foreground">
-                              {p.contract_value ? formatCurrency(p.contract_value) : '-'}
+                              {p.contract_value ? formatAmount(p.contract_value) : '-'}
                             </span>
                           </div>
                           {profitInfo && (
@@ -605,28 +990,36 @@ export default function ProyekPage() {
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">Dibayar:</span>
                                 <span className="font-semibold text-income">
-                                  {formatCurrency(profitInfo.total_paid)}
+                                  {formatAmount(profitInfo.total_paid)}
                                 </span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">Profit Bersih:</span>
                                 <span className="font-semibold text-foreground">
-                                  {formatCurrency(profitInfo.net_profit)} ({profitInfo.margin_percent}%)
+                                  {formatAmount(profitInfo.net_profit)} ({profitInfo.margin_percent}%)
                                 </span>
                               </div>
+                              {contractPct !== null && (
+                                <div className="h-1.5 w-full rounded-full bg-card border border-border overflow-hidden">
+                                  <div
+                                    className="h-full bg-income"
+                                    style={{ width: `${contractPct}%` }}
+                                  />
+                                </div>
+                              )}
                             </>
                           )}
                         </div>
                       )}
 
                       {p.kind === 'kuliah' && (
-                        <div className="p-3 rounded-lg bg-muted/40 border border-border text-xs space-y-1 tabular-nums">
+                        <div className="p-3 rounded-md bg-subtle border border-border text-xs space-y-1 tabular-nums">
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Semester:</span>
                             <span className="font-semibold text-foreground">{p.semester || '-'}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Kode & SKS:</span>
+                            <span className="text-muted-foreground">Kode &amp; SKS:</span>
                             <span className="font-semibold text-foreground">
                               {p.course_code || '-'} ({p.credits || 0} SKS)
                             </span>
@@ -635,11 +1028,11 @@ export default function ProyekPage() {
                       )}
 
                       {p.kind === 'intern' && (
-                        <div className="p-3 rounded-lg bg-muted/40 border border-border text-xs space-y-1 tabular-nums">
+                        <div className="p-3 rounded-md bg-subtle border border-border text-xs space-y-1 tabular-nums">
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Uang Saku:</span>
                             <span className="font-semibold text-foreground">
-                              {p.stipend_amount ? formatCurrency(p.stipend_amount) : '-'}
+                              {p.stipend_amount ? formatAmount(p.stipend_amount) : '-'}
                             </span>
                           </div>
                           <div className="flex justify-between">
@@ -673,13 +1066,333 @@ export default function ProyekPage() {
             })}
           </div>
         )
-      ) : (
+      ) : activeTab === 'gantt' ? (
+        /* ================= LINIMASA GANTT HORIZONTAL ================= */
+        projects.length === 0 ? (
+          <EmptyState
+            icon={<CalendarRange className="w-5 h-5" />}
+            title="Belum ada jadwal proyek untuk Gantt"
+            description="Buat proyek dengan tanggal mulai dan tenggat untuk memantau timeline horizontal."
+            actionLabel="Tambah Kegiatan"
+            onAction={openCreateModal}
+          />
+        ) : (
+          <Card className="overflow-hidden">
+            <CardHeader className="border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarRange className="w-4 h-4 text-primary" />
+                  <span>Linimasa Gantt Proyek &amp; Tenggat Tugas</span>
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
+                  Rentang tampil: {formatDateIndo(ganttRange.start.toISOString())} -{' '}
+                  {formatDateIndo(ganttRange.end.toISOString())}
+                </p>
+              </div>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {projects.length} proyek aktif
+              </span>
+            </CardHeader>
+
+            <div className="overflow-x-auto">
+              <div className="min-w-[680px] divide-y divide-border">
+                {/* Header Skala Waktu */}
+                <div className="grid grid-cols-12 bg-subtle border-b border-border text-[11px] font-semibold text-muted-foreground px-4 py-2.5">
+                  <div className="col-span-4">Kegiatan / Proyek</div>
+                  <div className="col-span-8 flex justify-between tabular-nums">
+                    <span>{formatDateIndo(ganttRange.start.toISOString())}</span>
+                    <span>
+                      {formatDateIndo(
+                        new Date(
+                          ganttRange.start.getTime() + ganttRange.totalMs * 0.5
+                        ).toISOString()
+                      )}
+                    </span>
+                    <span>{formatDateIndo(ganttRange.end.toISOString())}</span>
+                  </div>
+                </div>
+
+                {projects.map((p) => {
+                  const startMs = p.started_on
+                    ? new Date(p.started_on).getTime()
+                    : ganttRange.start.getTime();
+                  const endMs = p.deadline
+                    ? new Date(p.deadline).getTime()
+                    : startMs + 14 * 86400_000;
+
+                  const clampedStart = Math.max(ganttRange.start.getTime(), startMs);
+                  const clampedEnd = Math.min(
+                    ganttRange.end.getTime(),
+                    Math.max(clampedStart + 2 * 86400_000, endMs)
+                  );
+                  const leftPct =
+                    ((clampedStart - ganttRange.start.getTime()) / ganttRange.totalMs) * 100;
+                  const widthPct = Math.max(
+                    4,
+                    ((clampedEnd - clampedStart) / ganttRange.totalMs) * 100
+                  );
+
+                  const pTasks = (taskStatsByProject.get(p.id)?.tasks ?? []).filter(
+                    (t) => t.due_at
+                  );
+
+                  return (
+                    <div key={p.id} className="grid grid-cols-12 items-center px-4 py-3.5 hover:bg-hover gap-3">
+                      <div className="col-span-4 space-y-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm text-foreground truncate">
+                            {p.name}
+                          </span>
+                          <KindBadge kind={p.kind} />
+                        </div>
+                        <div className="text-[11px] text-muted-foreground tabular-nums">
+                          {p.started_on ? formatDateIndo(p.started_on) : 'Mulai fleksibel'} -&gt;{' '}
+                          {p.deadline ? formatDateIndo(p.deadline) : 'Tanpa tenggat'}
+                        </div>
+                      </div>
+
+                      <div className="col-span-8 space-y-1.5">
+                        <div className="relative h-9 w-full rounded-md bg-subtle border border-border overflow-hidden">
+                          <div
+                            style={{
+                              left: `${Math.max(0, Math.min(96, leftPct))}%`,
+                              width: `${Math.min(100 - Math.max(0, leftPct), widthPct)}%`,
+                            }}
+                            className="absolute top-1 h-5 rounded-sm bg-primary text-primary-foreground px-2 flex items-center text-[11px] font-medium truncate"
+                          >
+                            {p.status}
+                          </div>
+
+                          {pTasks.map((t) => {
+                            const tMs = new Date(t.due_at!).getTime();
+                            if (tMs < ganttRange.start.getTime() || tMs > ganttRange.end.getTime()) {
+                              return null;
+                            }
+                            const tLeft =
+                              ((tMs - ganttRange.start.getTime()) / ganttRange.totalMs) * 100;
+                            return (
+                              <div
+                                key={t.id}
+                                style={{ left: `${Math.max(1.5, Math.min(98.5, tLeft))}%` }}
+                                title={`Tugas: ${t.title} (${formatDateIndo(t.due_at!)})`}
+                                className={cn(
+                                  'absolute bottom-0.5 z-10 -translate-x-1/2 h-2.5 w-2.5 rounded-full border border-card',
+                                  t.status === 'done' ? 'bg-income' : 'bg-warning'
+                                )}
+                              />
+                            );
+                          })}
+                        </div>
+
+                        {pTasks.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {pTasks.slice(0, 4).map((t) => (
+                              <span
+                                key={t.id}
+                                className="inline-flex items-center gap-1 rounded-sm border border-border bg-card px-2 py-0.5 text-[11px] text-muted-foreground tabular-nums"
+                              >
+                                <span
+                                  className={cn(
+                                    'h-1.5 w-1.5 rounded-full',
+                                    t.status === 'done' ? 'bg-income' : 'bg-warning'
+                                  )}
+                                />
+                                <span className="truncate max-w-[140px]">{t.title}</span>
+                                <span>({formatDateIndo(t.due_at!)})</span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </Card>
+        )
+      ) : activeTab === 'workload' ? (
+        /* ================= PETA BEBAN KERJA (WORKLOAD) ================= */
         <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Total Estimasi Tugas Aktif
+                </div>
+                <div className="text-2xl font-bold text-foreground tabular-nums mt-1">
+                  {Math.round(
+                    (projectTasks
+                      .filter((t) => t.status !== 'done')
+                      .reduce((acc, t) => acc + Number(t.estimate_minutes ?? 0), 0) /
+                      60) *
+                      10
+                  ) / 10}{' '}
+                  jam
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5 tabular-nums">
+                  Dari {projectTasks.filter((t) => t.status !== 'done').length} tugas aktif
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Batas Kapasitas Sehat
+                </div>
+                <div className="text-2xl font-bold text-foreground tabular-nums mt-1">
+                  8 jam/hari · 40 jam/mgg
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  Penanda beban tinggi muncul otomatis
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Penanggung Jawab Over-Capacity
+                </div>
+                <div
+                  className={cn(
+                    'text-2xl font-bold tabular-nums mt-1',
+                    workloadByAssignee.some((w) => w.isOverloaded)
+                      ? 'text-expense'
+                      : 'text-income'
+                  )}
+                >
+                  {workloadByAssignee.filter((w) => w.isOverloaded).length}
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  Anggota melebihi 40 jam/minggu atau 8 jam/hari
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card className="overflow-hidden">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-primary" />
+                <span>Matriks Beban Kerja per Penanggung Jawab</span>
+              </CardTitle>
+            </CardHeader>
+            {workloadByAssignee.length === 0 ? (
+              <div className="p-8 text-center text-xs text-muted-foreground">
+                Belum ada tugas dengan estimasi waktu pada ruang kerja ini.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-subtle border-b border-border text-muted-foreground font-semibold uppercase tracking-wider">
+                    <tr>
+                      <th className="px-4 py-3">Penanggung Jawab</th>
+                      <th className="px-4 py-3 text-right">Tugas Aktif</th>
+                      <th className="px-4 py-3 text-right">Selesai</th>
+                      <th className="px-4 py-3 text-right">Total Estimasi</th>
+                      <th className="px-4 py-3 text-right">Beban 7 Hari / Puncak Harian</th>
+                      <th className="px-4 py-3 text-right">Status Kapasitas</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border tabular-nums">
+                    {workloadByAssignee.map((w) => {
+                      const totalHours = Math.round((w.totalEstimateMin / 60) * 10) / 10;
+                      const weeklyHours = Math.round((w.weeklyEstimateMin / 60) * 10) / 10;
+                      const peakDailyHours = Math.round((w.peakDailyMin / 60) * 10) / 10;
+                      return (
+                        <tr key={w.key} className="hover:bg-hover">
+                          <td className="px-4 py-3 font-medium text-foreground">
+                            <div>{w.label}</div>
+                            {w.role !== '-' && (
+                              <div className="text-[11px] text-muted-foreground capitalize">
+                                Peran: {w.role}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold">{w.activeTasks}</td>
+                          <td className="px-4 py-3 text-right text-muted-foreground">{w.doneTasks}</td>
+                          <td className="px-4 py-3 text-right font-semibold">{totalHours} jam</td>
+                          <td className="px-4 py-3 text-right">
+                            {weeklyHours} jam / {peakDailyHours} jam
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {w.isOverloaded ? (
+                              <StatusBadge variant="expense">
+                                <AlertTriangle className="w-3 h-3" />
+                                <span>Beban Tinggi</span>
+                              </StatusBadge>
+                            ) : w.isHeavy ? (
+                              <StatusBadge variant="warning">Padat</StatusBadge>
+                            ) : (
+                              <StatusBadge variant="income">Seimbang</StatusBadge>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          <Card className="overflow-hidden">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-primary" />
+                <span>Distribusi Jam &amp; Tugas per Proyek</span>
+              </CardTitle>
+            </CardHeader>
+            <div className="divide-y divide-border">
+              {projects.map((p) => {
+                const stat = taskStatsByProject.get(p.id) ?? {
+                  total: 0,
+                  done: 0,
+                  activeEstimateMin: 0,
+                };
+                const estHours = Math.round((stat.activeEstimateMin / 60) * 10) / 10;
+                const activeCount = stat.total - stat.done;
+                const barPct = Math.min(100, Math.round((estHours / 40) * 100));
+                return (
+                  <div key={p.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm text-foreground truncate">
+                          {p.name}
+                        </span>
+                        <KindBadge kind={p.kind} />
+                      </div>
+                      <div className="text-xs text-muted-foreground tabular-nums">
+                        {activeCount} tugas aktif · {stat.done} selesai · Estimasi tersisa {estHours} jam
+                      </div>
+                    </div>
+                    <div className="w-full sm:w-56 space-y-1">
+                      <div className="h-2.5 w-full rounded-full bg-subtle border border-border overflow-hidden">
+                        <div
+                          className={cn(
+                            'h-full transition-all duration-150',
+                            estHours > 40 ? 'bg-expense' : 'bg-primary'
+                          )}
+                          style={{ width: `${Math.max(estHours > 0 ? 6 : 0, barPct)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      ) : (
+        /* ================= LAPORAN PROYEK, MARGIN & PIUTANG ================= */
+        <div className="space-y-6">
+          <Card className="overflow-hidden print-avoid-break">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-primary" />
-                <span>Daftar Piutang Jatuh Tempo & Terlambat</span>
+                <span>Daftar Piutang Jatuh Tempo &amp; Terlambat</span>
               </CardTitle>
             </CardHeader>
 
@@ -690,19 +1403,19 @@ export default function ProyekPage() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-muted/40 border-b border-border text-muted-foreground font-semibold uppercase tracking-wider">
+                  <thead className="bg-subtle border-b border-border text-muted-foreground font-semibold uppercase tracking-wider">
                     <tr>
-                      <th className="px-4 py-3">Kegiatan & Klien</th>
+                      <th className="px-4 py-3">Kegiatan &amp; Klien</th>
                       <th className="px-4 py-3">Label Pembayaran</th>
                       <th className="px-4 py-3 text-right">Nominal Sisa</th>
                       <th className="px-4 py-3">Jatuh Tempo</th>
                       <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3 text-right">Aksi</th>
+                      <th className="px-4 py-3 text-right print:hidden">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {receivables.map((r) => (
-                      <tr key={r.payment_id} className="hover:bg-muted/20">
+                      <tr key={r.payment_id} className="hover:bg-hover">
                         <td className="px-4 py-3 font-medium text-foreground">
                           {r.project_name}
                           {r.client_name && (
@@ -711,7 +1424,7 @@ export default function ProyekPage() {
                         </td>
                         <td className="px-4 py-3">{r.label}</td>
                         <td className="px-4 py-3 font-bold text-foreground text-right tabular-nums">
-                          {formatCurrency(r.remaining_amount)}
+                          {formatAmount(r.remaining_amount)}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground tabular-nums">
                           {r.due_date ? formatDateIndo(r.due_date) : '-'}
@@ -725,7 +1438,7 @@ export default function ProyekPage() {
                             <StatusBadge variant="warning">Tertunda</StatusBadge>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-right print:hidden">
                           <Button
                             type="button"
                             size="sm"
@@ -742,59 +1455,69 @@ export default function ProyekPage() {
             )}
           </Card>
 
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden print-avoid-break">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-primary" />
-                <span>Laporan Profitabilitas Proyek Freelance</span>
+                <span>Laporan Keuangan Proyek, Sisa Tagihan &amp; Margin Bersih</span>
               </CardTitle>
             </CardHeader>
 
-            {profitData.filter((p) => p.kind === 'freelance').length === 0 ? (
+            {projectFinancialReports.length === 0 ? (
               <div className="p-8 text-center text-xs text-muted-foreground">
-                Belum ada data profitabilitas proyek freelance.
+                Belum ada data laporan keuangan proyek.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-muted/40 border-b border-border text-muted-foreground font-semibold uppercase tracking-wider">
+                  <thead className="bg-subtle border-b border-border text-muted-foreground font-semibold uppercase tracking-wider">
                     <tr>
                       <th className="px-4 py-3">Proyek</th>
-                      <th className="px-4 py-3 text-right">Nilai Kontrak</th>
-                      <th className="px-4 py-3 text-right">Total Diterima</th>
-                      <th className="px-4 py-3 text-right">Pengeluaran & Potongan</th>
-                      <th className="px-4 py-3 text-right">Profit Bersih</th>
+                      <th className="px-4 py-3 text-right">Kontrak</th>
+                      <th className="px-4 py-3 text-right">Masuk</th>
+                      <th className="px-4 py-3 text-right">Sisa Tagihan</th>
+                      <th className="px-4 py-3 text-right">Pengeluaran</th>
+                      <th className="px-4 py-3 text-right">Margin Bersih</th>
                       <th className="px-4 py-3 text-right">Margin %</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border tabular-nums">
-                    {profitData
-                      .filter((p) => p.kind === 'freelance')
-                      .map((p) => (
-                        <tr key={p.project_id} className="hover:bg-muted/20">
-                          <td className="px-4 py-3 font-medium text-foreground">
-                            {p.project_name}
-                            {p.client_name && (
-                              <div className="text-xs text-muted-foreground">{p.client_name}</div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            {p.contract_value ? formatCurrency(p.contract_value) : '-'}
-                          </td>
-                          <td className="px-4 py-3 text-right font-semibold text-income">
-                            {formatCurrency(p.total_paid)}
-                          </td>
-                          <td className="px-4 py-3 text-right text-expense">
-                            {formatCurrency(Number(p.total_expense) + Number(p.platform_fee_deducted))}
-                          </td>
-                          <td className="px-4 py-3 text-right font-bold text-foreground">
-                            {formatCurrency(p.net_profit)}
-                          </td>
-                          <td className="px-4 py-3 text-right font-medium">
-                            {p.margin_percent}%
-                          </td>
-                        </tr>
-                      ))}
+                    {projectFinancialReports.map((p) => (
+                      <tr key={p.project_id} className="hover:bg-hover">
+                        <td className="px-4 py-3 font-medium text-foreground">
+                          <div className="flex items-center gap-2">
+                            <span>{p.project_name}</span>
+                            <KindBadge kind={p.kind} />
+                          </div>
+                          {p.client_name && (
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {p.client_name}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {p.contract_value ? formatAmount(p.contract_value, p.currency) : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-income">
+                          {formatAmount(p.total_paid, p.currency)}
+                        </td>
+                        <td className="px-4 py-3 text-right text-warning font-medium">
+                          {formatAmount(p.remaining_invoiced, p.currency)}
+                        </td>
+                        <td className="px-4 py-3 text-right text-expense">
+                          {formatAmount(p.total_expense, p.currency)}
+                        </td>
+                        <td
+                          className={cn(
+                            'px-4 py-3 text-right font-bold',
+                            p.net_profit >= 0 ? 'text-foreground' : 'text-expense'
+                          )}
+                        >
+                          {formatAmount(p.net_profit, p.currency)}
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium">{p.margin_percent}%</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -811,7 +1534,7 @@ export default function ProyekPage() {
       >
         <form onSubmit={handleSaveProject} className="space-y-4">
           {formError && (
-            <div className="p-3 rounded-lg bg-expense/10 border border-expense/20 text-expense text-xs">
+            <div className="p-3 rounded-lg bg-expense-subtle border border-expense-border text-expense text-xs">
               {formError}
             </div>
           )}
@@ -1087,7 +1810,7 @@ export default function ProyekPage() {
         title={`Milestone Pembayaran: ${selectedProjectForPayments?.name || ''}`}
         description={
           selectedProjectForPayments?.contract_value
-            ? `Nilai Kontrak: ${formatCurrency(selectedProjectForPayments.contract_value)}`
+            ? `Nilai Kontrak: ${formatAmount(selectedProjectForPayments.contract_value)}`
             : undefined
         }
       >
@@ -1117,7 +1840,7 @@ export default function ProyekPage() {
                   <div>
                     <div className="font-semibold text-foreground">{pm.label}</div>
                     <div className="text-muted-foreground tabular-nums mt-0.5">
-                      Nominal: {formatCurrency(pm.amount)} • Tenggat: {pm.due_date ? formatDateIndo(pm.due_date) : '-'}
+                      Nominal: {formatAmount(pm.amount)} • Tenggat: {pm.due_date ? formatDateIndo(pm.due_date) : '-'}
                     </div>
                   </div>
 

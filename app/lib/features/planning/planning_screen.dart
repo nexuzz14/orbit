@@ -1,21 +1,25 @@
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
 import 'package:orbit_app/core/database/database.dart';
+import 'package:orbit_app/core/services/privacy_and_lock_service.dart';
 import 'package:orbit_app/core/services/sync_service.dart';
+import 'package:orbit_app/core/widgets/orbit_privacy_widgets.dart';
 import 'package:orbit_app/core/widgets/orbit_widgets.dart';
+import 'package:uuid/uuid.dart';
 
 class PlanningScreen extends StatefulWidget {
-  final String initialTab; // 'anggaran' | 'tagihan' | 'target'
+  final String initialTab;
   final bool forceLoading;
   final bool forceEmpty;
-  final String? forceError;
+  final bool forceError;
 
   const PlanningScreen({
     super.key,
     this.initialTab = 'anggaran',
     this.forceLoading = false,
     this.forceEmpty = false,
-    this.forceError,
+    this.forceError = false,
   });
 
   @override
@@ -23,432 +27,912 @@ class PlanningScreen extends StatefulWidget {
 }
 
 class _PlanningScreenState extends State<PlanningScreen> {
-  AppDatabase get _db => AppDatabase.shared;
-
-  late String _activeTab;
-  late bool _loading;
+  late String _tab;
+  bool _loading = true;
   String? _errorMessage;
 
-  List<Map<String, dynamic>> _budgets = [];
-  List<Map<String, dynamic>> _subscriptions = [];
-  List<Map<String, dynamic>> _goals = [];
+  List<LocalBudget> _budgets = const [];
+  List<LocalRecurringBill> _bills = const [];
+  List<LocalSavingsGoal> _goals = const [];
+  List<LocalCategory> _categories = const [];
+  List<LocalAccount> _accounts = const [];
+  Map<String, double> _spentByCategory = const {};
+  Map<String, String> _categoryNames = const {};
 
   @override
   void initState() {
     super.initState();
-    _activeTab = widget.initialTab;
-    _loading = widget.forceLoading;
-    _errorMessage = widget.forceError;
-    if (!widget.forceLoading && widget.forceError == null) {
+    _tab = widget.initialTab;
+    if (widget.forceLoading) {
+      _loading = true;
+    } else if (widget.forceError) {
+      _loading = false;
+      _errorMessage = 'Gagal memuat data perencanaan.';
+    } else if (widget.forceEmpty) {
+      _loading = false;
+    } else {
       _loadData();
-      if (!widget.forceEmpty) {
-        SyncService.instance.pullAllFromSupabase().then((_) {
-          if (mounted) _loadData();
-        });
-      }
     }
   }
 
-  Future<void> _loadData({bool pull = false}) async {
-    if (widget.forceLoading) return;
-    if (widget.forceError != null) return;
-
-    if (pull) {
-      setState(() => _loading = true);
-      await SyncService.instance.pullAllFromSupabase();
-    }
-
-    if (widget.forceEmpty) {
-      if (mounted) {
-        setState(() {
-          _budgets = [];
-          _subscriptions = [];
-          _goals = [];
-          _loading = false;
-        });
-      }
-      return;
-    }
-
+  Future<void> _loadData() async {
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
     try {
-      // 1. Muat Anggaran
-      final localBudgets = await (_db.select(_db.localBudgets)
-            ..where((b) => b.deletedAt.isNull()))
-          .get();
-      final localCategories = await _db.select(_db.localCategories).get();
-      final catNameMap = {for (final c in localCategories) c.id: c.name};
+      final db = AppDatabase.shared;
+      final budgets = await (db.select(
+        db.localBudgets,
+      )..where((b) => b.deletedAt.isNull())).get();
+      final bills = await (db.select(
+        db.localRecurringBills,
+      )..where((b) => b.deletedAt.isNull())).get();
+      final goals = await (db.select(
+        db.localSavingsGoals,
+      )..where((g) => g.deletedAt.isNull())).get();
+      final categories = await (db.select(
+        db.localCategories,
+      )..where((c) => c.archived.equals(false))).get();
+      final accounts = await (db.select(
+        db.localAccounts,
+      )..where((a) => a.archived.equals(false))).get();
+      final txs =
+          await (db.select(db.localTransactions)..where(
+                (t) =>
+                    t.deletedAt.isNull() &
+                    t.type.equals('expense') &
+                    t.status.equals('confirmed'),
+              ))
+              .get();
 
+      final spent = <String, double>{};
       final now = DateTime.now();
-      final startOfMonth = DateTime(now.year, now.month, 1);
-      final localTxs = await _db.select(_db.localTransactions).get();
-
-      final budgetList = <Map<String, dynamic>>[];
-      for (final b in localBudgets) {
-        final catName = catNameMap[b.categoryId] ?? b.categoryId;
-        final spent = localTxs
-            .where((t) =>
-                (t.categoryId == b.categoryId || t.categoryId == catName) &&
-                t.type == 'expense' &&
-                t.status == 'confirmed' &&
-                t.deletedAt == null &&
-                t.occurredAt.isAfter(startOfMonth.subtract(const Duration(seconds: 1))))
-            .fold<double>(0.0, (acc, t) => acc + t.amount);
-
-        budgetList.add({
-          'id': b.id,
-          'category': catName,
-          'kind': 'pribadi',
-          'limit': b.amount,
-          'spent': spent,
-        });
+      for (final tx in txs) {
+        if (tx.categoryId == null) continue;
+        final wib = tx.occurredAt.toUtc().add(const Duration(hours: 7));
+        if (wib.year == now.year && wib.month == now.month) {
+          spent[tx.categoryId!] = (spent[tx.categoryId!] ?? 0) + tx.amount;
+        }
       }
 
-      // 2. Muat Tagihan Berulang
-      final localBills = await (_db.select(_db.localRecurringBills)
-            ..where((b) => b.deletedAt.isNull()))
-          .get();
-      final billList = <Map<String, dynamic>>[];
-      for (final b in localBills) {
-        billList.add({
-          'id': b.id,
-          'name': b.name,
-          'amount': b.amount,
-          'cycle': b.scheduleType == 'monthly' ? 'Bulanan' : 'Mingguan',
-          'nextDue': 'Tgl ${b.scheduleValue}',
-          'kind': 'pribadi',
-        });
-      }
-
-      // 3. Muat Target Tabungan
-      final localGoals = await (_db.select(_db.localSavingsGoals)
-            ..where((g) => g.deletedAt.isNull()))
-          .get();
-      final goalList = <Map<String, dynamic>>[];
-      for (final g in localGoals) {
-        goalList.add({
-          'id': g.id,
-          'name': g.name,
-          'target': g.targetAmount,
-          'current': g.currentAmount,
-          'deadline': g.targetDate != null ? formatDateIndoShort(g.targetDate!) : '-',
-          'kind': 'pribadi',
-        });
-      }
-
-      if (mounted) {
-        setState(() {
-          _budgets = budgetList;
-          _subscriptions = billList;
-          _goals = goalList;
-          _loading = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _budgets = budgets;
+        _bills = bills;
+        _goals = goals;
+        _categories = categories;
+        _accounts = accounts;
+        _spentByCategory = spent;
+        _categoryNames = {for (final c in categories) c.id: c.name};
+        _loading = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Gagal memuat rencana keuangan: $e';
-          _loading = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _errorMessage = 'Gagal memuat perencanaan: $e';
+      });
     }
-  }
-
-  void _reload() {
-    _loadData(pull: true);
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final secondaryColor =
-        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
-
     return Scaffold(
+      backgroundColor: AppColors.canvasColor(context),
       appBar: AppBar(
-        title: const Text(
-          'Perencanaan Keuangan',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-        ),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () => _loadData(pull: true),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppTokens.space4,
-            AppTokens.space3,
-            AppTokens.space4,
-            96,
-          ),
-          children: [
-            SegmentedButton<String>(
-              showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(value: 'anggaran', label: Text('Anggaran')),
-                ButtonSegment(value: 'tagihan', label: Text('Tagihan')),
-                ButtonSegment(value: 'target', label: Text('Target')),
-              ],
-              selected: {_activeTab},
-              onSelectionChanged: (s) => setState(() => _activeTab = s.first),
+        title: const Text('Perencanaan Keuangan'),
+        actions: [
+          const OrbitPrivacyToggleButton(),
+          IconButton(
+            tooltip: 'Tambah Rencana',
+            constraints: const BoxConstraints(
+              minWidth: AppTokens.minTouchTarget,
+              minHeight: AppTokens.minTouchTarget,
             ),
-            const SizedBox(height: AppTokens.space4),
-
-            if (_errorMessage != null) ...[
-              OrbitErrorState(
-                message: _errorMessage!,
-                onRetry: _reload,
-              ),
-              const SizedBox(height: AppTokens.space4),
-            ],
-
-            if (_loading) ...[
-              const OrbitSkeleton(height: 92),
-              const SizedBox(height: AppTokens.space3),
-              const OrbitSkeleton(height: 92),
-            ] else if (_activeTab == 'anggaran') ...[
-              if (_budgets.isEmpty)
-                OrbitEmptyState(
-                  icon: Icons.pie_chart_outline,
-                  title: 'Belum ada anggaran bulanan',
-                  description:
-                      'Tetapkan batas pengeluaran per kategori agar arus kas tetap terkendali.',
-                  actionLabel: 'Segarkan',
-                  onAction: _reload,
-                )
-              else
-                for (final b in _budgets) ...[
-                  _buildBudgetCard(context, b, secondaryColor),
-                  const SizedBox(height: AppTokens.space3),
-                ],
-            ] else if (_activeTab == 'tagihan') ...[
-              if (_subscriptions.isEmpty)
-                OrbitEmptyState(
-                  icon: Icons.receipt_long_outlined,
-                  title: 'Belum ada tagihan berulang',
-                  description:
-                      'Pantau jadwal jatuh tempo langganan bulanan dan tagihan rutin Anda.',
-                  actionLabel: 'Segarkan',
-                  onAction: _reload,
-                )
-              else
-                for (final s in _subscriptions) ...[
-                  _buildSubscriptionCard(context, s, secondaryColor),
-                  const SizedBox(height: AppTokens.space3),
-                ],
-            ] else ...[
-              if (_goals.isEmpty)
-                OrbitEmptyState(
-                  icon: Icons.flag_outlined,
-                  title: 'Belum ada target tabungan',
-                  description:
-                      'Buat target dana darurat atau pembelian perangkat dengan progres terukur.',
-                  actionLabel: 'Segarkan',
-                  onAction: _reload,
-                )
-              else
-                for (final g in _goals) ...[
-                  _buildGoalCard(context, g, secondaryColor),
-                  const SizedBox(height: AppTokens.space3),
-                ],
-            ],
-          ],
-        ),
+            onPressed: _handleQuickAddForTab,
+            icon: const Icon(Icons.add),
+          ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildBudgetCard(
-    BuildContext context,
-    Map<String, dynamic> b,
-    Color secondaryColor,
-  ) {
-    final limit = b['limit'] as double;
-    final spent = b['spent'] as double;
-    final ratio = limit > 0 ? (spent / limit).clamp(0.0, 1.0) : 0.0;
-    final isOver = spent > limit;
-    final isWarn = ratio >= 0.8 && !isOver;
-
-    final barColor = isOver
-        ? AppColors.expenseColor(context)
-        : isWarn
-            ? AppColors.warningColor(context)
-            : AppColors.incomeColor(context);
-
-    return OrbitCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  b['category'] as String,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+          Container(
+            padding: const EdgeInsets.fromLTRB(
+              AppTokens.space4,
+              AppTokens.space3,
+              AppTokens.space4,
+              AppTokens.space3,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceColor(context),
+              border: Border(
+                bottom: BorderSide(color: AppColors.borderColor(context)),
+              ),
+            ),
+            child: OrbitViewSwitcher(
+              activeViewMode: _tab,
+              onChanged: (mode) => setState(() => _tab = mode),
+              options: const [
+                OrbitViewOption(
+                  id: 'anggaran',
+                  label: 'Anggaran',
+                  icon: Icons.pie_chart_outline,
                 ),
-              ),
-              OrbitKindBadge(kind: b['kind'] as String),
-            ],
-          ),
-          const SizedBox(height: AppTokens.space2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  '${formatRupiah(spent)} / ${formatRupiah(limit)}',
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: secondaryColor,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
+                OrbitViewOption(
+                  id: 'tagihan',
+                  label: 'Tagihan',
+                  icon: Icons.receipt_outlined,
                 ),
-              ),
-              const SizedBox(width: AppTokens.space2),
-              OrbitStatusBadge(
-                label: isOver
-                    ? 'Melebihi Batas'
-                    : '${(ratio * 100).round()}% Terpakai',
-                variant: isOver
-                    ? OrbitBadgeVariant.expense
-                    : isWarn
-                        ? OrbitBadgeVariant.warning
-                        : OrbitBadgeVariant.income,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppTokens.space2),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-            child: LinearProgressIndicator(
-              value: ratio,
-              minHeight: 8,
-              color: barColor,
-              backgroundColor: Theme.of(context).dividerColor,
+                OrbitViewOption(
+                  id: 'target',
+                  label: 'Target',
+                  icon: Icons.savings_outlined,
+                ),
+              ],
             ),
           ),
+          Expanded(child: _buildBody(context)),
         ],
       ),
     );
   }
 
-  Widget _buildSubscriptionCard(
-    BuildContext context,
-    Map<String, dynamic> s,
-    Color secondaryColor,
-  ) {
-    return OrbitCard(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
+  Widget _buildBody(BuildContext context) {
+    if (_loading) {
+      return ListView(
+        padding: const EdgeInsets.all(AppTokens.space4),
+        children: const [
+          OrbitSkeleton(height: 86),
+          SizedBox(height: AppTokens.space3),
+          OrbitSkeleton(height: 86),
+        ],
+      );
+    }
+
+    if (_errorMessage != null) {
+      return OrbitErrorState(message: _errorMessage!, onRetry: _loadData);
+    }
+
+    switch (_tab) {
+      case 'tagihan':
+        return _buildBillsTab(context);
+      case 'target':
+        return _buildGoalsTab(context);
+      default:
+        return _buildBudgetsTab(context);
+    }
+  }
+
+  Widget _buildBudgetsTab(BuildContext context) {
+    if (_budgets.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _loadData,
+        child: ListView(
+          children: [
+            const SizedBox(height: 36),
+            OrbitEmptyState(
+              icon: Icons.pie_chart_outline,
+              title: 'Belum ada anggaran bulanan',
+              description:
+                  'Tetapkan batas belanja per kategori agar pengeluaran tetap terkendali.',
+              actionLabel: 'Buat Anggaran',
+              onAction: _showAddBudgetSheet,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(AppTokens.space4),
+        itemCount: _budgets.length,
+        separatorBuilder: (_, __) => const SizedBox(height: AppTokens.space2),
+        itemBuilder: (context, index) {
+          final b = _budgets[index];
+          final spent = _spentByCategory[b.categoryId] ?? 0.0;
+          final ratio = b.amount > 0 ? spent / b.amount : 0.0;
+          final overBudget = ratio >= 1.0;
+          final warning = !overBudget && (ratio * 100) >= b.notifyAtPercent;
+          final barColor = overBudget
+              ? AppColors.expenseColor(context)
+              : (warning ? AppColors.warningColor(context) : AppColors.primary);
+
+          return OrbitCard(
+            padding: const EdgeInsets.all(AppTokens.space4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  s['name'] as String,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _categoryNames[b.categoryId] ?? 'Kategori',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimaryColor(context),
+                        ),
+                      ),
+                    ),
+                    OrbitStatusBadge(
+                      label: '${(ratio * 100).toStringAsFixed(0)}%',
+                      variant: overBudget
+                          ? OrbitBadgeVariant.expense
+                          : (warning
+                              ? OrbitBadgeVariant.warning
+                              : OrbitBadgeVariant.neutral),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppTokens.space2),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: ratio.clamp(0.0, 1.0),
+                    minHeight: 8,
+                    backgroundColor: AppColors.subtleColor(context),
+                    valueColor: AlwaysStoppedAnimation<Color>(barColor),
                   ),
                 ),
-                const SizedBox(height: AppTokens.space1),
-                Wrap(
-                  spacing: AppTokens.space2,
-                  runSpacing: AppTokens.space1,
-                  crossAxisAlignment: WrapCrossAlignment.center,
+                const SizedBox(height: AppTokens.space2),
+                OrbitPrivacyBuilder(
+                  builder: (context, _) => Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Terpakai ${PrivacyModeController.formatAmount(spent)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                          color: AppColors.textSecondaryColor(context),
+                        ),
+                      ),
+                      Text(
+                        'Batas ${PrivacyModeController.formatAmount(b.amount)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                          color: AppColors.textPrimaryColor(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildBillsTab(BuildContext context) {
+    if (_bills.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _loadData,
+        child: ListView(
+          children: [
+            const SizedBox(height: 36),
+            OrbitEmptyState(
+              icon: Icons.receipt_outlined,
+              title: 'Belum ada tagihan rutin',
+              description:
+                  'Catat langganan, cicilan, atau kos bulanan untuk pengingat jatuh tempo.',
+              actionLabel: 'Tambah Tagihan',
+              onAction: _showAddBillSheet,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(AppTokens.space4),
+        itemCount: _bills.length,
+        separatorBuilder: (_, __) => const SizedBox(height: AppTokens.space2),
+        itemBuilder: (context, index) {
+          final bill = _bills[index];
+          return OrbitCard(
+            padding: const EdgeInsets.all(AppTokens.space4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        bill.name,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimaryColor(context),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        bill.scheduleType == 'monthly'
+                            ? 'Setiap tanggal ${bill.scheduleValue}'
+                            : 'Jadwal ${bill.scheduleType}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                          color: AppColors.textMutedColor(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    OrbitKindBadge(kind: s['kind'] as String),
-                    Text(
-                      '${s['cycle']} - Jatuh tempo ${s['nextDue']}',
-                      style: TextStyle(fontSize: 11, color: secondaryColor),
+                    OrbitAmountText(
+                      amount: bill.amount,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                        color: AppColors.textPrimaryColor(context),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    OrbitStatusBadge(
+                      label: bill.active ? 'Aktif' : 'Nonaktif',
+                      variant: bill.active
+                          ? OrbitBadgeVariant.income
+                          : OrbitBadgeVariant.neutral,
                     ),
                   ],
                 ),
               ],
             ),
-          ),
-          Text(
-            formatRupiah(s['amount'] as double),
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppColors.expenseColor(context),
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildGoalCard(
-    BuildContext context,
-    Map<String, dynamic> g,
-    Color secondaryColor,
-  ) {
-    final target = g['target'] as double;
-    final current = g['current'] as double;
-    final ratio = target > 0 ? (current / target).clamp(0.0, 1.0) : 0.0;
-
-    return OrbitCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  g['name'] as String,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              OrbitKindBadge(kind: g['kind'] as String),
-            ],
-          ),
-          const SizedBox(height: AppTokens.space2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  '${formatRupiah(current)} dari ${formatRupiah(target)}',
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: secondaryColor,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppTokens.space2),
-              OrbitStatusBadge(
-                label: '${(ratio * 100).round()}% Tercapai',
-                variant: ratio >= 1.0
-                    ? OrbitBadgeVariant.income
-                    : OrbitBadgeVariant.neutral,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppTokens.space2),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-            child: LinearProgressIndicator(
-              value: ratio,
-              minHeight: 8,
-              color: AppColors.accentColor(context),
-              backgroundColor: Theme.of(context).dividerColor,
+  Widget _buildGoalsTab(BuildContext context) {
+    if (_goals.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _loadData,
+        child: ListView(
+          children: [
+            const SizedBox(height: 36),
+            OrbitEmptyState(
+              icon: Icons.savings_outlined,
+              title: 'Belum ada target tabungan',
+              description:
+                  'Tetapkan target dana darurat, perangkat kerja, atau rencana masa depan.',
+              actionLabel: 'Buat Target',
+              onAction: _showAddGoalSheet,
             ),
-          ),
-        ],
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(AppTokens.space4),
+        itemCount: _goals.length,
+        separatorBuilder: (_, __) => const SizedBox(height: AppTokens.space2),
+        itemBuilder: (context, index) {
+          final goal = _goals[index];
+          final ratio = goal.targetAmount > 0
+              ? (goal.currentAmount / goal.targetAmount)
+              : 0.0;
+          return OrbitCard(
+            padding: const EdgeInsets.all(AppTokens.space4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        goal.name,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimaryColor(context),
+                        ),
+                      ),
+                    ),
+                    OrbitStatusBadge(
+                      label: goal.isCompleted
+                          ? 'Tercapai'
+                          : '${(ratio * 100).toStringAsFixed(0)}%',
+                      variant: goal.isCompleted
+                          ? OrbitBadgeVariant.income
+                          : OrbitBadgeVariant.neutral,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppTokens.space2),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: ratio.clamp(0.0, 1.0),
+                    minHeight: 8,
+                    backgroundColor: AppColors.subtleColor(context),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      goal.isCompleted
+                          ? AppColors.incomeColor(context)
+                          : AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppTokens.space2),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    OrbitPrivacyBuilder(
+                      builder: (context, _) => Text(
+                        '${PrivacyModeController.formatAmount(goal.currentAmount)} / ${PrivacyModeController.formatAmount(goal.targetAmount)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                          color: AppColors.textSecondaryColor(context),
+                        ),
+                      ),
+                    ),
+                    if (!goal.isCompleted)
+                      TextButton(
+                        onPressed: () => _showDepositGoalSheet(goal),
+                        style: TextButton.styleFrom(
+                          minimumSize: const Size(0, AppTokens.minTouchTarget),
+                        ),
+                        child: const Text('+ Setor'),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
       ),
+    );
+  }
+
+  void _handleQuickAddForTab() {
+    if (_tab == 'tagihan') {
+      _showAddBillSheet();
+    } else if (_tab == 'target') {
+      _showAddGoalSheet();
+    } else {
+      _showAddBudgetSheet();
+    }
+  }
+
+  Future<void> _showAddBudgetSheet() async {
+    final amountCtrl = TextEditingController();
+    String? categoryId = _categories.isNotEmpty ? _categories.first.id : null;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppTokens.space4,
+                AppTokens.space4,
+                AppTokens.space4,
+                MediaQuery.of(ctx).viewInsets.bottom + AppTokens.space4,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Buat Anggaran Bulanan',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimaryColor(ctx),
+                    ),
+                  ),
+                  const SizedBox(height: AppTokens.space3),
+                  if (_categories.isNotEmpty)
+                    DropdownButtonFormField<String>(
+                      initialValue: categoryId,
+                      decoration: const InputDecoration(
+                        labelText: 'Kategori',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _categories
+                          .map(
+                            (c) => DropdownMenuItem(
+                              value: c.id,
+                              child: Text(c.name),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setSheetState(() => categoryId = v),
+                    ),
+                  const SizedBox(height: AppTokens.space2),
+                  TextField(
+                    controller: amountCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Batas Anggaran (IDR)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: AppTokens.space3),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(0, AppTokens.minTouchTarget),
+                    ),
+                    onPressed: categoryId == null
+                        ? null
+                        : () async {
+                            final amount =
+                                double.tryParse(
+                                  amountCtrl.text.replaceAll(
+                                    RegExp(r'[^0-9.]'),
+                                    '',
+                                  ),
+                                ) ??
+                                0;
+                            if (amount <= 0) return;
+                            final wsId =
+                                (await SyncService.instance.getWorkspaceId()) ?? 'personal-ws';
+                            final id = const Uuid().v4();
+                            await AppDatabase.shared
+                                .into(AppDatabase.shared.localBudgets)
+                                .insertOnConflictUpdate(
+                                  LocalBudgetsCompanion.insert(
+                                    id: id,
+                                    workspaceId: wsId,
+                                    categoryId: categoryId!,
+                                    amount: amount,
+                                  ),
+                                );
+                            await SyncService.instance.pushRecord(
+                              tableName: 'budgets',
+                              recordId: id,
+                              action: 'insert',
+                              payload: {
+                                'id': id,
+                                'workspace_id': wsId,
+                                'category_id': categoryId!,
+                                'amount': amount,
+                                'period': 'monthly',
+                              },
+                            );
+                            if (!ctx.mounted) return;
+                            Navigator.of(ctx).pop();
+                            _loadData();
+                          },
+                    child: const Text('Simpan Anggaran'),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showAddBillSheet() async {
+    final nameCtrl = TextEditingController();
+    final amountCtrl = TextEditingController();
+    final dayCtrl = TextEditingController(text: '25');
+    final catId = _categories.isNotEmpty ? _categories.first.id : 'cat-default';
+    final accId = _accounts.isNotEmpty ? _accounts.first.id : 'acc-default';
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppTokens.space4,
+            AppTokens.space4,
+            AppTokens.space4,
+            MediaQuery.of(ctx).viewInsets.bottom + AppTokens.space4,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Tambah Tagihan Rutin',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimaryColor(ctx),
+                ),
+              ),
+              const SizedBox(height: AppTokens.space3),
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Nama Tagihan',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: AppTokens.space2),
+              TextField(
+                controller: amountCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Nominal (IDR)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: AppTokens.space2),
+              TextField(
+                controller: dayCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Tanggal Jatuh Tempo (1-28)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: AppTokens.space3),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(0, AppTokens.minTouchTarget),
+                ),
+                onPressed: () async {
+                  final name = nameCtrl.text.trim();
+                  final amount =
+                      double.tryParse(
+                        amountCtrl.text.replaceAll(RegExp(r'[^0-9.]'), ''),
+                      ) ??
+                      0;
+                  final day = (int.tryParse(dayCtrl.text) ?? 25).clamp(1, 28);
+                  if (name.isEmpty || amount <= 0) return;
+
+                  final wsId =
+                      (await SyncService.instance.getWorkspaceId()) ??
+                      'personal-ws';
+                  final id = const Uuid().v4();
+                  await AppDatabase.shared
+                      .into(AppDatabase.shared.localRecurringBills)
+                      .insertOnConflictUpdate(
+                        LocalRecurringBillsCompanion.insert(
+                          id: id,
+                          workspaceId: wsId,
+                          name: name,
+                          amount: amount,
+                          categoryId: catId,
+                          accountId: accId,
+                          scheduleType: const drift.Value('monthly'),
+                          scheduleValue: drift.Value(day),
+                        ),
+                      );
+                  await SyncService.instance.pushRecord(
+                    tableName: 'recurring_bills',
+                    recordId: id,
+                    action: 'insert',
+                    payload: {
+                      'id': id,
+                      'workspace_id': wsId,
+                      'name': name,
+                      'amount': amount,
+                      'category_id': catId,
+                      'account_id': accId,
+                      'schedule_type': 'monthly',
+                      'schedule_value': day,
+                      'active': true,
+                    },
+                  );
+                  if (!ctx.mounted) return;
+                  Navigator.of(ctx).pop();
+                  _loadData();
+                },
+                child: const Text('Simpan Tagihan'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showAddGoalSheet() async {
+    final nameCtrl = TextEditingController();
+    final targetCtrl = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppTokens.space4,
+            AppTokens.space4,
+            AppTokens.space4,
+            MediaQuery.of(ctx).viewInsets.bottom + AppTokens.space4,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Buat Target Tabungan',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimaryColor(ctx),
+                ),
+              ),
+              const SizedBox(height: AppTokens.space3),
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Nama Target',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: AppTokens.space2),
+              TextField(
+                controller: targetCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Nominal Target (IDR)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: AppTokens.space3),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(0, AppTokens.minTouchTarget),
+                ),
+                onPressed: () async {
+                  final name = nameCtrl.text.trim();
+                  final target =
+                      double.tryParse(
+                        targetCtrl.text.replaceAll(RegExp(r'[^0-9.]'), ''),
+                      ) ??
+                      0;
+                  if (name.isEmpty || target <= 0) return;
+
+                  final wsId = (await SyncService.instance.getWorkspaceId()) ?? 'personal-ws';
+                  final id = const Uuid().v4();
+                  await AppDatabase.shared
+                      .into(AppDatabase.shared.localSavingsGoals)
+                      .insertOnConflictUpdate(
+                        LocalSavingsGoalsCompanion.insert(
+                          id: id,
+                          workspaceId: wsId,
+                          name: name,
+                          targetAmount: target,
+                        ),
+                      );
+                  await SyncService.instance.pushRecord(
+                    tableName: 'savings_goals',
+                    recordId: id,
+                    action: 'insert',
+                    payload: {
+                      'id': id,
+                      'workspace_id': wsId,
+                      'name': name,
+                      'target_amount': target,
+                      'current_amount': 0,
+                      'is_completed': false,
+                    },
+                  );
+                  if (!ctx.mounted) return;
+                  Navigator.of(ctx).pop();
+                  _loadData();
+                },
+                child: const Text('Simpan Target'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showDepositGoalSheet(LocalSavingsGoal goal) async {
+    final addCtrl = TextEditingController();
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppTokens.space4,
+            AppTokens.space4,
+            AppTokens.space4,
+            MediaQuery.of(ctx).viewInsets.bottom + AppTokens.space4,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Setor ke ${goal.name}',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimaryColor(ctx),
+                ),
+              ),
+              const SizedBox(height: AppTokens.space3),
+              TextField(
+                controller: addCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Nominal Tambahan (IDR)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: AppTokens.space3),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(0, AppTokens.minTouchTarget),
+                ),
+                onPressed: () async {
+                  final delta =
+                      double.tryParse(
+                        addCtrl.text.replaceAll(RegExp(r'[^0-9.]'), ''),
+                      ) ??
+                      0;
+                  if (delta <= 0) return;
+                  final nextAmount = goal.currentAmount + delta;
+                  final completed = nextAmount >= goal.targetAmount;
+                  await (AppDatabase.shared.update(
+                    AppDatabase.shared.localSavingsGoals,
+                  )..where((g) => g.id.equals(goal.id))).write(
+                    LocalSavingsGoalsCompanion(
+                      currentAmount: drift.Value(nextAmount),
+                      isCompleted: drift.Value(completed),
+                    ),
+                  );
+                  await SyncService.instance.pushRecord(
+                    tableName: 'savings_goals',
+                    recordId: goal.id,
+                    action: 'update',
+                    payload: {
+                      'id': goal.id,
+                      'workspace_id': goal.workspaceId,
+                      'name': goal.name,
+                      'target_amount': goal.targetAmount,
+                      'current_amount': nextAmount,
+                      'is_completed': completed,
+                    },
+                  );
+                  if (!ctx.mounted) return;
+                  Navigator.of(ctx).pop();
+                  _loadData();
+                },
+                child: const Text('Simpan Setoran'),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

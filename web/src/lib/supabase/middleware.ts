@@ -8,6 +8,19 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
+  const pathname = request.nextUrl.pathname;
+  const isPublicPwaPath =
+    pathname === '/manifest.webmanifest' ||
+    pathname === '/sw.js' ||
+    pathname === '/offline';
+
+  if (isPublicPwaPath) {
+    if (pathname === '/sw.js') {
+      response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+    return response;
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 

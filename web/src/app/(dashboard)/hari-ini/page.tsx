@@ -1,26 +1,54 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   AlertCircle,
   AlertTriangle,
   ArrowRight,
+  BellRing,
   Calendar,
   CheckCircle2,
   CheckSquare,
   Circle,
-  Clock,
+  Copy,
+  ExternalLink,
   Inbox,
+  Mail,
   MapPin,
   Plus,
   Receipt,
+  RotateCcw,
+  Sparkles,
   Wallet,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { formatCurrency, formatDateIndo, getGreeting } from '@/lib/format';
-import type { ActivityKind } from '@/types/database';
 import {
+  formatDateIndo,
+  getDateKeyInTimezone,
+  getGreeting,
+} from '@/lib/format';
+import {
+  buildWeeklyDigestSummary,
+  detectSmartAlerts,
+  type AlertBillInput,
+  type AlertBudgetInput,
+  type AlertEventInput,
+  type DigestTransactionInput,
+} from '@/lib/smart-alerts';
+import { usePrivacyMode } from '@/lib/privacy-mode';
+import { RealtimeStatusBadge, useOrbitRealtime } from '@/lib/use-orbit-realtime';
+import {
+  computeAttentionSummary,
+  computeTaskProgress,
+  getStagnantDays,
+  isTaskOverdue,
+  isTaskStagnant,
+} from '@/lib/task-v2';
+import type { ActivityKind, TaskPriority, TaskStatus } from '@/types/database';
+import {
+  AttentionBannerCard,
+  type AttentionPreviewItem,
   Button,
   Card,
   CardContent,
@@ -32,11 +60,24 @@ import {
   ErrorState,
   Input,
   KindBadge,
+  ProgressControl,
   Select,
   Skeleton,
   StatusBadge,
+  TaskStatusBadge,
 } from '@/components/ui';
 import { TransactionFormModal } from '@/components/transaction-form-modal';
+import {
+  changeTaskStatusWithRpc,
+  mapRawTaskRow,
+} from '@/components/tasks/task-actions';
+import { RevisionDialog } from '@/components/tasks/revision-dialog';
+import { DetailPeek } from '@/components/tasks/detail-peek';
+import type {
+  PaymentOption,
+  ProjectOption,
+  TaskRecord,
+} from '@/components/tasks/types';
 
 type AgendaItem = {
   id: string;
@@ -96,15 +137,22 @@ type AccountItem = {
   currency: string;
 };
 
+const ACTIVE_WORKSPACE_STORAGE_KEY = 'orbit_active_workspace_id';
 
 export default function HariIniPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+  const { privacyMode, formatAmount } = usePrivacyMode();
+
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [statusFeedback, setStatusFeedback] = useState<string | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [selectedKind, setSelectedKind] = useState<ActivityKind | 'all'>('all');
 
   const [agendaItems, setAgendaItems] = useState<AgendaItem[]>([]);
+  const [workspaceTasks, setWorkspaceTasks] = useState<TaskRecord[]>([]);
+  const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [payments, setPayments] = useState<PaymentOption[]>([]);
   const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
   const [isHeavyDay, setIsHeavyDay] = useState(false);
   const [receivables, setReceivables] = useState<ReceivableItem[]>([]);
@@ -113,6 +161,13 @@ export default function HariIniPage() {
   const [todayExpense, setTodayExpense] = useState<number>(0);
   const [draftCount, setDraftCount] = useState<number>(0);
   const [accounts, setAccounts] = useState<AccountItem[]>([]);
+
+  const [peekTaskId, setPeekTaskId] = useState<string | null>(null);
+  const [pendingRevision, setPendingRevision] = useState<{
+    task: TaskRecord;
+    toStatus: TaskStatus;
+  } | null>(null);
+  const [revisionSubmitting, setRevisionSubmitting] = useState(false);
 
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
   const [pendingMilestoneId, setPendingMilestoneId] = useState<string | null>(null);
@@ -123,84 +178,161 @@ export default function HariIniPage() {
   const [showQuickTaskModal, setShowQuickTaskModal] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskKind, setNewTaskKind] = useState<ActivityKind>('pribadi');
-  const [newTaskPriority, setNewTaskPriority] = useState<'rendah' | 'sedang' | 'tinggi'>('sedang');
+  const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>('sedang');
   const [savingTask, setSavingTask] = useState(false);
 
   const [showTxModal, setShowTxModal] = useState(false);
 
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
+  const [digestBudgets, setDigestBudgets] = useState<AlertBudgetInput[]>([]);
+  const [digestBills, setDigestBills] = useState<AlertBillInput[]>([]);
+  const [digestTransactions, setDigestTransactions] = useState<DigestTransactionInput[]>([]);
+  const [weekEvents, setWeekEvents] = useState<AlertEventInput[]>([]);
+  const [digestCopied, setDigestCopied] = useState(false);
+  const [browserNotifFeedback, setBrowserNotifFeedback] = useState<string | null>(null);
+
+  const todayStr = useMemo(
+    () => getDateKeyInTimezone(new Date(), 'Asia/Jakarta'),
+    []
+  );
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setErrorMessage(null);
 
     try {
-      const { data: memberData, error: memberErr } = await supabase
+      const { data: memberships, error: memberErr } = await supabase
         .from('workspace_members')
-        .select('workspace_id')
-        .limit(1)
-        .single();
+        .select('workspace_id');
 
       if (memberErr && memberErr.code !== 'PGRST116') {
         throw new Error(memberErr.message || 'Gagal memuat workspace.');
       }
 
-      if (!memberData) {
+      if (!memberships || memberships.length === 0) {
         setAgendaItems([]);
+        setWorkspaceTasks([]);
         setLoading(false);
         return;
       }
 
-      const wsId = memberData.workspace_id;
+      const preferredWs =
+        typeof window !== 'undefined'
+          ? window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY)
+          : null;
+      const wsId =
+        memberships.find((m) => m.workspace_id === preferredWs)?.workspace_id ??
+        memberships[0].workspace_id;
+
       setWorkspaceId(wsId);
 
       const kindFilter = selectedKind === 'all' ? undefined : selectedKind;
+      const nowMs = Date.now();
+      const past7Iso = new Date(nowMs - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const next7Iso = new Date(nowMs + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-      const [accRes, agendaRes, conflictRes, recRes, balRes, todayTxRes, draftRes] =
-        await Promise.all([
-          supabase
-            .from('accounts')
-            .select('id, name, currency')
-            .eq('workspace_id', wsId)
-            .is('deleted_at', null)
-            .order('sort_order'),
-          supabase.rpc('fn_agenda', {
-            p_workspace_id: wsId,
-            p_start_date: todayStr,
-            p_end_date: todayStr,
-            p_kind: kindFilter,
-          }),
-          supabase.rpc('fn_detect_conflicts', {
-            p_workspace_id: wsId,
-            p_start_date: todayStr,
-            p_end_date: todayStr,
-          }),
-          supabase
-            .from('v_receivables')
-            .select('*')
-            .eq('workspace_id', wsId)
-            .order('due_date', { ascending: true })
-            .limit(3),
-          supabase
-            .from('v_account_balances')
-            .select('balance, is_liquid')
-            .eq('workspace_id', wsId),
-          supabase
-            .from('transactions')
-            .select('type, amount, occurred_at, status')
-            .eq('workspace_id', wsId)
-            .eq('status', 'confirmed')
-            .is('deleted_at', null)
-            .gte('occurred_at', `${todayStr}T00:00:00.000Z`)
-            .lte('occurred_at', `${todayStr}T23:59:59.999Z`),
-          supabase
-            .from('transactions')
-            .select('*', { count: 'exact', head: true })
-            .eq('workspace_id', wsId)
-            .eq('status', 'draft')
-            .is('deleted_at', null),
-        ]);
+      const [
+        accRes,
+        agendaRes,
+        conflictRes,
+        recRes,
+        balRes,
+        todayTxRes,
+        draftRes,
+        tasksRes,
+        projectsRes,
+        paymentsRes,
+        budgetRes,
+        billsRes,
+        weekTxRes,
+        weekEventsRes,
+      ] = await Promise.all([
+        supabase
+          .from('accounts')
+          .select('id, name, currency')
+          .eq('workspace_id', wsId)
+          .is('deleted_at', null)
+          .order('sort_order'),
+        supabase.rpc('fn_agenda', {
+          p_workspace_id: wsId,
+          p_start_date: todayStr,
+          p_end_date: todayStr,
+          p_kind: kindFilter,
+        }),
+        supabase.rpc('fn_detect_conflicts', {
+          p_workspace_id: wsId,
+          p_start_date: todayStr,
+          p_end_date: todayStr,
+        }),
+        supabase
+          .from('v_receivables')
+          .select('*')
+          .eq('workspace_id', wsId)
+          .order('due_date', { ascending: true })
+          .limit(3),
+        supabase
+          .from('v_account_balances')
+          .select('balance, is_liquid')
+          .eq('workspace_id', wsId),
+        supabase
+          .from('transactions')
+          .select('type, amount, occurred_at, status')
+          .eq('workspace_id', wsId)
+          .eq('status', 'confirmed')
+          .is('deleted_at', null)
+          .gte('occurred_at', `${todayStr}T00:00:00+07:00`)
+          .lte('occurred_at', `${todayStr}T23:59:59+07:00`),
+        supabase
+          .from('transactions')
+          .select('*', { count: 'exact', head: true })
+          .eq('workspace_id', wsId)
+          .eq('status', 'draft')
+          .is('deleted_at', null),
+        supabase
+          .from('tasks')
+          .select(
+            '*, projects(name), task_checklist_items(id, task_id, text, done, sort_order, created_at, updated_at)'
+          )
+          .eq('workspace_id', wsId)
+          .is('deleted_at', null)
+          .order('sort_order', { ascending: true }),
+        supabase
+          .from('projects')
+          .select('id, name, kind')
+          .eq('workspace_id', wsId)
+          .is('deleted_at', null)
+          .order('name', { ascending: true }),
+        supabase
+          .from('project_payments')
+          .select('id, project_id, label, amount')
+          .eq('workspace_id', wsId)
+          .eq('status', 'expected')
+          .is('deleted_at', null),
+        supabase
+          .from('v_budget_progress')
+          .select(
+            'budget_id, category_id, category_name, effective_budget_amount, spent_amount, percentage_spent, is_over_budget, is_warning, notify_at_percent'
+          )
+          .eq('workspace_id', wsId),
+        supabase
+          .from('recurring_bills')
+          .select('id, name, amount, currency, active, schedule_type, schedule_value')
+          .eq('workspace_id', wsId)
+          .is('deleted_at', null),
+        supabase
+          .from('transactions')
+          .select('id, type, amount, occurred_at, status, deleted_at')
+          .eq('workspace_id', wsId)
+          .eq('status', 'confirmed')
+          .is('deleted_at', null)
+          .gte('occurred_at', past7Iso),
+        supabase
+          .from('events')
+          .select('id, title, starts_at, ends_at, all_day')
+          .eq('workspace_id', wsId)
+          .is('deleted_at', null)
+          .gte('ends_at', new Date(nowMs - 2 * 60 * 60 * 1000).toISOString())
+          .lte('starts_at', next7Iso),
+      ]);
 
       if (accRes.error) throw new Error(accRes.error.message);
 
@@ -249,48 +381,326 @@ export default function HariIniPage() {
       }
 
       setDraftCount(draftRes.count || 0);
-    } catch (err: any) {
-      setErrorMessage(err?.message || 'Gagal memuat ringkasan hari ini.');
+
+      if (!tasksRes.error && tasksRes.data) {
+        const mapped = (tasksRes.data as unknown as Record<string, unknown>[]).map(
+          mapRawTaskRow
+        );
+        setWorkspaceTasks(mapped);
+      } else {
+        setWorkspaceTasks([]);
+      }
+
+      if (!projectsRes.error && projectsRes.data) {
+        setProjects(
+          projectsRes.data.map((p) => ({
+            id: p.id,
+            name: p.name,
+            kind: p.kind,
+          }))
+        );
+      }
+
+      if (!paymentsRes.error && paymentsRes.data) {
+        setPayments(
+          paymentsRes.data.map((pay) => ({
+            id: pay.id,
+            project_id: pay.project_id,
+            label: pay.label,
+            amount: Number(pay.amount),
+          }))
+        );
+      }
+
+      setDigestBudgets(!budgetRes.error && Array.isArray(budgetRes.data) ? (budgetRes.data as AlertBudgetInput[]) : []);
+      setDigestBills(!billsRes.error && Array.isArray(billsRes.data) ? (billsRes.data as AlertBillInput[]) : []);
+      setDigestTransactions(
+        !weekTxRes.error && Array.isArray(weekTxRes.data)
+          ? (weekTxRes.data as DigestTransactionInput[])
+          : []
+      );
+      setWeekEvents(
+        !weekEventsRes.error && Array.isArray(weekEventsRes.data)
+          ? (weekEventsRes.data as AlertEventInput[])
+          : []
+      );
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : 'Gagal memuat ringkasan hari ini.'
+      );
     } finally {
       setLoading(false);
     }
   }, [supabase, todayStr, selectedKind, selectedAccountId]);
 
   useEffect(() => {
-    loadData();
-    const onTxCreated = () => loadData();
-    window.addEventListener('orbit:transaction-created', onTxCreated);
-    return () => window.removeEventListener('orbit:transaction-created', onTxCreated);
+    void loadData();
+    const onRefresh = () => void loadData();
+    window.addEventListener('orbit:transaction-created', onRefresh);
+    window.addEventListener('orbit:workspace-changed', onRefresh);
+    return () => {
+      window.removeEventListener('orbit:transaction-created', onRefresh);
+      window.removeEventListener('orbit:workspace-changed', onRefresh);
+    };
   }, [loadData]);
 
-  const handleToggleTask = async (task: AgendaItem) => {
-    const wasDone = task.status === 'done';
+  const { status: realtimeStatus } = useOrbitRealtime({
+    workspaceId,
+    tables: ['tasks', 'transactions', 'events', 'budgets', 'project_payments'],
+    onChange: loadData,
+  });
 
-    setAgendaItems((prev) =>
-      prev.map((item) =>
-        item.id === task.id
-          ? {
-              ...item,
-              status: wasDone ? 'todo' : 'done',
-              checklist_done: wasDone ? item.checklist_done : item.checklist_total,
-            }
-          : item
-      )
-    );
+  const smartAlerts = useMemo(
+    () =>
+      detectSmartAlerts({
+        events: weekEvents,
+        tasks: workspaceTasks,
+        budgets: digestBudgets,
+        bills: digestBills,
+      }),
+    [weekEvents, workspaceTasks, digestBudgets, digestBills]
+  );
 
-    const { data: updatedTask, error } = await supabase.rpc('fn_complete_task', {
-      p_task_id: task.id,
-    });
+  const weeklyDigest = useMemo(
+    () =>
+      buildWeeklyDigestSummary({
+        tasks: workspaceTasks,
+        transactions: digestTransactions,
+        events: weekEvents,
+        bills: digestBills,
+        maskAmounts: privacyMode,
+      }),
+    [workspaceTasks, digestTransactions, weekEvents, digestBills, privacyMode]
+  );
 
-    if (error) {
-      loadData();
+  const handleCopyWeeklyDigest = async () => {
+    try {
+      await navigator.clipboard.writeText(weeklyDigest.plainText);
+      setDigestCopied(true);
+      setTimeout(() => setDigestCopied(false), 2000);
+    } catch {
+      setBrowserNotifFeedback('Gagal menyalin ringkasan ke clipboard.');
+    }
+  };
+
+  const handleSendBrowserNotification = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      setBrowserNotifFeedback('Browser ini belum mendukung Web Notification API.');
       return;
     }
+    try {
+      let permission = Notification.permission;
+      if (permission === 'default') {
+        permission = await Notification.requestPermission();
+      }
+      if (permission !== 'granted') {
+        setBrowserNotifFeedback(
+          'Izin notifikasi browser belum diizinkan. Aktifkan izin notifikasi pada pengaturan situs browser Anda.'
+        );
+        return;
+      }
 
-    if (!wasDone && updatedTask && updatedTask.milestone_payment_id) {
-      setPendingMilestoneId(updatedTask.milestone_payment_id);
-      setPendingTaskTitle(task.title);
-      setShowMilestoneModal(true);
+      const alertHeadline =
+        smartAlerts.length > 0
+          ? smartAlerts[0].title
+          : `${weeklyDigest.next7Days.activeTasksCount} tugas aktif dan ${weeklyDigest.next7Days.upcomingEventsCount} agenda minggu ini.`;
+
+      new Notification('Pengingat Orbit', {
+        body: privacyMode
+          ? 'Ada pembaruan penting di ruang kerja Anda. Buka Orbit untuk melihat detail.'
+          : alertHeadline,
+        icon: '/orbit-icon-192.png',
+      });
+      setBrowserNotifFeedback('Notifikasi uji browser berhasil dikirim.');
+    } catch {
+      setBrowserNotifFeedback('Gagal menampilkan notifikasi uji di browser ini.');
+    }
+  };
+
+  const subtasksByParent = useMemo(() => {
+    const map = new Map<string, TaskRecord[]>();
+    for (const item of workspaceTasks) {
+      if (!item.parent_task_id) continue;
+      const arr = map.get(item.parent_task_id) ?? [];
+      arr.push(item);
+      map.set(item.parent_task_id, arr);
+    }
+    return map;
+  }, [workspaceTasks]);
+
+  const kindFilteredWorkspaceTasks = useMemo(() => {
+    if (selectedKind === 'all') return workspaceTasks;
+    return workspaceTasks.filter((t) => t.kind === selectedKind);
+  }, [workspaceTasks, selectedKind]);
+
+  const attentionSummary = useMemo(
+    () =>
+      computeAttentionSummary({
+        tasks: kindFilteredWorkspaceTasks,
+        conflictCount: conflicts.length,
+      }),
+    [kindFilteredWorkspaceTasks, conflicts.length]
+  );
+
+  const attentionPreviewItems: AttentionPreviewItem[] = useMemo(() => {
+    const out: AttentionPreviewItem[] = [];
+    for (const t of kindFilteredWorkspaceTasks) {
+      if (t.status === 'done') continue;
+      if (t.status === 'revisi') {
+        out.push({
+          id: `rev-${t.id}`,
+          title: t.title,
+          badge: `Revisi ${t.revision_count}x`,
+          tone: 'warning',
+          subtitle: t.latest_revision_note ?? undefined,
+          onClick: () => setPeekTaskId(t.id),
+        });
+      } else if (isTaskOverdue(t)) {
+        out.push({
+          id: `due-${t.id}`,
+          title: t.title,
+          badge: 'Terlambat',
+          tone: 'expense',
+          subtitle: t.project_name ?? undefined,
+          onClick: () => setPeekTaskId(t.id),
+        });
+      } else if (isTaskStagnant(t)) {
+        out.push({
+          id: `stg-${t.id}`,
+          title: t.title,
+          badge: `Macet ${getStagnantDays(t)}h`,
+          tone: 'warning',
+          subtitle: t.project_name ?? undefined,
+          onClick: () => setPeekTaskId(t.id),
+        });
+      }
+      if (out.length >= 6) break;
+    }
+    return out;
+  }, [kindFilteredWorkspaceTasks]);
+
+  // Daftar tugas fokus hari ini: gabungan hasil fn_agenda + task terlambat / revisi aktif
+  const focusTaskRecords = useMemo(() => {
+    const agendaTaskIds = new Set(
+      agendaItems.filter((i) => i.item_type === 'task').map((i) => i.id)
+    );
+    const taskMap = new Map(kindFilteredWorkspaceTasks.map((t) => [t.id, t]));
+    const collected: TaskRecord[] = [];
+    const seen = new Set<string>();
+
+    // 1. Tugas terlambat atau revisi dari workspaceTasks
+    for (const t of kindFilteredWorkspaceTasks) {
+      if (t.parent_task_id || t.status === 'done') continue;
+      if (t.status === 'revisi' || isTaskOverdue(t)) {
+        collected.push(t);
+        seen.add(t.id);
+      }
+    }
+
+    // 2. Tugas hari ini dari agendaItems (enriched dari workspaceTasks jika tersedia)
+    for (const item of agendaItems) {
+      if (item.item_type !== 'task' || seen.has(item.id)) continue;
+      const existing = taskMap.get(item.id);
+      if (existing) {
+        collected.push(existing);
+      } else if (agendaTaskIds.has(item.id)) {
+        collected.push(
+          mapRawTaskRow({
+            id: item.id,
+            workspace_id: workspaceId ?? '',
+            project_id: item.project_id,
+            project_name: item.project_name,
+            kind: item.kind,
+            title: item.title,
+            description: item.description,
+            status: item.status,
+            priority: item.priority ?? 'sedang',
+            due_at: item.due_at,
+            due_is_date_only: item.due_is_date_only,
+            milestone_payment_id: item.milestone_payment_id,
+          })
+        );
+      }
+      seen.add(item.id);
+    }
+
+    return collected;
+  }, [agendaItems, kindFilteredWorkspaceTasks, workspaceId]);
+
+  const executeStatusTransition = useCallback(
+    async (task: TaskRecord, toStatus: TaskStatus, note?: string | null) => {
+      setStatusFeedback(null);
+      const prevTasks = workspaceTasks;
+
+      setWorkspaceTasks((prev) =>
+        prev.map((item) =>
+          item.id === task.id
+            ? {
+                ...item,
+                status: toStatus,
+                progress_percent: toStatus === 'done' ? 100 : item.progress_percent,
+                completed_at:
+                  toStatus === 'done'
+                    ? item.completed_at || new Date().toISOString()
+                    : null,
+                revision_count:
+                  toStatus === 'revisi' && task.status !== 'revisi'
+                    ? item.revision_count + 1
+                    : item.revision_count,
+                latest_revision_note:
+                  toStatus === 'revisi' && note ? note : item.latest_revision_note,
+              }
+            : item
+        )
+      );
+
+      const res = await changeTaskStatusWithRpc({
+        supabase,
+        task,
+        toStatus,
+        note: note ?? null,
+      });
+
+      if (!res.ok) {
+        setWorkspaceTasks(prevTasks);
+        setStatusFeedback(res.errorMessage ?? 'Gagal mengubah status tugas.');
+        return;
+      }
+
+      if (res.updatedRow) {
+        setWorkspaceTasks((prev) =>
+          prev.map((item) => (item.id === task.id ? res.updatedRow! : item))
+        );
+      }
+
+      if (toStatus === 'done' && task.milestone_payment_id) {
+        setPendingMilestoneId(task.milestone_payment_id);
+        setPendingTaskTitle(task.title);
+        setShowMilestoneModal(true);
+      }
+    },
+    [supabase, workspaceTasks]
+  );
+
+  const handleRequestStatusChange = useCallback(
+    async (task: TaskRecord, toStatus: TaskStatus) => {
+      if (toStatus === 'revisi' && task.status !== 'revisi') {
+        setPendingRevision({ task, toStatus });
+        return;
+      }
+      await executeStatusTransition(task, toStatus);
+    },
+    [executeStatusTransition]
+  );
+
+  const handleConfirmRevision = async (note: string) => {
+    if (!pendingRevision) return;
+    setRevisionSubmitting(true);
+    try {
+      await executeStatusTransition(pendingRevision.task, pendingRevision.toStatus, note);
+      setPendingRevision(null);
+    } finally {
+      setRevisionSubmitting(false);
     }
   };
 
@@ -308,7 +718,7 @@ export default function HariIniPage() {
     setPendingMilestoneId(null);
 
     if (!error) {
-      loadData();
+      void loadData();
     }
   };
 
@@ -322,7 +732,7 @@ export default function HariIniPage() {
       title: newTaskTitle.trim(),
       kind: newTaskKind,
       priority: newTaskPriority,
-      due_at: new Date().toISOString(),
+      due_at: new Date(`${todayStr}T23:59:59+07:00`).toISOString(),
       due_is_date_only: true,
       status: 'todo',
     });
@@ -331,25 +741,29 @@ export default function HariIniPage() {
     if (!error) {
       setNewTaskTitle('');
       setShowQuickTaskModal(false);
-      loadData();
+      void loadData();
     }
   };
 
-  const overdueTasks = agendaItems.filter((i) => i.item_type === 'task' && i.is_overdue);
   const scheduledEvents = agendaItems.filter((i) => i.item_type === 'event');
-  const todayTasks = agendaItems.filter((i) => i.item_type === 'task' && !i.is_overdue);
   const conflictEventIds = new Set(
     conflicts.flatMap((c) => [c.event1_id, c.event2_id]).filter(Boolean) as string[]
   );
+  const activePeekTask = peekTaskId
+    ? workspaceTasks.find((t) => t.id === peekTaskId) ?? null
+    : null;
 
   return (
     <div className="space-y-6">
       {/* Header Sapaan & Tanggal */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-            {formatDateIndo(todayStr)}
-          </p>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+              {formatDateIndo(todayStr)}
+            </p>
+            <RealtimeStatusBadge status={realtimeStatus} />
+          </div>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
             {getGreeting()}
           </h1>
@@ -406,9 +820,36 @@ export default function HariIniPage() {
       </div>
 
       {/* State Error */}
-      {errorMessage && <ErrorState message={errorMessage} onRetry={loadData} />}
+      {errorMessage && <ErrorState message={errorMessage} onRetry={() => void loadData()} />}
 
-      {/* Peringatan Benturan Jadwal atau Hari Padat */}
+      {statusFeedback && (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-2 rounded-lg border border-expense-border bg-expense-subtle px-3.5 py-2.5 text-xs text-expense"
+        >
+          <span>{statusFeedback}</span>
+          <button
+            type="button"
+            onClick={() => setStatusFeedback(null)}
+            className="font-medium underline"
+          >
+            Tutup
+          </button>
+        </div>
+      )}
+
+      {/* Attention Banner Card (D.2) */}
+      {!loading && !errorMessage && (
+        <AttentionBannerCard
+          overdueCount={attentionSummary.overdueCount}
+          revisiCount={attentionSummary.revisiCount}
+          stagnantCount={attentionSummary.stagnantCount}
+          conflictCount={attentionSummary.conflictCount}
+          items={attentionPreviewItems}
+        />
+      )}
+
+      {/* Peringatan Detail Benturan Jadwal atau Hari Padat */}
       {!loading && !errorMessage && (conflicts.length > 0 || isHeavyDay) && (
         <div className="space-y-2" role="region" aria-label="Peringatan jadwal">
           {conflicts.map((c, idx) => (
@@ -420,7 +861,8 @@ export default function HariIniPage() {
               <div>
                 <span className="font-semibold">Benturan Jadwal: </span>
                 <span>
-                  &ldquo;{c.event1_title}&rdquo; dan &ldquo;{c.event2_title}&rdquo; berada pada jam yang tumpang tindih.
+                  &ldquo;{c.event1_title}&rdquo; dan &ldquo;{c.event2_title}&rdquo; berada
+                  pada jam yang tumpang tindih.
                 </span>
               </div>
             </div>
@@ -438,9 +880,9 @@ export default function HariIniPage() {
         </div>
       )}
 
-      {/* Urutan PRD M10c: 1. Jadwal & Tugas Hari Ini, 2. Ringkasan Uang Hari Itu */}
+      {/* Grid Utama */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Kolom Kiri (7 kolom): Jadwal & Tugas Hari Ini */}
+        {/* Kolom Kiri (7 kolom): Jadwal & Tugas Fokus Hari Ini */}
         <div className="lg:col-span-7 space-y-6">
           {/* 1A. Jadwal Hari Ini */}
           <Card>
@@ -478,20 +920,27 @@ export default function HariIniPage() {
                   {scheduledEvents.map((evt) => {
                     const startTime = evt.starts_at
                       ? new Date(evt.starts_at).toLocaleTimeString('id-ID', {
+                          timeZone: 'Asia/Jakarta',
                           hour: '2-digit',
                           minute: '2-digit',
                         })
                       : '--:--';
                     const endTime = evt.ends_at
                       ? new Date(evt.ends_at).toLocaleTimeString('id-ID', {
+                          timeZone: 'Asia/Jakarta',
                           hour: '2-digit',
                           minute: '2-digit',
                         })
                       : '--:--';
-                    const hasConflict = evt.event_id ? conflictEventIds.has(evt.event_id) : false;
+                    const hasConflict = evt.event_id
+                      ? conflictEventIds.has(evt.event_id)
+                      : false;
 
                     return (
-                      <div key={evt.id} className="flex items-start gap-4 py-3 first:pt-0 last:pb-0">
+                      <div
+                        key={evt.id}
+                        className="flex items-start gap-4 py-3 first:pt-0 last:pb-0"
+                      >
                         <div className="w-24 shrink-0 pt-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
                           {evt.all_day ? 'Seharian' : `${startTime} - ${endTime}`}
                         </div>
@@ -513,7 +962,9 @@ export default function HariIniPage() {
                                   <span>{evt.location}</span>
                                 </span>
                               )}
-                              {evt.project_name && <span>Kegiatan: {evt.project_name}</span>}
+                              {evt.project_name && (
+                                <span>Kegiatan: {evt.project_name}</span>
+                              )}
                             </div>
                           )}
                         </div>
@@ -525,21 +976,23 @@ export default function HariIniPage() {
             </CardContent>
           </Card>
 
-          {/* 1B. Tugas Terlambat & Tugas Hari Ini */}
+          {/* 1B. Tugas Fokus & Perhatian Hari Ini (D.2) */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
                 <CheckSquare className="h-4 w-4 text-primary" aria-hidden="true" />
-                <CardTitle>Tugas Hari Ini</CardTitle>
-                <StatusBadge variant={overdueTasks.length > 0 ? 'expense' : 'neutral'}>
-                  {todayTasks.length + overdueTasks.length}
+                <CardTitle>Tugas Fokus Hari Ini</CardTitle>
+                <StatusBadge
+                  variant={attentionSummary.overdueCount > 0 ? 'expense' : 'neutral'}
+                >
+                  {focusTaskRecords.length}
                 </StatusBadge>
               </div>
               <Link
                 href="/tugas"
                 className="min-h-11 inline-flex items-center gap-1 px-2 text-xs font-medium text-primary hover:underline"
               >
-                <span>Semua Tugas</span>
+                <span>Buka Papan Tugas</span>
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
               </Link>
             </CardHeader>
@@ -550,26 +1003,41 @@ export default function HariIniPage() {
                   <Skeleton className="h-14 w-full" />
                   <Skeleton className="h-14 w-full" />
                 </div>
-              ) : overdueTasks.length === 0 && todayTasks.length === 0 ? (
+              ) : focusTaskRecords.length === 0 ? (
                 <EmptyState
-                  title="Tidak ada tugas yang jatuh tempo"
-                  description="Semua tugas hari ini telah selesai atau belum ada tugas baru."
+                  title="Tidak ada tugas jatuh tempo atau revisi"
+                  description="Semua tugas prioritas hari ini aman. Tambah tugas cepat atau buka papan tugas."
                   actionLabel="Tambah Tugas Cepat"
                   onAction={() => setShowQuickTaskModal(true)}
                 />
               ) : (
                 <div className="divide-y divide-border">
-                  {[...overdueTasks, ...todayTasks].map((task) => {
+                  {focusTaskRecords.map((task) => {
                     const isDone = task.status === 'done';
+                    const overdue = isTaskOverdue(task);
+                    const stagnant = isTaskStagnant(task);
+                    const subtasks = subtasksByParent.get(task.id) ?? [];
+                    const progress = computeTaskProgress({
+                      status: task.status,
+                      progressPercent: task.progress_percent,
+                      checklistItems: task.checklist_items,
+                      subtasks,
+                    });
+
                     return (
                       <div
                         key={task.id}
-                        className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+                        className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
                       >
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="flex items-start gap-2 min-w-0 flex-1">
                           <button
                             type="button"
-                            onClick={() => handleToggleTask(task)}
+                            onClick={() =>
+                              void handleRequestStatusChange(
+                                task,
+                                isDone ? 'todo' : 'done'
+                              )
+                            }
                             aria-label={
                               isDone
                                 ? `Tandai tugas ${task.title} belum selesai`
@@ -584,35 +1052,77 @@ export default function HariIniPage() {
                             )}
                           </button>
 
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setPeekTaskId(task.id)}
                                 className={cn(
-                                  'text-sm font-medium text-foreground truncate',
+                                  'text-left text-sm font-medium text-foreground hover:text-primary hover:underline truncate max-w-full',
                                   isDone && 'line-through text-muted-foreground'
                                 )}
                               >
                                 {task.title}
-                              </span>
+                              </button>
                               <KindBadge kind={task.kind} />
-                              {task.is_overdue && !isDone && (
+                              <TaskStatusBadge status={task.status} compact />
+                              {overdue && !isDone && (
                                 <StatusBadge variant="expense">Terlambat</StatusBadge>
                               )}
-                              {task.priority === 'tinggi' && (
-                                <StatusBadge variant="warning">Prioritas Tinggi</StatusBadge>
+                              {task.revision_count > 0 && (
+                                <StatusBadge variant="warning">
+                                  <RotateCcw className="h-3 w-3" strokeWidth={1.75} />
+                                  Revisi {task.revision_count}x
+                                </StatusBadge>
+                              )}
+                              {stagnant && (
+                                <StatusBadge variant="warning">
+                                  Macet {getStagnantDays(task)}h
+                                </StatusBadge>
                               )}
                             </div>
-                            {(task.project_name || task.checklist_total > 0) && (
-                              <div className="mt-0.5 flex items-center gap-3 text-xs text-muted-foreground">
-                                {task.project_name && <span>{task.project_name}</span>}
-                                {task.checklist_total > 0 && (
-                                  <span className="tabular-nums">
-                                    Checklist {task.checklist_done}/{task.checklist_total}
-                                  </span>
-                                )}
+
+                            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                              {task.project_name && <span>{task.project_name}</span>}
+                              {task.checklist_items.length > 0 && (
+                                <span className="tabular-nums">
+                                  Checklist{' '}
+                                  {task.checklist_items.filter((c) => c.done).length}/
+                                  {task.checklist_items.length}
+                                </span>
+                              )}
+                              <div className="w-24">
+                                <ProgressControl value={progress.percent} compact />
                               </div>
-                            )}
+                            </div>
                           </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 pl-11 sm:pl-0 shrink-0">
+                          <select
+                            aria-label={`Ubah status ${task.title}`}
+                            value={task.status}
+                            onChange={(e) =>
+                              void handleRequestStatusChange(
+                                task,
+                                e.target.value as TaskStatus
+                              )
+                            }
+                            className="h-9 rounded-md border border-border bg-surface px-2 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                          >
+                            <option value="todo">Belum dikerjakan</option>
+                            <option value="doing">Dikerjakan</option>
+                            <option value="revisi">Revisi</option>
+                            <option value="done">Selesai</option>
+                          </select>
+                          <Link
+                            href={`/tugas?task=${task.id}`}
+                            aria-label={`Buka ${task.title} di Papan Tugas`}
+                            title="Buka di Papan Tugas"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-hover hover:text-foreground"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.75} />
+                          </Link>
                         </div>
                       </div>
                     );
@@ -656,7 +1166,7 @@ export default function HariIniPage() {
                       Total Saldo Likuid Tersedia
                     </span>
                     <div className="mt-1 text-2xl font-bold tabular-nums text-foreground">
-                      {formatCurrency(liquidBalance)}
+                      {formatAmount(liquidBalance)}
                     </div>
                   </div>
 
@@ -667,7 +1177,7 @@ export default function HariIniPage() {
                         Pemasukan Hari Ini
                       </span>
                       <div className="mt-1 text-base font-bold tabular-nums text-income">
-                        +{formatCurrency(todayIncome)}
+                        +{formatAmount(todayIncome)}
                       </div>
                     </div>
                     <div className="rounded-lg border border-border bg-card p-3.5">
@@ -675,7 +1185,7 @@ export default function HariIniPage() {
                         Pengeluaran Hari Ini
                       </span>
                       <div className="mt-1 text-base font-bold tabular-nums text-expense">
-                        -{formatCurrency(todayExpense)}
+                        -{formatAmount(todayExpense)}
                       </div>
                     </div>
                   </div>
@@ -698,7 +1208,7 @@ export default function HariIniPage() {
             </CardContent>
           </Card>
 
-          {/* Kartu Piutang Jatuh Tempo (Bila Ada) */}
+          {/* Kartu Piutang Jatuh Tempo */}
           {!loading && receivables.length > 0 && (
             <Card>
               <CardHeader>
@@ -722,7 +1232,7 @@ export default function HariIniPage() {
                         {r.label} ({r.project_name})
                       </div>
                       <div className="mt-0.5 text-xs text-muted-foreground tabular-nums">
-                        {formatCurrency(r.amount)} •{' '}
+                        {formatAmount(r.amount)} ·{' '}
                         {r.is_overdue
                           ? `${r.days_overdue} hari lewat tenggat`
                           : `Tenggat: ${r.due_date || '-'}`}
@@ -747,6 +1257,225 @@ export default function HariIniPage() {
         </div>
       </div>
 
+      {/* Pengingat Cerdas & Ringkasan Mingguan (#6, #12) */}
+      {!loading && !errorMessage && (
+        <section
+          aria-label="Pengingat Cerdas dan Ringkasan Mingguan"
+          data-testid="hari-ini-smart-digest"
+          className="grid grid-cols-1 lg:grid-cols-12 gap-6"
+        >
+          <Card className="lg:col-span-5">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <BellRing className="h-4 w-4 text-primary" aria-hidden="true" />
+                <CardTitle>Pengingat Cerdas</CardTitle>
+                <StatusBadge variant={smartAlerts.length > 0 ? 'warning' : 'neutral'}>
+                  {smartAlerts.length}
+                </StatusBadge>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleSendBrowserNotification}
+              >
+                <BellRing className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Uji Notifikasi</span>
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {browserNotifFeedback && (
+                <div className="rounded-md border border-border bg-subtle p-2.5 text-xs text-foreground">
+                  {browserNotifFeedback}
+                </div>
+              )}
+
+              {smartAlerts.length === 0 ? (
+                <EmptyState
+                  icon={<CheckCircle2 className="h-5 w-5 text-income" />}
+                  title="Tidak ada peringatan mendesak"
+                  description="Jadwal bebas bentrok, tugas macet nihil, serta anggaran dan tagihan masih aman."
+                />
+              ) : (
+                <div className="space-y-2.5">
+                  {smartAlerts.slice(0, 6).map((alert) => (
+                    <div
+                      key={alert.id}
+                      className={cn(
+                        'rounded-lg border p-3 flex items-start justify-between gap-3',
+                        alert.severity === 'danger'
+                          ? 'border-expense-border bg-expense-subtle'
+                          : 'border-warning-border bg-warning-subtle'
+                      )}
+                    >
+                      <div className="min-w-0 space-y-0.5">
+                        <div className="text-xs font-semibold text-foreground">
+                          {alert.title}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {privacyMode && typeof alert.amount === 'number'
+                            ? 'Nominal disembunyikan oleh Mode Privasi.'
+                            : alert.description}
+                        </div>
+                      </div>
+                      <Link
+                        href={alert.href}
+                        className="shrink-0 text-xs font-medium text-primary hover:underline"
+                      >
+                        {alert.actionLabel}
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="lg:col-span-7">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
+                <CardTitle>Ringkasan Mingguan</CardTitle>
+              </div>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {weeklyDigest.periodLabel}
+              </span>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="rounded-lg border border-border bg-subtle p-3.5 space-y-2">
+                  <div className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
+                    7 Hari Terakhir
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Tugas Tuntas</span>
+                    <strong className="text-foreground tabular-nums">
+                      {weeklyDigest.past7Days.completedTasksCount}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Pemasukan</span>
+                    <strong className="text-income tabular-nums">
+                      +{formatAmount(weeklyDigest.past7Days.incomeTotal)}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Pengeluaran</span>
+                    <strong className="text-expense tabular-nums">
+                      -{formatAmount(weeklyDigest.past7Days.expenseTotal)}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between border-t border-border pt-1.5">
+                    <span className="text-muted-foreground">Rasio Tabungan</span>
+                    <strong className="text-primary tabular-nums">
+                      {weeklyDigest.past7Days.savingsRatePercent !== null
+                        ? `${weeklyDigest.past7Days.savingsRatePercent}%`
+                        : '-'}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-border bg-subtle p-3.5 space-y-2">
+                  <div className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
+                    7 Hari Ke Depan
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Tugas Aktif (Terlambat)</span>
+                    <strong className="text-foreground tabular-nums">
+                      {weeklyDigest.next7Days.activeTasksCount} ({weeklyDigest.next7Days.overdueTasksCount})
+                    </strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Tenggat &lt;= 7 Hari</span>
+                    <strong className="text-foreground tabular-nums">
+                      {weeklyDigest.next7Days.upcomingDueTasksCount}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Agenda Terjadwal</span>
+                    <strong className="text-foreground tabular-nums">
+                      {weeklyDigest.next7Days.upcomingEventsCount}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between border-t border-border pt-1.5">
+                    <span className="text-muted-foreground">Tagihan Mendatang</span>
+                    <strong className="text-warning tabular-nums">
+                      {weeklyDigest.next7Days.upcomingBillsCount} (
+                      {formatAmount(weeklyDigest.next7Days.upcomingBillsTotal)})
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyWeeklyDigest}
+                >
+                  <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>{digestCopied ? 'Ringkasan Disalin' : 'Salin Ringkasan'}</span>
+                </Button>
+                <a
+                  href={weeklyDigest.mailtoHref}
+                  className="min-h-[36px] inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-hover transition-colors"
+                >
+                  <Mail className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                  <span>Kirim Ringkasan Email</span>
+                </a>
+                <Link
+                  href="/pengaturan"
+                  className="text-xs font-medium text-primary hover:underline ml-auto"
+                >
+                  Atur Pengingat
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
+      {/* Side Peek 480px untuk melihat & mengedit detail tugas langsung dari Hari Ini */}
+      {workspaceId && (
+        <DetailPeek
+          open={Boolean(activePeekTask)}
+          task={activePeekTask}
+          allTasks={workspaceTasks}
+          workspaceId={workspaceId}
+          projects={projects}
+          payments={payments}
+          onClose={() => setPeekTaskId(null)}
+          onSelectTask={(nextId) => setPeekTaskId(nextId)}
+          onTaskUpdated={(updated) => {
+            setWorkspaceTasks((prev) =>
+              prev.map((item) => (item.id === updated.id ? updated : item))
+            );
+          }}
+          onTaskCreated={(created) => {
+            setWorkspaceTasks((prev) => [...prev, created]);
+          }}
+          onTaskDeleted={(deletedId) => {
+            setWorkspaceTasks((prev) => prev.filter((item) => item.id !== deletedId));
+            setPeekTaskId(null);
+          }}
+          onChangeStatus={(task, toStatus) => handleRequestStatusChange(task, toStatus)}
+        />
+      )}
+
+      {/* Dialog Revisi Wajib Catatan */}
+      <RevisionDialog
+        open={Boolean(pendingRevision)}
+        task={pendingRevision?.task ?? null}
+        submitting={revisionSubmitting}
+        onClose={() => {
+          if (!revisionSubmitting) {
+            setPendingRevision(null);
+          }
+        }}
+        onConfirm={handleConfirmRevision}
+      />
+
       {/* Dialog Konfirmasi Pelunasan Milestone */}
       <Dialog
         open={showMilestoneModal}
@@ -759,7 +1488,10 @@ export default function HariIniPage() {
       >
         <div className="space-y-4">
           <div>
-            <label htmlFor="milestone-acc-select" className="mb-1.5 block text-xs font-medium text-foreground">
+            <label
+              htmlFor="milestone-acc-select"
+              className="mb-1.5 block text-xs font-medium text-foreground"
+            >
               Pilih Akun Penerima
             </label>
             <Select
@@ -787,7 +1519,7 @@ export default function HariIniPage() {
             <Button
               variant="primary"
               disabled={markingPaid}
-              onClick={handleConfirmMilestonePayment}
+              onClick={() => void handleConfirmMilestonePayment()}
             >
               {markingPaid ? 'Memproses...' : 'Tandai Lunas'}
             </Button>
@@ -804,7 +1536,10 @@ export default function HariIniPage() {
       >
         <form onSubmit={handleCreateQuickTask} className="space-y-4">
           <div>
-            <label htmlFor="quick-task-title" className="mb-1.5 block text-xs font-medium text-foreground">
+            <label
+              htmlFor="quick-task-title"
+              className="mb-1.5 block text-xs font-medium text-foreground"
+            >
               Judul Tugas
             </label>
             <Input
@@ -820,7 +1555,10 @@ export default function HariIniPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label htmlFor="quick-task-kind" className="mb-1.5 block text-xs font-medium text-foreground">
+              <label
+                htmlFor="quick-task-kind"
+                className="mb-1.5 block text-xs font-medium text-foreground"
+              >
                 Jenis Kegiatan
               </label>
               <Select
@@ -835,13 +1573,16 @@ export default function HariIniPage() {
               </Select>
             </div>
             <div>
-              <label htmlFor="quick-task-priority" className="mb-1.5 block text-xs font-medium text-foreground">
+              <label
+                htmlFor="quick-task-priority"
+                className="mb-1.5 block text-xs font-medium text-foreground"
+              >
                 Prioritas
               </label>
               <Select
                 id="quick-task-priority"
                 value={newTaskPriority}
-                onChange={(e) => setNewTaskPriority(e.target.value as 'rendah' | 'sedang' | 'tinggi')}
+                onChange={(e) => setNewTaskPriority(e.target.value as TaskPriority)}
               >
                 <option value="rendah">Rendah</option>
                 <option value="sedang">Sedang</option>
@@ -851,7 +1592,11 @@ export default function HariIniPage() {
           </div>
 
           <div className="flex justify-end gap-2 border-t border-border pt-3">
-            <Button variant="outline" onClick={() => setShowQuickTaskModal(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowQuickTaskModal(false)}
+            >
               Batal
             </Button>
             <Button type="submit" variant="primary" disabled={savingTask}>
@@ -867,7 +1612,7 @@ export default function HariIniPage() {
         onClose={() => setShowTxModal(false)}
         workspaceId={workspaceId}
         initialAccounts={accounts}
-        onSuccess={loadData}
+        onSuccess={() => void loadData()}
       />
     </div>
   );

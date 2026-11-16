@@ -178,4 +178,42 @@ Dokumen ini mencatat keputusan teknis, arsitektur, dan keamanan yang diambil sel
   4. **Pemicu Sinkronisasi Terintegrasi**: `HomeScreen` menjalankan sinkronisasi latar belakang saat inisialisasi dan setiap kali status autentikasi berubah menjadi `signedIn`. Seluruh layar (`TodayScreen`, `TasksScreen`, `TransactionsScreen`, `ScheduleScreen`, `ProjectsScreen`, `AccountsScreen`, `PlanningScreen`) dilengkapi `RefreshIndicator` untuk sinkronisasi manual tarik-bawah.
 - **Konsekuensi**: Paritas data antara Web dan Mobile Flutter tercapai 100%. Data pengguna yang ada di Web langsung muncul di Mobile begitu pengguna masuk atau menarik layar ke bawah (pull-to-refresh). Ketahanan luring (offline-first) tetap terjaga 100%.
 
+---
+
+## ADR-015: Sistem Desain Notion+Jira Opsi A dan Siklus Kerja Tugas D.2
+- **Status**: Diterima (Gelombang 0.1–0.2, 15 Nov 2026)
+- **Konteks**:
+  1. Tampilan Web dan Mobile sebelumnya memiliki kepadatan kartu yang tidak seragam, menu tugas yang tersembunyi di sub-navigasi Web, serta tombol `Papan` di Mobile (`tasks_screen.dart`) yang merender daftar vertikal yang sama dengan `Daftar`.
+  2. Pengguna menyetujui rombak total bergaya Notion + Jira dan memilih **Opsi A (Biru Tenang Orbit `#0284C7` / `#38BDF8`)** dibanding Opsi B (Monokrom Graphite Notion).
+- **Keputusan**:
+  1. Seluruh permukaan Netral memakai skala `border hairline 1 px`, latar kanvas bersih, `Side Peek` (`480 px`) di Web, rute penuh di Mobile, dan aksen tunggal Opsi A untuk CTA, indikator tab aktif, dan progres utama.
+  2. Siklus status tugas D.2 (`todo`, `doing`, `revisi`, `done`), `progress_percent` otomatis checklist/subtugas atau slider manual kelipatan 5, `revision_count`, `status_changed_at`, serta `task_status_history` append-only diterapkan langsung ke desain baru tanpa menambal UI lama dua kali.
+- **Konsekuensi**: Kontrak UI, warna, dan perilaku antara Web (`web/`) dan Android (`app/`) seragam dari satu sistem token di `docs/design/`.
+
+---
+
+## ADR-016: Skema Terpadu Orbit v2, Sinkronisasi Realtime+WorkManager, dan Widget/Listener Android Pribadi
+- **Status**: Diterima (Gelombang 0.2–0.3, 15 Nov 2026)
+- **Konteks**:
+  1. Aplikasi Mobile diputuskan khusus Android dengan distribusi sideload APK pribadi (tidak mengejar kebijakan tinjauan Play Store).
+  2. Implementasi paralel Web (Next.js) dan Mobile (Flutter) pada Gelombang 1–3 membutuhkan pembekuan kontrak skema PostgreSQL + Drift SQLite sejak Gelombang 0 agar kedua jalur tidak mengubah tabel inti secara sepihak.
+- **Keputusan**:
+  1. Membekukan seluruh kebutuhan tabel dan kolom Orbit v2 (D.2 + 16 fitur v5.3) dalam migrasi baru di `supabase/migrations/` dengan RLS deny-by-default (`is_member` / `has_role`) dan pengujian pgTAP sebelum Gelombang 1 dibuka.
+  2. Menjaga sinkronisasi lokal Android melalui Drift (`schemaVersion = 6`) dan `SyncOutbox` idempoten (aksi `insert` memakai `upsert onConflict: id`), didukung Supabase Realtime `postgres_changes` dan `WorkManager` Kotlin periodik (`OrbitBackgroundWorker`) untuk memperbarui data lokal dan 4 Homescreen Widgets native Android (`AppWidgetProvider` + `OrbitWidgetStore`).
+  3. Integrasi sensitif (OAuth Google Calendar, Web Push VAPID, pembacaan notifikasi bank lewat `NotificationListenerService` + Share Target `ACTION_SEND` + OCR ML Kit) mengutamakan pemrosesan lokal di perangkat tanpa menyimpan atau mencatat teks mentah notifikasi dan selalu mengarahkan hasil tangkapan otomatis ke `Inbox` sebagai `status = 'draft'`.
+- **Konsekuensi**: Jalur Web dan Jalur Mobile dapat berkembang secara paralel tanpa melanggar kontrak skema database dan kompatibel dengan AGP 9.0.1 / Kotlin 2.3.20 melalui platform channel native yang teruji kompilasinya.
+
+---
+
+## ADR-017: Resolusi Konflik Sync Offline-First & Privasi Mode Gelombang 4
+- **Status**: Diterima (Gelombang 4, 15 Nov 2026)
+- **Konteks**:
+  1. Penarikan data (`pullAllFromSupabase`) sebelum mendorong `syncOutbox` berisiko menimpa perubahan offline yang belum sempat tersinkron ke server.
+  2. Fitur pemakaian pribadi (Mode Privasi nominal `Rp ••••••`, PIN lokal SHA-256 / Biometrik, Android Widgets, serta parser notifikasi bank) menuntut aturan konsisten agar nominal dan teks mentah tidak pernah bocor saat perangkat terkunci atau saat mode privasi aktif.
+- **Keputusan**:
+  1. **Push-before-Pull & Pending Protection**: `pullAllFromSupabase` di Android wajib memanggil `triggerSync()` lebih dulu, mengidentifikasi `recordId` berstatus `pending`/`failed` pada `syncOutbox`, dan melewati penimpaan baris lokal untuk ID yang masih menunggu unggah. Operasi gagal maksimal (`attempts >= 5`) ditandai `failed` untuk pemulihan manual via `retryFailedOutboxOps()` tanpa kehilangan data lokal.
+  2. **Privasi Terpadu Lintas Permukaan**: Saat Mode Privasi aktif, seluruh tampilan nominal Web, Mobile, serta Android Saldo Widget wajib merender `Rp ••••••`; `showTitleOnLockscreen` default `false` menahan judul/nominal dari body notifikasi terjadwal; dan Web Service Worker (`sw.js`) secara eksplisit tidak meng-cache respons API/Supabase sensitif.
+- **Konsekuensi**: Perubahan offline pengguna aman dari penimpaan tak disengaja saat kembali online, sementara data sensitif terlindungi baik saat layar terbuka di tempat umum maupun pada pratinjau widget/notifikasi.
+
+
 

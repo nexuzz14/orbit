@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="orbit_widget_today_label">Orbit Hari Ini (4x2)</string>
+    <string name="orbit_widget_tasks_label">Orbit Tugas (2x2)</string>
+    <string name="orbit_widget_quick_add_label">Orbit Tambah Cepat (4x1)</string>
+    <string name="orbit_widget_balance_label">Orbit Saldo Likuid (2x1)</string>
+    <string name="orbit_bank_listener_label">Pembaca Notifikasi Bank Orbit</string>
+    <string name="orbit_widget_today_desc">Ringkasan hingga 3 agenda dan tugas terdekat hari ini (WIB).</string>
+    <string name="orbit_widget_tasks_desc">Hitungan tugas aktif beserta 3 tugas prioritas.</string>
+    <string name="orbit_widget_quick_add_desc">Aksi cepat tambah transaksi, tugas, atau pindai struk Orbit.</string>
+    <string name="orbit_widget_balance_desc">Total saldo likuid dengan dukungan Mode Privasi.</string>
+</resources>

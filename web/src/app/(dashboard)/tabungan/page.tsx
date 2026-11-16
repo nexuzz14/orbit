@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { formatCurrency, formatDateIndo } from '@/lib/format';
+import { formatDateIndo } from '@/lib/format';
+import { usePrivacyMode } from '@/lib/privacy-mode';
 import type {
   SavingsGoal,
   IncomeSplitRule,
@@ -53,6 +54,7 @@ interface ExtendedAllocation extends SavingsAllocation {
 
 export default function TabunganPage() {
   const supabase = createClient();
+  const { formatAmount } = usePrivacyMode();
   const [activeTab, setActiveTab] = useState<'goals' | 'rules' | 'history'>('goals');
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -444,10 +446,10 @@ export default function TabunganPage() {
                   Total Terkumpul
                 </div>
                 <div className="text-2xl font-bold mt-1 tracking-tight text-income tabular-nums">
-                  {formatCurrency(totalSaved)}
+                  {formatAmount(totalSaved)}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1 tabular-nums">
-                  Dari target total {formatCurrency(totalTarget)}
+                  Dari target total {formatAmount(totalTarget)}
                 </div>
               </CardContent>
             </Card>
@@ -508,7 +510,7 @@ export default function TabunganPage() {
                     targetNum > 0 ? Math.min(Math.round((currentNum / targetNum) * 100), 100) : 0;
 
                   return (
-                    <div key={goal.id} className="p-4 space-y-3 hover:bg-muted/20 transition-colors">
+                    <div key={goal.id} className="p-4 space-y-3 hover:bg-hover transition-colors">
                       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -535,9 +537,9 @@ export default function TabunganPage() {
                         <div className="flex items-center gap-3">
                           <div className="text-right tabular-nums">
                             <div className="text-sm font-bold text-income">
-                              {formatCurrency(currentNum)}{' '}
+                              {formatAmount(currentNum)}{' '}
                               <span className="text-xs font-normal text-muted-foreground">
-                                / {formatCurrency(targetNum)}
+                                / {formatAmount(targetNum)}
                               </span>
                             </div>
                             <div className="text-xs text-muted-foreground">{pct}% terkumpul</div>
@@ -575,7 +577,7 @@ export default function TabunganPage() {
                         </div>
                       </div>
 
-                      <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                      <div className="w-full bg-subtle border border-border/60 rounded-full h-2 overflow-hidden">
                         <div
                           className={`h-full transition-all duration-200 ${
                             goal.is_completed ? 'bg-income' : 'bg-primary'
@@ -612,7 +614,7 @@ export default function TabunganPage() {
               {rules.map((rule) => (
                 <div
                   key={rule.id}
-                  className={`p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:bg-muted/20 transition-colors ${
+                  className={`p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:bg-hover transition-colors ${
                     !rule.active ? 'opacity-60' : ''
                   }`}
                 >
@@ -629,7 +631,7 @@ export default function TabunganPage() {
                       Prioritas: {rule.priority} • Alokasi:{' '}
                       {rule.split_type === 'percentage'
                         ? `${rule.split_value}% dari pemasukan`
-                        : formatCurrency(rule.split_value)}
+                        : formatAmount(rule.split_value)}
                     </div>
                   </div>
 
@@ -674,7 +676,7 @@ export default function TabunganPage() {
           </CardHeader>
           <div className="divide-y divide-border">
             {allocations.map((alloc) => (
-              <div key={alloc.id} className="p-4 flex justify-between items-center hover:bg-muted/20">
+              <div key={alloc.id} className="p-4 flex justify-between items-center hover:bg-hover">
                 <div className="space-y-1">
                   <div className="font-semibold text-sm text-foreground">
                     {alloc.goal?.name || 'Target Tabungan'}
@@ -688,7 +690,7 @@ export default function TabunganPage() {
                   </div>
                 </div>
                 <div className="text-right font-bold text-sm text-income tabular-nums">
-                  +{formatCurrency(alloc.amount)}
+                  +{formatAmount(alloc.amount)}
                 </div>
               </div>
             ))}
@@ -704,7 +706,7 @@ export default function TabunganPage() {
       >
         <form onSubmit={handleSaveGoal} className="space-y-4">
           {goalError && (
-            <div className="p-3 text-xs bg-expense/10 text-expense border border-expense/20 rounded-lg">
+            <div className="p-3 text-xs bg-expense-subtle text-expense border border-expense-border rounded-lg">
               {goalError}
             </div>
           )}
@@ -793,13 +795,13 @@ export default function TabunganPage() {
         title="Setor ke Tabungan"
         description={
           depositingGoal
-            ? `${depositingGoal.name} (${formatCurrency(depositingGoal.current_amount)} / ${formatCurrency(depositingGoal.target_amount)})`
+            ? `${depositingGoal.name} (${formatAmount(depositingGoal.current_amount)} / ${formatAmount(depositingGoal.target_amount)})`
             : undefined
         }
       >
         <form onSubmit={handleManualDeposit} className="space-y-4">
           {depositError && (
-            <div className="p-3 text-xs bg-expense/10 text-expense border border-expense/20 rounded-lg">
+            <div className="p-3 text-xs bg-expense-subtle text-expense border border-expense-border rounded-lg">
               {depositError}
             </div>
           )}
@@ -843,7 +845,7 @@ export default function TabunganPage() {
       >
         <form onSubmit={handleSaveRule} className="space-y-4">
           {ruleError && (
-            <div className="p-3 text-xs bg-expense/10 text-expense border border-expense/20 rounded-lg">
+            <div className="p-3 text-xs bg-expense-subtle text-expense border border-expense-border rounded-lg">
               {ruleError}
             </div>
           )}

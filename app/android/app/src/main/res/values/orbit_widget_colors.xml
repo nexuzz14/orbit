@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="orbit_widget_bg">#FFFFFF</color>
+    <color name="orbit_widget_subtle">#F7F7F5</color>
+    <color name="orbit_widget_border">#E5E5E0</color>
+    <color name="orbit_widget_text_primary">#1F1F1F</color>
+    <color name="orbit_widget_text_secondary">#6B6B65</color>
+    <color name="orbit_widget_accent">#0284C7</color>
+    <color name="orbit_widget_accent_soft">#E0F2FE</color>
+    <color name="orbit_widget_accent_ink">#0369A1</color>
+    <color name="orbit_widget_btn_text_on_accent">#FFFFFF</color>
+</resources>

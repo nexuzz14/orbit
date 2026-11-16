@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orbit v2 — Mockup Gaya Notion & Jira</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap');
+
+    :root {
+      --font-sans: 'Plus Jakarta Sans', 'Inter', 'Segoe UI', system-ui, sans-serif;
+      --font-mono: ui-monospace, 'Cascadia Mono', 'Consolas', monospace;
+
+      --bg-canvas: #ffffff;
+      --bg-sidebar: #f7f7f5;
+      --bg-surface: #ffffff;
+      --bg-subtle: #efefed;
+      --bg-hover: #f4f4f2;
+      --border: #e6e6e3;
+      --border-strong: #d1d1cc;
+      --text-primary: #11181c;
+      --text-secondary: #555550;
+      --text-muted: #80807a;
+
+      /* Accent defaults to Option A (Orbit Blue) */
+      --accent: #0284c7;
+      --accent-fg: #ffffff;
+      --accent-subtle: #e0f2fe;
+
+      /* Status & Semantic */
+      --todo-fg: #475569; --todo-bg: #f1f5f9; --todo-bd: #e2e8f0;
+      --doing-fg: #0369a1; --doing-bg: #e0f2fe; --doing-bd: #bae6fd;
+      --revisi-fg: #b45309; --revisi-bg: #fef3c7; --revisi-bd: #fde68a;
+      --done-fg: #15803d; --done-bg: #dcfce7; --done-bd: #bbf7d0;
+
+      --income-fg: #15803d; --income-bg: #dcfce7; --income-bd: #bbf7d0;
+      --expense-fg: #dc2626; --expense-bg: #fee2e2; --expense-bd: #fecaca;
+      --warning-fg: #b45309; --warning-bg: #fef3c7; --warning-bd: #fde68a;
+
+      --kind-intern-fg: #0369a1; --kind-intern-bg: #e0f2fe; --kind-intern-bd: #bae6fd;
+      --kind-freelance-fg: #6d28d9; --kind-freelance-bg: #ede9fe; --kind-freelance-bd: #ddd6fe;
+      --kind-kuliah-fg: #b45309; --kind-kuliah-bg: #fef3c7; --kind-kuliah-bd: #fde68a;
+      --kind-pribadi-fg: #3f3f46; --kind-pribadi-bg: #f4f4f5; --kind-pribadi-bd: #e4e4e7;
+
+      --shadow-peek: -8px 0 24px rgba(15, 23, 42, 0.06);
+    }
+
+    body.accent-b {
+      --accent: #18181b;
+      --accent-fg: #fafafa;
+      --accent-subtle: #f4f4f5;
+    }
+
+    body.dark {
+      --bg-canvas: #191919;
+      --bg-sidebar: #202020;
+      --bg-surface: #242424;
+      --bg-subtle: #2f2f2f;
+      --bg-hover: #2a2a2a;
+      --border: #323232;
+      --border-strong: #454545;
+      --text-primary: #f3f3f2;
+      --text-secondary: #b3b3ae;
+      --text-muted: #7e7e78;
+
+      --accent: #38bdf8;
+      --accent-fg: #0f172a;
+      --accent-subtle: #0c4a6e;
+
+      --todo-fg: #cbd5e1; --todo-bg: #27272a; --todo-bd: #3f3f46;
+      --doing-fg: #7dd3fc; --doing-bg: #0c4a6e; --doing-bd: #075985;
+      --revisi-fg: #fcd34d; --revisi-bg: #451a03; --revisi-bd: #78350f;
+      --done-fg: #4ade80; --done-bg: #052e16; --done-bd: #14532d;
+
+      --income-fg: #4ade80; --income-bg: #052e16; --income-bd: #14532d;
+      --expense-fg: #f87171; --expense-bg: #450a0a; --expense-bd: #7f1d1d;
+      --warning-fg: #fbbf24; --warning-bg: #451a03; --warning-bd: #78350f;
+
+      --kind-intern-fg: #7dd3fc; --kind-intern-bg: #0c4a6e; --kind-intern-bd: #075985;
+      --kind-freelance-fg: #c4b5fd; --kind-freelance-bg: #2e1065; --kind-freelance-bd: #4c1d95;
+      --kind-kuliah-fg: #fcd34d; --kind-kuliah-bg: #451a03; --kind-kuliah-bd: #78350f;
+      --kind-pribadi-fg: #d4d4d8; --kind-pribadi-bg: #27272a; --kind-pribadi-bd: #3f3f46;
+
+      --shadow-peek: -12px 0 32px rgba(0, 0, 0, 0.45);
+    }
+
+    body.dark.accent-b {
+      --accent: #f4f4f5;
+      --accent-fg: #09090b;
+      --accent-subtle: #27272a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-canvas);
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tabular { font-variant-numeric: tabular-nums; }
+
+    /* Badges & Chips */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 2px 7px; border-radius: 4px; border: 1px solid;
+      font-size: 11.5px; font-weight: 600; line-height: 16px; white-space: nowrap;
+    }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    .st-todo { color: var(--todo-fg); background: var(--todo-bg); border-color: var(--todo-bd); }
+    .st-doing { color: var(--doing-fg); background: var(--doing-bg); border-color: var(--doing-bd); }
+    .st-revisi { color: var(--revisi-fg); background: var(--revisi-bg); border-color: var(--revisi-bd); }
+    .st-done { color: var(--done-fg); background: var(--done-bg); border-color: var(--done-bd); }
+
+    .kind-intern { color: var(--kind-intern-fg); background: var(--kind-intern-bg); border-color: var(--kind-intern-bd); }
+    .kind-freelance { color: var(--kind-freelance-fg); background: var(--kind-freelance-bg); border-color: var(--kind-freelance-bd); }
+    .kind-kuliah { color: var(--kind-kuliah-fg); background: var(--kind-kuliah-bg); border-color: var(--kind-kuliah-bd); }
+    .kind-pribadi { color: var(--kind-pribadi-fg); background: var(--kind-pribadi-bg); border-color: var(--kind-pribadi-bd); }
+
+    .sem-income { color: var(--income-fg); background: var(--income-bg); border-color: var(--income-bd); }
+    .sem-expense { color: var(--expense-fg); background: var(--expense-bg); border-color: var(--expense-bd); }
+    .sem-warning { color: var(--warning-fg); background: var(--warning-bg); border-color: var(--warning-bd); }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 6px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 600;
+      border: 1px solid transparent; cursor: pointer; white-space: nowrap; height: 32px;
+    }
+    .btn-primary { background: var(--accent); color: var(--accent-fg); }
+    .btn-ghost { background: transparent; color: var(--text-secondary); border-color: transparent; }
+    .btn-outline { background: var(--bg-surface); color: var(--text-primary); border-color: var(--border); }
+
+    .progress-track {
+      width: 100%; height: 5px; background: var(--bg-subtle); border-radius: 99px; overflow: hidden;
+    }
+    .progress-fill { height: 100%; background: var(--accent); border-radius: 99px; }
+
+    /* Web Shell (Desktop 1440x900) */
+    .web-frame {
+      width: 1440px; height: 900px; display: flex; overflow: hidden; background: var(--bg-canvas);
+      position: relative;
+    }
+    .sidebar {
+      width: 244px; background: var(--bg-sidebar); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; justify-content: space-between; shrink: 0;
+    }
+    .sb-top { padding: 14px 12px 10px; border-bottom: 1px solid var(--border); }
+    .ws-switcher {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 8px; border-radius: 6px; font-weight: 600; font-size: 13.5px;
+    }
+    .ws-brand { display: flex; align-items: center; gap: 8px; }
+    .ws-logo {
+      width: 22px; height: 22px; border-radius: 5px; background: var(--accent); color: var(--accent-fg);
+      display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px;
+    }
+    .sb-search {
+      margin-top: 8px; display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 9px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--bg-surface); color: var(--text-muted); font-size: 12px;
+    }
+    .kbd {
+      font-family: var(--font-mono); font-size: 10px; padding: 1px 5px; border-radius: 4px;
+      background: var(--bg-subtle); border: 1px solid var(--border); color: var(--text-secondary);
+    }
+    .sb-scroll { flex: 1; overflow-y: auto; padding: 10px 8px; }
+    .sb-group-title {
+      font-size: 10.5px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.05em; padding: 10px 10px 4px;
+    }
+    .sb-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 10px; border-radius: 6px; font-size: 13px; color: var(--text-secondary);
+      margin-bottom: 1px;
+    }
+    .sb-item-left { display: flex; align-items: center; gap: 8px; overflow: hidden; }
+    .sb-item-left span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sb-item.active {
+      background: var(--bg-subtle); color: var(--text-primary); font-weight: 600;
+    }
+    body.accent-a .sb-item.active {
+      background: var(--accent-subtle); color: var(--accent);
+    }
+    body.dark.accent-a .sb-item.active {
+      color: var(--accent);
+    }
+    .sb-count {
+      font-size: 11px; color: var(--text-muted); background: var(--bg-subtle);
+      padding: 1px 6px; border-radius: 99px;
+    }
+    .proj-dot { width: 8px; height: 8px; border-radius: 2px; shrink: 0; }
+    .sb-footer {
+      padding: 10px 12px; border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; gap: 6px;
+      font-size: 11.5px; color: var(--text-secondary); white-space: nowrap;
+    }
+
+    .web-main {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;
+    }
+    .web-topbar {
+      height: 50px; border-bottom: 1px solid var(--border); padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between; background: var(--bg-canvas);
+    }
+    .breadcrumbs { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+    .breadcrumbs strong { color: var(--text-primary); font-weight: 600; }
+    .topbar-actions { display: flex; align-items: center; gap: 8px; }
+    .accent-pill {
+      font-size: 11px; padding: 3px 8px; border-radius: 99px; background: var(--bg-subtle);
+      border: 1px solid var(--border); color: var(--text-secondary); font-weight: 600; white-space: nowrap;
+    }
+
+    .web-body {
+      flex: 1; display: flex; overflow: hidden;
+    }
+    .web-content {
+      flex: 1; padding: 20px; overflow: hidden; display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+    .page-title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+    .page-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+    .view-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      border-bottom: 1px solid var(--border); padding-bottom: 10px;
+    }
+    .view-tabs { display: flex; align-items: center; gap: 4px; }
+    .view-tab {
+      display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px;
+      border-radius: 6px; font-size: 12.5px; font-weight: 500; color: var(--text-secondary);
+    }
+    .view-tab.active {
+      background: var(--bg-subtle); color: var(--text-primary); font-weight: 600;
+    }
+    .filter-row { display: flex; align-items: center; gap: 6px; }
+    .chip {
+      padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500;
+      border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-secondary);
+    }
+    .chip.active {
+      background: var(--accent-subtle); color: var(--accent); border-color: transparent; font-weight: 600;
+    }
+    body.accent-b .chip.active {
+      background: var(--accent); color: var(--accent-fg);
+    }
+
+    /* Kanban 4 Columns */
+    .kanban-grid {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
+      flex: 1; min-height: 0;
+    }
+    .kb-col {
+      background: var(--bg-sidebar); border: 1px solid var(--border); border-radius: 8px;
+      display: flex; flex-direction: column; padding: 9px; gap: 8px; overflow: hidden;
+    }
+    .kb-col-header {
+      display: flex; align-items: center; justify-content: space-between; padding: 2px 2px 6px;
+    }
+    .kb-col-title { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; }
+    .kb-card {
+      background: var(--bg-surface); border: 1px solid var(--border); border-radius: 7px;
+      padding: 10px; display: flex; flex-direction: column; gap: 7px;
+    }
+    .kb-card .badge { font-size: 10.5px; padding: 1.5px 6px; line-height: 15px; }
+    .kb-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .kb-card-title { font-size: 13px; font-weight: 600; line-height: 1.35; color: var(--text-primary); }
+    .kb-card-meta {
+      display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-secondary);
+    }
+    .kb-footer-link {
+      margin-top: auto; text-align: center; font-size: 11.5px; font-weight: 600;
+      color: var(--accent); padding: 6px; border-top: 1px dashed var(--border);
+    }
+
+    /* Side Peek Panel (Jira/Notion style) */
+    .side-peek {
+      width: 392px; border-left: 1px solid var(--border); background: var(--bg-surface);
+      box-shadow: var(--shadow-peek); display: flex; flex-direction: column; padding: 16px 18px; gap: 14px;
+      overflow: hidden;
+    }
+    .peek-head { display: flex; align-items: center; justify-content: space-between; color: var(--text-secondary); font-size: 12px; }
+    .peek-title { font-size: 17px; font-weight: 700; line-height: 1.3; }
+    .prop-table {
+      display: grid; grid-template-columns: 108px 1fr; row-gap: 8px; column-gap: 10px;
+      padding: 10px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      font-size: 12.5px; align-items: center;
+    }
+    .prop-key { color: var(--text-muted); font-weight: 500; }
+    .prop-val { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .callout {
+      padding: 8px 10px; border-radius: 6px; border: 1px solid var(--warning-bd);
+      background: var(--warning-bg); color: var(--warning-fg); font-size: 12px; font-weight: 500;
+    }
+    .block-box {
+      padding: 9px 11px; border-radius: 6px; background: var(--bg-sidebar); border: 1px solid var(--border);
+      font-size: 12.5px; color: var(--text-secondary);
+    }
+    .checklist-item {
+      display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 3px 0;
+    }
+    .chk-box {
+      width: 15px; height: 15px; border-radius: 3px; border: 1.5px solid var(--border-strong);
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .chk-box.done { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+    .history-item { font-size: 11.5px; color: var(--text-secondary); border-left: 2px solid var(--border-strong); padding-left: 8px; margin-bottom: 6px; }
+
+    /* Hari Ini Dashboard Grid */
+    .today-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; flex: 1; min-height: 0; }
+    .flat-section {
+      border: 1px solid var(--border); border-radius: 8px; background: var(--bg-surface);
+      padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .section-head { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 600; }
+    .status-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .stat-tile {
+      padding: 9px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-sidebar);
+    }
+    .stat-num { font-size: 19px; font-weight: 700; }
+    .stat-lbl { font-size: 11px; color: var(--text-secondary); }
+    .list-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 8px 4px; border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .list-row:last-child { border-bottom: none; }
+
+    /* Mobile Frame (390x844) */
+    .mobile-frame {
+      width: 390px; height: 844px; display: flex; flex-direction: column;
+      background: var(--bg-canvas); color: var(--text-primary); overflow: hidden;
+    }
+    .mob-appbar {
+      height: 52px; padding: 0 14px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; background: var(--bg-canvas); shrink: 0;
+    }
+    .mob-body {
+      flex: 1; padding: 12px 14px; overflow: hidden; display: flex; flex-direction: column; gap: 12px;
+    }
+    .mob-nav {
+      height: 64px; border-top: 1px solid var(--border); background: var(--bg-canvas);
+      display: grid; grid-template-columns: repeat(4, 1fr); align-items: center; padding: 0 6px; shrink: 0;
+    }
+    .mob-nav-item {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      font-size: 11px; font-weight: 500; color: var(--text-muted);
+    }
+    .mob-nav-item.active { color: var(--accent); font-weight: 700; }
+    .mob-seg {
+      display: grid; grid-template-columns: repeat(3, 1fr); background: var(--bg-sidebar);
+      border: 1px solid var(--border); border-radius: 7px; padding: 2px; gap: 2px;
+    }
+    .mob-seg-btn {
+      text-align: center; padding: 6px 4px; border-radius: 5px; font-size: 12px; font-weight: 600;
+      color: var(--text-secondary);
+    }
+    .mob-seg-btn.active { background: var(--bg-surface); color: var(--text-primary); box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+
+    /* Mobile Widgets Preview Canvas */
+    .widgets-board {
+      width: 920px; height: 660px; padding: 28px; background: #14171a; color: #f8fafc;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 22px;
+    }
+    .w-surface {
+      background: #1e2226; border: 1px solid #2e343b; border-radius: 18px; padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .w-surface.light-w {
+      background: #ffffff; border-color: #e6e6e3; color: #11181c;
+    }
+
+    svg.ico { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; shrink: 0; }
+  </style>
+</head>
+<body class="accent-a">
+  <div id="mount"></div>
+
+  <script>
+    const ICONS = {
+      search: '<svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
+      plus: '<svg class="ico" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
+      today: '<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>',
+      agenda: '<svg class="ico" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/></svg>',
+      kanban: '<svg class="ico" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg>',
+      wallet: '<svg class="ico" viewBox="0 0 24 24"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>',
+      list: '<svg class="ico" viewBox="0 0 24 24"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>',
+      grid: '<svg class="ico" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>',
+      menu: '<svg class="ico" viewBox="0 0 24 24"><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></svg>',
+      check: '<svg class="ico" viewBox="0 0 24 24" style="width:11px;height:11px;stroke-width:2.6"><path d="M20 6 9 17l-5-5"/></svg>',
+      alert: '<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>',
+      bell: '<svg class="ico" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
+      eyeoff: '<svg class="ico" viewBox="0 0 24 24"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>',
+    };
+
+    function sidebarHtml(activeId, accentLabel) {
+      return `
+        <aside class="sidebar">
+          <div>
+            <div class="sb-top">
+              <div class="ws-switcher">
+                <div class="ws-brand">
+                  <div class="ws-logo">O</div>
+                  <span>Orbit Pribadi</span>
+                </div>
+                <span style="font-size:11px;color:var(--text-muted)">&lt;&lt;</span>
+              </div>
+              <div class="sb-search">
+                <span style="display:flex;align-items:center;gap:6px">${ICONS.search} Cari cepat...</span>
+                <span class="kbd">Ctrl K</span>
+              </div>
+            </div>
+            <div class="sb-scroll">
+              <div class="sb-group-title">Utama</div>
+              <div class="sb-item ${activeId==='hari-ini'?'active':''}"><span class="sb-item-left">${ICONS.today}<span>Hari Ini</span></span></div>
+              <div class="sb-item ${activeId==='jadwal'?'active':''}"><span class="sb-item-left">${ICONS.agenda}<span>Agenda & Jadwal</span></span></div>
+              <div class="sb-item ${activeId==='tugas'?'active':''}"><span class="sb-item-left">${ICONS.kanban}<span>Tugas & Kanban</span></span><span class="sb-count">11</span></div>
+              <div class="sb-item ${activeId==='uang'?'active':''}"><span class="sb-item-left">${ICONS.wallet}<span>Keuangan</span></span></div>
+
+              <div class="sb-group-title">Tampilan Tersimpan</div>
+              <div class="sb-item"><span class="sb-item-left"><span class="badge-dot" style="color:var(--expense-fg)"></span><span>Terlambat & Revisi</span></span><span class="sb-count">3</span></div>
+              <div class="sb-item"><span class="sb-item-left"><span class="badge-dot" style="color:var(--accent)"></span><span>Papan Proyek Aktif</span></span></div>
+
+              <div class="sb-group-title">Kegiatan Aktif</div>
+              <div class="sb-item"><span class="sb-item-left"><span class="proj-dot" style="background:var(--kind-intern-fg)"></span><span>Magang Backend</span></span></div>
+              <div class="sb-item"><span class="sb-item-left"><span class="proj-dot" style="background:var(--kind-freelance-fg)"></span><span>Portal Klien SaaS</span></span></div>
+              <div class="sb-item"><span class="sb-item-left"><span class="proj-dot" style="background:var(--kind-kuliah-fg)"></span><span>Skripsi Sem 7</span></span></div>
+
+              <div class="sb-group-title">Pengelolaan</div>
+              <div class="sb-item"><span class="sb-item-left"><span>Inbox & Sumber Auto</span></span><span class="sb-count" style="color:var(--warning-fg);background:var(--warning-bg)">3</span></div>
+              <div class="sb-item"><span class="sb-item-left"><span>Kategori & Aturan</span></span></div>
+              <div class="sb-item"><span class="sb-item-left"><span>Pengaturan</span></span></div>
+            </div>
+          </div>
+          <div class="sb-footer">
+            <span>Mode: ${document.body.classList.contains('dark') ? 'Gelap' : 'Terang'}</span>
+            <span class="accent-pill">${accentLabel}</span>
+          </div>
+        </aside>
+      `;
+    }
+
+    function renderWebKanban(accentLabel) {
+      return `
+        <div class="web-frame">
+          ${sidebarHtml('tugas', accentLabel)}
+          <main class="web-main">
+            <header class="web-topbar">
+              <div class="breadcrumbs">Orbit Pribadi / <strong>Tugas & Papan Kanban</strong></div>
+              <div class="topbar-actions">
+                <span class="accent-pill">${accentLabel}</span>
+                <button class="btn btn-outline">Tampilan Tersimpan</button>
+                <button class="btn btn-primary">${ICONS.plus} Tugas Baru</button>
+              </div>
+            </header>
+            <div class="web-body">
+              <section class="web-content">
+                <div class="page-header">
+                  <div>
+                    <div class="page-title">Tugas & Papan Kanban</div>
+                    <div class="page-subtitle">Gaya Notion & Jira: seret kartu untuk memindah status, ketuk untuk buka panel detail.</div>
+                  </div>
+                </div>
+                <div class="view-bar">
+                  <div class="view-tabs">
+                    <div class="view-tab">${ICONS.list} Daftar</div>
+                    <div class="view-tab active">${ICONS.kanban} Papan Kanban</div>
+                    <div class="view-tab">${ICONS.today} Kalender</div>
+                  </div>
+                  <div class="filter-row">
+                    <span class="chip active">Semua (11)</span>
+                    <span class="chip">Magang</span>
+                    <span class="chip">Freelance</span>
+                    <span class="chip">Kuliah</span>
+                    <span class="chip">Pribadi</span>
+                  </div>
+                </div>
+
+                <div class="kanban-grid">
+                  <!-- TODO -->
+                  <div class="kb-col">
+                    <div class="kb-col-header">
+                      <span class="kb-col-title"><span class="badge st-todo">Belum dikerjakan</span></span>
+                      <span class="sb-count">3</span>
+                    </div>
+                    <div class="kb-card">
+                      <div style="display:flex;justify-content:space-between;gap:6px">
+                        <span class="badge kind-kuliah"><span class="badge-dot"></span>Kuliah</span>
+                        <span class="badge sem-expense">Terlambat</span>
+                      </div>
+                      <div class="kb-card-title">Revisi Bab 3 Metodologi Penelitian</div>
+                      <div class="progress-track"><div class="progress-fill" style="width:20%"></div></div>
+                      <div class="kb-card-meta"><span>Progres: 20%</span><span>14 Nov WIB</span></div>
+                    </div>
+                    <div class="kb-card">
+                      <div style="display:flex;justify-content:space-between">
+                        <span class="badge kind-intern"><span class="badge-dot"></span>Magang</span>
+                        <span class="badge st-todo">Sedang</span>
+                      </div>
+                      <div class="kb-card-title">Setup Cron Backup Staging DB</div>
+                      <div class="progress-track"><div class="progress-fill" style="width:0%"></div></div>
+                      <div class="kb-card-meta"><span>0/3 checklist</span><span>18 Nov WIB</span></div>
+                    </div>
+                  </div>
+
+                  <!-- DOING -->
+                  <div class="kb-col">
+                    <div class="kb-col-header">
+                      <span class="kb-col-title"><span class="badge st-doing">Dikerjakan</span></span>
+                      <span class="sb-count">3</span>
+                    </div>
+                    <div class="kb-card selected">
+                      <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;flex-wrap:wrap">
+                        <span class="badge kind-freelance"><span class="badge-dot"></span>Freelance</span>
+                        <span class="badge sem-warning">Macet 6 hr</span>
+                      </div>
+                      <div class="kb-card-title">Implementasi API Checkout & Callback</div>
+                      <div class="progress-track"><div class="progress-fill" style="width:75%"></div></div>
+                      <div class="kb-card-meta"><span>3/4 checklist &bull; 75%</span><span>17 Nov</span></div>
+                    </div>
+                    <div class="kb-card">
+                      <div style="display:flex;justify-content:space-between">
+                        <span class="badge kind-intern"><span class="badge-dot"></span>Magang</span>
+                        <span class="badge st-doing">70%</span>
+                      </div>
+                      <div class="kb-card-title">Refactor Query Index Transaksi</div>
+                      <div class="progress-track"><div class="progress-fill" style="width:70%"></div></div>
+                      <div class="kb-card-meta"><span>Manual slider</span><span>16 Nov</span></div>
+                    </div>
+                  </div>
+
+                  <!-- REVISI -->
+                  <div class="kb-col">
+                    <div class="kb-col-header">
+                      <span class="kb-col-title"><span class="badge st-revisi">Revisi</span></span>
+                      <span class="sb-count">2</span>
+                    </div>
+                    <div class="kb-card">
+                      <div style="display:flex;justify-content:space-between">
+                        <span class="badge kind-freelance"><span class="badge-dot"></span>Freelance</span>
+                        <span class="badge st-revisi">Revisi 2x</span>
+                      </div>
+                      <div class="kb-card-title">Mockup Dashboard Admin Klien</div>
+                      <div style="font-size:11.5px;color:var(--warning-fg)">Catatan: Ubah kontras tabel laporan PDF</div>
+                      <div class="progress-track"><div class="progress-fill" style="width:60%"></div></div>
+                      <div class="kb-card-meta"><span>Progres: 60%</span><span>Hari ini 18:00</span></div>
+                    </div>
+                  </div>
+
+                  <!-- DONE -->
+                  <div class="kb-col">
+                    <div class="kb-col-header">
+                      <span class="kb-col-title"><span class="badge st-done">Selesai (14 hr)</span></span>
+                      <span class="sb-count">3</span>
+                    </div>
+                    <div class="kb-card" style="opacity:0.86">
+                      <div style="display:flex;justify-content:space-between">
+                        <span class="badge kind-freelance"><span class="badge-dot"></span>Freelance</span>
+                        <span class="badge sem-income">Milestone</span>
+                      </div>
+                      <div class="kb-card-title" style="text-decoration:line-through;color:var(--text-secondary)">Desain Wireframe Portal Klien</div>
+                      <div class="kb-card-meta"><span>100%</span><span>12 Nov</span></div>
+                    </div>
+                    <div class="kb-footer-link">Lihat semua tugas selesai (24) &rarr;</div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Side Peek Notion + Jira Detail -->
+              <aside class="side-peek">
+                <div class="peek-head">
+                  <span>Portal Klien SaaS / ORB-14</span>
+                  <span>Buka penuh &bull; Tutup [Esc]</span>
+                </div>
+                <div class="peek-title">Implementasi API Checkout & Callback</div>
+                <div class="callout">${ICONS.alert} Perlu perhatian: berada di status Dikerjakan selama 6 hari tanpa pembaruan.</div>
+
+                <div class="prop-table">
+                  <div class="prop-key">Status</div>
+                  <div class="prop-val"><span class="badge st-doing">Dikerjakan &#9662;</span> <span class="badge st-revisi">Revisi: 1x</span></div>
+                  <div class="prop-key">Prioritas</div>
+                  <div class="prop-val"><span class="badge sem-expense">Tinggi</span></div>
+                  <div class="prop-key">Progres</div>
+                  <div class="prop-val">
+                    <div style="flex:1;min-width:110px"><div class="progress-track"><div class="progress-fill" style="width:75%"></div></div></div>
+                    <strong style="font-size:12px">75%</strong>
+                    <span style="font-size:10.5px;color:var(--text-muted)">(Auto checklist)</span>
+                  </div>
+                  <div class="prop-key">Tenggat</div>
+                  <div class="prop-val">17 Nov 2026, 23:59 WIB</div>
+                  <div class="prop-key">Estimasi</div>
+                  <div class="prop-val">120 menit</div>
+                  <div class="prop-key">Milestone</div>
+                  <div class="prop-val"><span class="badge sem-warning">Termin 2 - Rp 1.500.000</span></div>
+                </div>
+
+                <div>
+                  <div style="font-size:12px;font-weight:600;margin-bottom:6px">Catatan & Spesifikasi</div>
+                  <div class="block-box">Pastikan webhook callback memeriksa idempotency key dan signature HMAC sebelum menandai invoice lunas.</div>
+                </div>
+
+                <div>
+                  <div style="font-size:12px;font-weight:600;margin-bottom:6px">Checklist (3/4 selesai &mdash; mengunci slider manual)</div>
+                  <div class="checklist-item"><span class="chk-box done">${ICONS.check}</span><span style="text-decoration:line-through;color:var(--text-muted)">Buat endpoint signature verify</span></div>
+                  <div class="checklist-item"><span class="chk-box done">${ICONS.check}</span><span style="text-decoration:line-through;color:var(--text-muted)">Simpan idempotency key</span></div>
+                  <div class="checklist-item"><span class="chk-box done">${ICONS.check}</span><span style="text-decoration:line-through;color:var(--text-muted)">Uji skenario webhook sukses</span></div>
+                  <div class="checklist-item"><span class="chk-box"></span><span>Tangani retry saat timeout BCA VA</span></div>
+                </div>
+
+                <div style="margin-top:auto">
+                  <div style="font-size:12px;font-weight:600;margin-bottom:6px">Riwayat Status (D.2)</div>
+                  <div class="history-item"><strong>10 Nov 14:20</strong> &bull; Revisi &rarr; Dikerjakan</div>
+                  <div class="history-item"><strong>09 Nov 17:05</strong> &bull; Dikerjakan &rarr; Revisi &bull; "Perlu cek signature payload"</div>
+                </div>
+              </aside>
+            </div>
+          </main>
+        </div>
+      `;
+    }
+
+    function renderWebHariIni(accentLabel) {
+      return `
+        <div class="web-frame">
+          ${sidebarHtml('hari-ini', accentLabel)}
+          <main class="web-main">
+            <header class="web-topbar">
+              <div class="breadcrumbs">Orbit Pribadi / <strong>Hari Ini</strong> &bull; Minggu, 15 Nov 2026 (13:20 WIB)</div>
+              <div class="topbar-actions">
+                <span class="chip active">Semua Kegiatan</span>
+                <span class="chip">Magang</span>
+                <span class="chip">Freelance</span>
+                <span class="chip">Kuliah</span>
+                <button class="btn btn-primary">${ICONS.plus} Tambah Cepat</button>
+              </div>
+            </header>
+            <div class="web-body">
+              <section class="web-content">
+                <div class="page-header">
+                  <div>
+                    <div class="page-title">Selamat Siang, Nabil</div>
+                    <div class="page-subtitle">Ringkasan operasional lintas peran hari ini. Klik item mana pun untuk panel detail atau buka Papan Kanban.</div>
+                  </div>
+                  <button class="btn btn-outline">${ICONS.kanban} Buka Papan Kanban</button>
+                </div>
+
+                <!-- Kartu Progres M10c -->
+                <div class="status-strip">
+                  <div class="stat-tile"><div class="stat-num">3</div><div class="stat-lbl">Belum dikerjakan</div></div>
+                  <div class="stat-tile"><div class="stat-num" style="color:var(--doing-fg)">3</div><div class="stat-lbl">Sedang dikerjakan</div></div>
+                  <div class="stat-tile"><div class="stat-num" style="color:var(--revisi-fg)">2</div><div class="stat-lbl">Sedang Revisi</div></div>
+                  <div class="stat-tile"><div class="stat-num" style="color:var(--done-fg)">8</div><div class="stat-lbl">Selesai (14 hari)</div></div>
+                </div>
+
+                <div class="today-grid">
+                  <div style="display:flex;flex-direction:column;gap:14px">
+                    <div class="flat-section">
+                      <div class="section-head"><span>Perlu Perhatian (M10c)</span><span class="badge sem-warning">3 Item</span></div>
+                      <div class="list-row">
+                        <div><strong>Revisi Bab 3 Metodologi</strong><div style="font-size:11.5px;color:var(--text-secondary)">Kuliah &bull; Tenggat lewat 1 hari</div></div>
+                        <span class="badge sem-expense">Terlambat</span>
+                      </div>
+                      <div class="list-row">
+                        <div><strong>Mockup Dashboard Admin Klien</strong><div style="font-size:11.5px;color:var(--text-secondary)">Freelance &bull; Catatan: kontras tabel PDF</div></div>
+                        <span class="badge st-revisi">Sedang Revisi (2x)</span>
+                      </div>
+                      <div class="list-row">
+                        <div><strong>Implementasi API Checkout</strong><div style="font-size:11.5px;color:var(--text-secondary)">Freelance &bull; Tidak berubah 6 hari</div></div>
+                        <span class="badge sem-warning">Macet &gt; 5 hr</span>
+                      </div>
+                    </div>
+
+                    <div class="flat-section" style="flex:1">
+                      <div class="section-head"><span>Jadwal Hari Ini</span><span style="font-size:12px;color:var(--text-muted)">3 acara</span></div>
+                      <div class="list-row">
+                        <div><strong>09:00 - 11:00</strong> &nbsp; Standup & Review Sprint <span class="badge kind-intern">Magang</span></div>
+                        <span style="font-size:12px;color:var(--text-muted)">Meet</span>
+                      </div>
+                      <div class="list-row">
+                        <div><strong>14:00 - 15:30</strong> &nbsp; Sinkronisasi Klien Portal <span class="badge kind-freelance">Freelance</span></div>
+                        <span style="font-size:12px;color:var(--text-muted)">Zoom</span>
+                      </div>
+                      <div class="list-row">
+                        <div><strong>19:30 - 21:00</strong> &nbsp; Deep Work Bab 3 Skripsi <span class="badge kind-kuliah">Kuliah</span></div>
+                        <span style="font-size:12px;color:var(--text-muted)">Kos</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style="display:flex;flex-direction:column;gap:14px">
+                    <div class="flat-section">
+                      <div class="section-head"><span>Keuangan & Safe-to-Spend</span><span class="badge sem-warning">3 Draft Inbox</span></div>
+                      <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+                        <div style="font-size:12px;color:var(--text-muted)">Total Saldo Likuid</div>
+                        <div style="font-size:24px;font-weight:700" class="tabular">Rp 12.935.000</div>
+                      </div>
+                      <div class="list-row"><span>Pemasukan hari ini</span><strong style="color:var(--income-fg)">+Rp 800.000</strong></div>
+                      <div class="list-row"><span>Pengeluaran hari ini</span><strong style="color:var(--expense-fg)">-Rp 42.500</strong></div>
+                      <div class="list-row"><span>Safe-to-Spend harian</span><strong>Rp 185.000 / hr</strong></div>
+                    </div>
+                    <div class="flat-section" style="flex:1">
+                      <div class="section-head"><span>Tagihan & Piutang Dekat</span></div>
+                      <div class="list-row"><span>Internet Fiber Biznet</span><span class="badge sem-warning">H-3 &bull; Rp 350.000</span></div>
+                      <div class="list-row"><span>Piutang Termin 2 Portal</span><span class="badge sem-income">Rp 1.500.000</span></div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </main>
+        </div>
+      `;
+    }
+
+    function renderWebUang(accentLabel) {
+      return `
+        <div class="web-frame">
+          ${sidebarHtml('uang', accentLabel)}
+          <main class="web-main">
+            <header class="web-topbar">
+              <div class="breadcrumbs">Orbit Pribadi / <strong>Keuangan & Transaksi</strong></div>
+              <div class="topbar-actions">
+                <button class="btn btn-outline">Impor CSV</button>
+                <button class="btn btn-outline">Ekspor</button>
+                <button class="btn btn-primary">${ICONS.plus} Catat Transaksi</button>
+              </div>
+            </header>
+            <div class="web-body">
+              <section class="web-content">
+                <div class="view-bar">
+                  <div class="view-tabs">
+                    <div class="view-tab active">Transaksi</div>
+                    <div class="view-tab">Akun & Dompet</div>
+                    <div class="view-tab">Anggaran</div>
+                    <div class="view-tab">Tagihan</div>
+                    <div class="view-tab">Target</div>
+                    <div class="view-tab">Ringkasan Grafik</div>
+                  </div>
+                  <div class="filter-row">
+                    <span class="badge sem-warning">Inbox: 3 Draft Menunggu Konfirmasi</span>
+                  </div>
+                </div>
+
+                <div class="status-strip">
+                  <div class="stat-tile"><div class="stat-num" style="color:var(--income-fg)">+Rp 5.800.000</div><div class="stat-lbl">Pemasukan Bulan Ini</div></div>
+                  <div class="stat-tile"><div class="stat-num" style="color:var(--expense-fg)">-Rp 2.140.000</div><div class="stat-lbl">Pengeluaran Bulan Ini</div></div>
+                  <div class="stat-tile"><div class="stat-num">Rp 3.660.000</div><div class="stat-lbl">Arus Kas Bersih</div></div>
+                  <div class="stat-tile"><div class="stat-num">78%</div><div class="stat-lbl">Pemakaian Anggaran</div></div>
+                </div>
+
+                <div class="flat-section" style="flex:1">
+                  <div class="section-head"><span>Hari ini &bull; Min, 15 Nov 2026</span><strong style="color:var(--expense-fg)">Subtotal: -Rp 42.500</strong></div>
+                  <div class="list-row">
+                    <div><strong>Kopi Kenangan QRIS</strong> <span class="badge sem-warning">Draft Notifikasi</span><div style="font-size:11.5px;color:var(--text-secondary)">BCA Utama &bull; Makan & Minum &bull; 10:15 WIB</div></div>
+                    <strong style="color:var(--expense-fg)">-Rp 24.000</strong>
+                  </div>
+                  <div class="list-row">
+                    <div><strong>GoRide Kampus</strong><div style="font-size:11.5px;color:var(--text-secondary)">GoPay &bull; Transport &bull; <span class="badge kind-kuliah">Kuliah</span></div></div>
+                    <strong style="color:var(--expense-fg)">-Rp 18.500</strong>
+                  </div>
+                  <div class="section-head" style="margin-top:12px"><span>Kemarin &bull; Sab, 14 Nov 2026</span><strong style="color:var(--income-fg)">Subtotal: +Rp 1.455.000</strong></div>
+                  <div class="list-row">
+                    <div><strong>Termin 1 Portal Klien</strong><div style="font-size:11.5px;color:var(--text-secondary)">BCA Utama &bull; Proyek Freelance &bull; <span class="badge kind-freelance">Freelance</span></div></div>
+                    <strong style="color:var(--income-fg)">+Rp 1.500.000</strong>
+                  </div>
+                  <div class="list-row">
+                    <div><strong>Makan Malam Kos</strong><div style="font-size:11.5px;color:var(--text-secondary)">Tunai &bull; Makan & Minum</div></div>
+                    <strong style="color:var(--expense-fg)">-Rp 45.000</strong>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </main>
+        </div>
+      `;
+    }
+
+    function mobileShell(activeIdx, title, bodyHtml) {
+      const items = [
+        { lbl: 'Hari Ini', ico: ICONS.today },
+        { lbl: 'Agenda', ico: ICONS.agenda },
+        { lbl: 'Uang', ico: ICONS.wallet },
+        { lbl: 'Lainnya', ico: ICONS.grid },
+      ];
+      return `
+        <div class="mobile-frame">
+          <header class="mob-appbar">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="color:var(--text-secondary)">${ICONS.menu}</span>
+              <strong style="font-size:15.5px">${title}</strong>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;color:var(--text-secondary)">
+              ${ICONS.search}
+              <span style="background:var(--accent);color:var(--accent-fg);width:28px;height:28px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center">${ICONS.plus}</span>
+            </div>
+          </header>
+          <main class="mob-body">${bodyHtml}</main>
+          <nav class="mob-nav">
+            ${items.map((it, idx) => `
+              <div class="mob-nav-item ${idx===activeIdx?'active':''}">
+                ${it.ico}
+                <span>${it.lbl}</span>
+              </div>
+            `).join('')}
+          </nav>
+        </div>
+      `;
+    }
+
+    function renderMobileHariIni() {
+      return mobileShell(0, 'Orbit', `
+        <div>
+          <div style="font-size:20px;font-weight:700">Selamat Siang, Nabil</div>
+          <div style="font-size:12px;color:var(--text-muted)">Minggu, 15 Nov 2026 &bull; 13:20 WIB</div>
+        </div>
+        <div class="status-strip" style="gap:6px">
+          <div class="stat-tile" style="padding:7px"><div class="stat-num" style="font-size:15px">3</div><div class="stat-lbl">Todo</div></div>
+          <div class="stat-tile" style="padding:7px"><div class="stat-num" style="font-size:15px;color:var(--doing-fg)">3</div><div class="stat-lbl">Jalan</div></div>
+          <div class="stat-tile" style="padding:7px"><div class="stat-num" style="font-size:15px;color:var(--revisi-fg)">2</div><div class="stat-lbl">Revisi</div></div>
+          <div class="stat-tile" style="padding:7px"><div class="stat-num" style="font-size:15px;color:var(--done-fg)">8</div><div class="stat-lbl">Selesai</div></div>
+        </div>
+        <div class="callout">${ICONS.alert} 1 tugas terlambat &bull; 1 macet &gt; 5 hari &bull; 2 revisi</div>
+        <div class="flat-section" style="padding:10px 12px;gap:6px">
+          <div class="section-head"><span>Tugas Perlu Aksi</span><span style="font-size:11.5px;color:var(--accent)">Buka Kanban &rarr;</span></div>
+          <div class="list-row" style="padding:6px 0">
+            <div><strong style="font-size:13px">Revisi Bab 3 Skripsi</strong><div><span class="badge kind-kuliah">Kuliah</span> <span class="badge sem-expense">Terlambat</span></div></div>
+            <strong>20%</strong>
+          </div>
+          <div class="list-row" style="padding:6px 0">
+            <div><strong style="font-size:13px">Mockup Dashboard Klien</strong><div><span class="badge kind-freelance">Freelance</span> <span class="badge st-revisi">Revisi 2x</span></div></div>
+            <strong>60%</strong>
+          </div>
+          <div class="list-row" style="padding:6px 0">
+            <div><strong style="font-size:13px">API Checkout Callback</strong><div><span class="badge kind-freelance">Freelance</span> <span class="badge sem-warning">Macet 6 hr</span></div></div>
+            <strong>75%</strong>
+          </div>
+        </div>
+        <div class="flat-section" style="padding:10px 12px;gap:6px">
+          <div class="section-head"><span>Uang Hari Ini</span><span class="badge sem-warning">3 Draft</span></div>
+          <div class="list-row" style="padding:4px 0"><span>Saldo Likuid</span><strong>Rp 12.935.000</strong></div>
+          <div class="list-row" style="padding:4px 0"><span>Arus Kas Hari Ini</span><strong style="color:var(--expense-fg)">-Rp 42.500</strong></div>
+        </div>
+      `);
+    }
+
+    function renderMobileKanban() {
+      return mobileShell(1, 'Agenda', `
+        <div class="mob-seg" style="grid-template-columns:1fr 1fr">
+          <div class="mob-seg-btn active">Tugas</div>
+          <div class="mob-seg-btn">Jadwal</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="mob-seg" style="flex:1;margin-right:8px">
+            <div class="mob-seg-btn">Daftar</div>
+            <div class="mob-seg-btn active">Papan</div>
+            <div class="mob-seg-btn">Kalender</div>
+          </div>
+          <span class="chip active">Semua</span>
+        </div>
+        <!-- 2+ visible horizontal swipe Kanban columns -->
+        <div style="display:flex;gap:10px;flex:1;overflow:hidden">
+          <div class="kb-col" style="width:242px;shrink:0">
+            <div class="kb-col-header">
+              <span class="badge st-doing">Dikerjakan (3)</span>
+              <span style="font-size:11px;color:var(--text-muted)">Geser &rarr;</span>
+            </div>
+            <div class="kb-card selected">
+              <div style="display:flex;justify-content:space-between">
+                <span class="badge kind-freelance"><span class="badge-dot"></span>Freelance</span>
+                <span class="badge sem-warning">Macet 6 hr</span>
+              </div>
+              <div class="kb-card-title">API Checkout & Callback Midtrans</div>
+              <div class="progress-track"><div class="progress-fill" style="width:75%"></div></div>
+              <div class="kb-card-meta"><span>3/4 checklist</span><span>Pindah v</span></div>
+            </div>
+            <div class="kb-card">
+              <span class="badge kind-intern" style="align-self:flex-start"><span class="badge-dot"></span>Magang</span>
+              <div class="kb-card-title">Refactor Index DB Transaksi</div>
+              <div class="progress-track"><div class="progress-fill" style="width:70%"></div></div>
+              <div class="kb-card-meta"><span>70%</span><span>16 Nov</span></div>
+            </div>
+          </div>
+          <div class="kb-col" style="width:180px;shrink:0;opacity:0.9">
+            <div class="kb-col-header">
+              <span class="badge st-revisi">Revisi (2)</span>
+            </div>
+            <div class="kb-card">
+              <span class="badge kind-freelance" style="align-self:flex-start">Freelance</span>
+              <div class="kb-card-title">Mockup Dashboard Klien</div>
+              <span class="badge st-revisi" style="align-self:flex-start">Revisi 2x</span>
+            </div>
+          </div>
+        </div>
+      `);
+    }
+
+    function renderMobileDetail() {
+      return `
+        <div class="mobile-frame">
+          <header class="mob-appbar">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-weight:700;font-size:16px">&larr;</span>
+              <span style="font-size:13px;color:var(--text-secondary)">Portal Klien &bull; ORB-14</span>
+            </div>
+            <span class="badge st-doing">Dikerjakan &#9662;</span>
+          </header>
+          <main class="mob-body" style="gap:10px">
+            <div style="font-size:18px;font-weight:700;line-height:1.3">Implementasi API Checkout & Callback</div>
+            <div class="callout">${ICONS.alert} Macet 6 hari tanpa perubahan status.</div>
+            <div class="prop-table">
+              <div class="prop-key">Status</div><div class="prop-val"><span class="badge st-doing">Dikerjakan</span> <span class="badge st-revisi">Revisi 1x</span></div>
+              <div class="prop-key">Prioritas</div><div class="prop-val"><span class="badge sem-expense">Tinggi</span></div>
+              <div class="prop-key">Progres</div>
+              <div class="prop-val"><div style="flex:1"><div class="progress-track"><div class="progress-fill" style="width:75%"></div></div></div><strong>75%</strong></div>
+              <div class="prop-key">Tenggat</div><div class="prop-val">17 Nov 2026, 23:59 WIB</div>
+              <div class="prop-key">Milestone</div><div class="prop-val"><span class="badge sem-warning">Termin 2 (Rp 1,5 jt)</span></div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:600;margin-bottom:5px">Catatan & Spesifikasi</div>
+              <div class="block-box">Pastikan webhook callback memeriksa idempotency key dan signature HMAC sebelum menandai invoice lunas.</div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:600;margin-bottom:4px">Checklist (Auto Progres 75%)</div>
+              <div class="checklist-item"><span class="chk-box done">${ICONS.check}</span><span style="text-decoration:line-through;color:var(--text-secondary);opacity:0.75">Endpoint verifikasi signature</span></div>
+              <div class="checklist-item"><span class="chk-box done">${ICONS.check}</span><span style="text-decoration:line-through;color:var(--text-secondary);opacity:0.75">Idempotency key Postgres</span></div>
+              <div class="checklist-item"><span class="chk-box done">${ICONS.check}</span><span style="text-decoration:line-through;color:var(--text-secondary);opacity:0.75">Uji callback sukses</span></div>
+              <div class="checklist-item"><span class="chk-box"></span><span>Retry timeout Virtual Account</span></div>
+            </div>
+            <div style="padding-top:10px;border-top:1px solid var(--border)">
+              <div style="font-size:12px;font-weight:600;margin-bottom:6px">Riwayat Status (D.2)</div>
+              <div class="history-item">10 Nov 14:20 &bull; Revisi &rarr; Dikerjakan</div>
+              <div class="history-item">09 Nov 17:05 &bull; Dikerjakan &rarr; Revisi &bull; "Cek signature"</div>
+            </div>
+          </main>
+        </div>
+      `;
+    }
+
+    function renderMobileUang() {
+      return mobileShell(2, 'Uang', `
+        <div class="mob-seg">
+          <div class="mob-seg-btn active">Transaksi</div>
+          <div class="mob-seg-btn">Akun</div>
+          <div class="mob-seg-btn">Ringkasan</div>
+        </div>
+        <div style="display:flex;gap:6px;overflow:hidden;mask-image:linear-gradient(to right, black 85%, transparent 100%)">
+          <span class="chip active">Inbox (3)</span>
+          <span class="chip">Anggaran</span>
+          <span class="chip">Tagihan</span>
+          <span class="chip">Target</span>
+        </div>
+        <div class="flat-section" style="padding:10px 12px;gap:4px">
+          <div class="section-head"><span>Hari ini</span><strong style="color:var(--expense-fg)">-Rp 42.500</strong></div>
+          <div class="list-row">
+            <div><strong>Kopi Kenangan</strong><div><span class="badge sem-warning">Draft Notifikasi</span> <span style="font-size:11px;color:var(--text-muted)">BCA</span></div></div>
+            <strong style="color:var(--expense-fg)">-Rp 24.000</strong>
+          </div>
+          <div class="list-row">
+            <div><strong>GoRide Kampus</strong><div style="font-size:11px;color:var(--text-muted)">GoPay &bull; Transport &bull; Kuliah</div></div>
+            <strong style="color:var(--expense-fg)">-Rp 18.500</strong>
+          </div>
+        </div>
+        <div class="flat-section" style="padding:10px 12px;gap:4px">
+          <div class="section-head"><span>Kemarin &bull; Sab, 14 Nov</span><strong style="color:var(--income-fg)">+Rp 1.455.000</strong></div>
+          <div class="list-row">
+            <div><strong>Termin 1 Portal Klien</strong><div style="font-size:11px;color:var(--text-muted)">BCA &bull; Freelance</div></div>
+            <strong style="color:var(--income-fg)">+Rp 1.500.000</strong>
+          </div>
+          <div class="list-row">
+            <div><strong>Makan Malam Kos</strong><div style="font-size:11px;color:var(--text-muted)">Tunai</div></div>
+            <strong style="color:var(--expense-fg)">-Rp 45.000</strong>
+          </div>
+        </div>
+      `);
+    }
+
+    function renderAndroidWidgets() {
+      return `
+        <div class="widgets-board">
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em">Widget 1: Hari Ini (4x2 Android)</div>
+            <div class="w-surface" style="flex:1">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <strong style="font-size:14px">Orbit &bull; Hari Ini</strong>
+                <span class="badge sem-expense">1 Terlambat</span>
+              </div>
+              <div class="list-row" style="border-color:#2e343b"><span>09:00 Standup Magang</span><span class="badge kind-intern">Magang</span></div>
+              <div class="list-row" style="border-color:#2e343b"><span>Revisi Bab 3 Metodologi</span><span class="badge st-revisi">Revisi 20%</span></div>
+              <div class="list-row" style="border-color:#2e343b"><span>Mockup Dashboard Klien</span><span class="badge st-doing">60%</span></div>
+            </div>
+
+            <div style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em">Widget 3: Tambah Cepat (4x1 Android)</div>
+            <div class="w-surface" style="flex-direction:row;align-items:center;justify-content:space-between">
+              <strong style="font-size:13px">Orbit +</strong>
+              <div style="display:flex;gap:8px">
+                <span class="btn btn-primary" style="height:30px">+ Transaksi</span>
+                <span class="btn" style="height:30px;background:#2a3038;color:#f8fafc;border-color:#3a424d">+ Tugas</span>
+                <span class="btn" style="height:30px;background:#2a3038;color:#f8fafc;border-color:#3a424d">+ Jadwal</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em">Widget 2: Ringkasan Tugas (2x2 Android)</div>
+            <div class="w-surface">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <strong>Tugas Aktif</strong>
+                <span class="btn btn-primary" style="height:26px;padding:0 10px">+ Baru</span>
+              </div>
+              <div class="status-strip" style="grid-template-columns:1fr 1fr;gap:8px">
+                <div class="stat-tile" style="background:#262b31;border-color:#353c45"><div class="stat-num">3</div><div class="stat-lbl" style="color:#94a3b8">Belum</div></div>
+                <div class="stat-tile" style="background:#0c4a6e;border-color:#075985"><div class="stat-num" style="color:#7dd3fc">3</div><div class="stat-lbl" style="color:#bae6fd">Dikerjakan</div></div>
+                <div class="stat-tile" style="background:#451a03;border-color:#78350f"><div class="stat-num" style="color:#fcd34d">2</div><div class="stat-lbl" style="color:#fde68a">Revisi</div></div>
+                <div class="stat-tile" style="background:#052e16;border-color:#14532d"><div class="stat-num" style="color:#4ade80">8</div><div class="stat-lbl" style="color:#bbf7d0">Selesai</div></div>
+              </div>
+            </div>
+
+            <div style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em">Widget 4: Saldo Opsional & Privasi (2x1)</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="w-surface">
+                <span style="font-size:11px;color:#94a3b8">Total Saldo Likuid</span>
+                <strong style="font-size:18px" class="tabular">Rp 12.935.000</strong>
+                <span style="font-size:11px;color:#4ade80">Safe: Rp 185rb/hr</span>
+              </div>
+              <div class="w-surface">
+                <span style="font-size:11px;color:#94a3b8;display:flex;justify-content:space-between">Mode Layar Kunci ${ICONS.eyeoff}</span>
+                <strong style="font-size:18px;letter-spacing:2px">Rp ***.***</strong>
+                <span style="font-size:11px;color:#94a3b8">Ketuk & buka biometrik</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const screen = params.get('screen') || 'web-kanban';
+    const theme = params.get('theme') || 'light';
+    const accent = params.get('accent') || 'a';
+
+    document.body.className = `${theme === 'dark' ? 'dark' : ''} accent-${accent}`;
+    const accentLabel = accent === 'b' ? 'Opsi B: Monokrom Notion' : 'Opsi A: Biru Orbit';
+
+    const mount = document.getElementById('mount');
+    if (screen === 'web-kanban') mount.innerHTML = renderWebKanban(accentLabel);
+    else if (screen === 'web-hari-ini') mount.innerHTML = renderWebHariIni(accentLabel);
+    else if (screen === 'web-uang') mount.innerHTML = renderWebUang(accentLabel);
+    else if (screen === 'mobile-hari-ini') mount.innerHTML = renderMobileHariIni();
+    else if (screen === 'mobile-kanban') mount.innerHTML = renderMobileKanban();
+    else if (screen === 'mobile-detail') mount.innerHTML = renderMobileDetail();
+    else if (screen === 'mobile-uang') mount.innerHTML = renderMobileUang();
+    else if (screen === 'mobile-widgets') mount.innerHTML = renderAndroidWidgets();
+  </script>
+</body>
+</html>

@@ -1,9 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <application
         android:label="Orbit"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -21,7 +27,7 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Deep Link untuk OAuth Google & Reset Password Callback -->
+            <!-- Deep Link OAuth Google, Reset Password, & Quick-Add Widget -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -30,9 +36,92 @@
                     android:scheme="io.supabase.orbit"
                     android:host="login-callback" />
                 <data
+                    android:scheme="io.supabase.orbit"
+                    android:host="quick-add" />
+                <data
                     android:scheme="io.supabase.orbit" />
             </intent-filter>
+            <!-- Share Target Android: hanya teks mutasi/struk atau gambar struk aman -->
+            <intent-filter android:label="Simpan ke Inbox Orbit">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter android:label="Pindai Struk ke Orbit">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/jpeg" />
+                <data android:mimeType="image/jpg" />
+                <data android:mimeType="image/png" />
+                <data android:mimeType="image/webp" />
+            </intent-filter>
         </activity>
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name="id.my.nabilcf.orbit_app.OrbitTodayWidgetProvider"
+            android:exported="true"
+            android:label="@string/orbit_widget_today_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_today_info" />
+        </receiver>
+        <receiver
+            android:name="id.my.nabilcf.orbit_app.OrbitTasksWidgetProvider"
+            android:exported="true"
+            android:label="@string/orbit_widget_tasks_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_tasks_info" />
+        </receiver>
+        <receiver
+            android:name="id.my.nabilcf.orbit_app.OrbitQuickAddWidgetProvider"
+            android:exported="true"
+            android:label="@string/orbit_widget_quick_add_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_quick_add_info" />
+        </receiver>
+        <receiver
+            android:name="id.my.nabilcf.orbit_app.OrbitBalanceWidgetProvider"
+            android:exported="true"
+            android:label="@string/orbit_widget_balance_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_balance_info" />
+        </receiver>
+        <service
+            android:name="id.my.nabilcf.orbit_app.OrbitBankNotificationListener"
+            android:exported="true"
+            android:label="@string/orbit_bank_listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
@@ -46,6 +135,10 @@
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
         </intent>
     </queries>
 </manifest>

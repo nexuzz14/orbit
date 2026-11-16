@@ -11,11 +11,14 @@ const config: Config = {
     extend: {
       colors: {
         background: 'var(--background)',
+        sidebar: 'var(--sidebar)',
         foreground: 'var(--foreground)',
         card: 'var(--card)',
         'card-foreground': 'var(--card-foreground)',
         subtle: 'var(--subtle)',
+        hover: 'var(--hover)',
         border: 'var(--border)',
+        'border-strong': 'var(--border-strong)',
         primary: {
           DEFAULT: 'var(--primary)',
           foreground: 'var(--primary-foreground)',
@@ -24,6 +27,7 @@ const config: Config = {
         muted: {
           DEFAULT: 'var(--muted)',
           foreground: 'var(--muted-foreground)',
+          subtle: 'var(--text-muted)',
         },
         income: {
           DEFAULT: 'var(--income)',
@@ -42,12 +46,14 @@ const config: Config = {
         },
       },
       borderRadius: {
+        xs: '4px',
         sm: '6px',
         md: '8px',
         lg: '12px',
       },
       boxShadow: {
-        card: '0 1px 2px 0 rgba(15, 23, 42, 0.04)',
+        card: '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+        peek: '0 4px 16px rgba(0, 0, 0, 0.08)',
       },
       transitionDuration: {
         DEFAULT: '150ms',

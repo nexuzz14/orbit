@@ -201,7 +201,7 @@ test.describe('Fase D.1b Authenticated CSP, Hydration, and Sidebar 1280x700 Veri
     });
   }
 
-  test('Sidebar viewport 1280x700 proves 5 Lainnya items and menu scrollability', async ({ page }) => {
+  test('Sidebar viewport 1280x700 proves Orbit v2 sections and menu scrollability', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 700 });
     await page.goto('/hari-ini', { waitUntil: 'networkidle' });
 
@@ -210,10 +210,9 @@ test.describe('Fase D.1b Authenticated CSP, Hydration, and Sidebar 1280x700 Veri
     await expect(sidebar).toBeVisible();
 
     const expectedItems = [
-      'Kegiatan & Piutang',
+      'Semua Kegiatan',
       'Kategori & Aturan',
-      'Sumber Otomatis',
-      'Keamanan',
+      'Inbox Draft',
       'Pengaturan',
     ];
 

@@ -85,3 +85,17 @@ Untuk mengaktifkan workflow backup database otomatis `.github/workflows/backup.y
    - Tunggu run selesai hingga hijau dan periksa artefak `orbit-db-backup-*.dump.gpg` yang dihasilkan.
 
 > **Catatan Status Checklist Keamanan PRD 9.16**: Item backup di checklist gerbang rilis keamanan berstatus **"Menunggu secret dari pengguna"** hingga Anda selesai menyetel kedua secret di atas dan workflow berhasil dijalankan.
+
+---
+
+## 7. Konfigurasi Orbit v2 (Migrasi v5.2/v5.3, VAPID Web Push, dan Google Calendar Sync)
+1. **Migrasi Database Cloud Supabase (wajib konfirmasi sebelum push)**:
+   - Pastikan 3 berkas migrasi Orbit v2 sudah diterapkan ke project Cloud Supabase Anda (`20261115000100_v5_2_task_status_enum_revisi.sql`, `20261115000200_v5_2_d2_task_workflow.sql`, `20261115000300_v5_3_collaboration_and_views.sql`).
+2. **Web Push (VAPID) di Vercel / `.env.local`**:
+   - Buat pasangan kunci VAPID (`npx web-push generate-vapid-keys`), lalu setel di Vercel Environment Variables:
+     - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
+     - `VAPID_PRIVATE_KEY` (rahasia server)
+     - `VAPID_SUBJECT` (mis. `mailto:email-anda@contoh.com`)
+3. **Sinkronisasi Dua Arah Google Calendar API (opsional)**:
+   - Aktifkan Google Calendar API pada project Google Cloud Console yang sama dan tambahkan redirect URI `https://orbit-neo-df21.vercel.app/api/calendar/google/callback` (dan `http://localhost:3000/api/calendar/google/callback` untuk lokal).
+   - Setel `GOOGLE_CLIENT_ID` dan `GOOGLE_CLIENT_SECRET` di Vercel Environment Variables. Tanpa variabel ini, Orbit tetap berjalan penuh lewat ekspor/impor file `.ics`.

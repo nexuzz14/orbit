@@ -197,37 +197,165 @@ async function setTheme(page: Page, mode: 'light' | 'dark') {
 }
 
 test.describe('Fase D Visual Regression & Sesudah Screenshots', () => {
-  test.setTimeout(120000);
+  test.setTimeout(360000);
 
   test('Capture and verify main Web routes in Desktop & Mobile viewports', async ({ page }) => {
     fs.mkdirSync(outDir, { recursive: true });
 
     // 1. Login Route (Unauthenticated)
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto('/login', { waitUntil: 'networkidle' });
+    await page.goto('/login', { waitUntil: 'load' });
     await setTheme(page, 'light');
     await expect(page.getByRole('heading', { name: 'ORBIT' })).toBeVisible();
-    await page.screenshot({ path: path.join(outDir, 'web-desktop-login-data.png') });
+    await page.screenshot({ path: path.join(outDir, 'web-desktop-login-data.png'), animations: 'disabled' });
 
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.screenshot({ path: path.join(outDir, 'web-mobile-login-data.png') });
+    await page.screenshot({ path: path.join(outDir, 'web-mobile-login-data.png'), animations: 'disabled' });
 
-    // 2. Authenticate via test user
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await page.fill('input[type="email"]', 'orbit.visual.e2e@gmail.com');
-    await page.fill('input[type="password"]', 'OrbitTestPassword123!');
-    await page.click('button[type="submit"]');
-    await page.waitForURL('**/hari-ini', { timeout: 20000 });
+    // 2. Simulasi sesi terautentikasi E2E & mock API Supabase
+    const mockUserId = 'e2e-visual-user';
+    const mockSession = {
+      access_token: 'e2e-visual-access-token',
+      refresh_token: 'e2e-visual-refresh-token',
+      token_type: 'bearer',
+      expires_in: 86400,
+      expires_at: Math.floor(Date.now() / 1000) + 86400,
+      user: {
+        id: mockUserId,
+        aud: 'authenticated',
+        role: 'authenticated',
+        email: 'orbit.visual.e2e@gmail.com',
+        app_metadata: { provider: 'email' },
+        user_metadata: { display_name: 'Orbit Visual E2E' },
+        created_at: `${yesterdayDate}T08:00:00.000Z`,
+      },
+    };
+    const ssrCookieValue = `base64-${Buffer.from(JSON.stringify(mockSession)).toString('base64url')}`;
 
-    let mockMode: 'data' | 'empty' | 'error' = 'data';
+    await page.context().addCookies([
+      {
+        name: 'orbit-e2e-user',
+        value: 'true',
+        domain: 'localhost',
+        path: '/',
+      },
+      {
+        name: 'sb-kpsfdqswoerzkicocvre-auth-token',
+        value: ssrCookieValue,
+        domain: 'localhost',
+        path: '/',
+      },
+      {
+        name: 'sb-dummy-auth-token',
+        value: ssrCookieValue,
+        domain: 'localhost',
+        path: '/',
+      },
+    ]);
 
-    await page.route('**/rest/v1/**', async (route) => {
-      const url = route.request().url();
-      if (url.includes('workspace_members')) {
+    await page.evaluate((id) => {
+      window.localStorage.setItem('orbit_active_workspace_id', id);
+    }, wsId);
+
+    await page.route('**/auth/v1/**', async (route) => {
+      const pathname = new URL(route.request().url()).pathname;
+      if (pathname.endsWith('/factors')) {
         return route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ workspace_id: wsId }),
+          body: JSON.stringify({ all: [], totp: [] }),
+        });
+      }
+      if (pathname.endsWith('/token')) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockSession),
+        });
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockSession.user),
+      });
+    });
+
+    let mockMode: 'data' | 'empty' | 'error' = 'data';
+    const mockWorkspace = {
+      id: wsId,
+      name: 'Orbit Workspace Sesudah',
+      type: 'shared',
+      base_currency: 'IDR',
+      owner_id: mockUserId,
+      month_start_day: 1,
+      created_at: `${yesterdayDate}T08:00:00.000Z`,
+      updated_at: `${todayIso}T08:00:00.000Z`,
+    };
+    const mockMemberships = [
+      {
+        workspace_id: wsId,
+        user_id: mockUserId,
+        role: 'owner',
+        workspaces: mockWorkspace,
+      },
+    ];
+
+    await page.route('**/rest/v1/**', async (route) => {
+      const req = route.request();
+      const method = req.method();
+      const parsedUrl = new URL(req.url());
+      const pathname = parsedUrl.pathname;
+      const accept = req.headers()['accept'] ?? '';
+      const wantsObject = accept.includes('vnd.pgrst.object');
+
+      const respond = (data: unknown) => {
+        if (method === 'HEAD') {
+          const count = Array.isArray(data) ? data.length : 1;
+          return route.fulfill({
+            status: 200,
+            headers: {
+              'content-range': count > 0 ? `0-${count - 1}/${count}` : '0-0/0',
+            },
+            body: '',
+          });
+        }
+        if (wantsObject && Array.isArray(data)) {
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(data[0] ?? null),
+          });
+        }
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(data),
+        });
+      };
+
+      if (pathname.endsWith('/workspaces')) {
+        return respond(wantsObject ? mockWorkspace : [mockWorkspace]);
+      }
+      if (pathname.endsWith('/workspace_members')) {
+        return respond(wantsObject ? mockMemberships[0] : mockMemberships);
+      }
+      if (pathname.endsWith('/profiles')) {
+        return respond({
+          id: mockUserId,
+          display_name: 'Orbit Visual E2E',
+          base_currency: 'IDR',
+          timezone: 'Asia/Jakarta',
+          month_start_day: 1,
+        });
+      }
+      if (pathname.endsWith('/notification_settings')) {
+        return respond({
+          workspace_id: wsId,
+          budget_warning_enabled: true,
+          budget_exceeded_enabled: true,
+          bills_reminder_enabled: true,
+          receivables_reminder_enabled: true,
+          daily_summary_time: '08:00',
         });
       }
       if (mockMode === 'error') {
@@ -238,168 +366,205 @@ test.describe('Fase D Visual Regression & Sesudah Screenshots', () => {
         });
       }
       if (mockMode === 'empty') {
-        if (route.request().method() === 'HEAD') {
-          return route.fulfill({ status: 200, headers: { 'content-range': '0-0/0' }, body: '' });
-        }
-        return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+        return respond([]);
       }
 
-      if (url.includes('fn_agenda')) {
-        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockAgenda) });
+      if (pathname.endsWith('/rpc/fn_agenda')) {
+        return respond(mockAgenda);
       }
-      if (url.includes('fn_detect_conflicts')) {
-        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockConflicts) });
+      if (pathname.endsWith('/rpc/fn_detect_conflicts')) {
+        return respond(mockConflicts);
       }
-      if (url.includes('v_account_balances')) {
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify([
-            { account_id: 'acc-1', name: 'BCA Utama', type: 'bank', currency: 'IDR', balance: 12450000, is_liquid: true, archived: false },
-            { account_id: 'acc-2', name: 'GoPay', type: 'ewallet', currency: 'IDR', balance: 485000, is_liquid: true, archived: false },
-          ]),
-        });
+      if (pathname.endsWith('/rpc/fn_global_search')) {
+        return respond([]);
       }
-      if (url.includes('v_receivables')) {
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify([
-            {
-              payment_id: 'rec-1',
-              project_id: 'proj-2',
-              project_name: 'Redesign Portal Klien',
-              client_name: 'Studio Kreatif',
-              label: 'Termin 2 Desain UI',
-              amount: 3500000,
-              remaining_amount: 3500000,
-              due_date: todayIso,
-              status: 'menunggu',
-              is_overdue: false,
-              days_overdue: 0,
-            },
-          ]),
-        });
+      if (pathname.endsWith('/rpc/fn_my_sessions')) {
+        return respond([]);
       }
-      if (url.includes('v_budget_progress')) {
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify([
-            {
-              budget_id: 'b-1',
-              category_id: 'cat-1',
-              category_name: 'Makan & Minum',
-              period: 'monthly',
-              budget_amount: 1500000,
-              spent_amount: 1220000,
-              remaining_amount: 280000,
-              usage_percent: 81.3,
-              notify_at_percent: 80,
-              is_warning: true,
-              is_over_budget: false,
-            },
-          ]),
-        });
+      if (pathname.endsWith('/v_account_balances')) {
+        return respond([
+          { account_id: 'acc-1', workspace_id: wsId, name: 'BCA Utama', type: 'bank', currency: 'IDR', balance: 12450000, is_liquid: true, archived: false },
+          { account_id: 'acc-2', workspace_id: wsId, name: 'GoPay', type: 'ewallet', currency: 'IDR', balance: 485000, is_liquid: true, archived: false },
+        ]);
       }
-      if (url.includes('/accounts')) {
-        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockAccounts) });
+      if (pathname.endsWith('/v_monthly_summary')) {
+        return respond([
+          {
+            workspace_id: wsId,
+            month_start: `${todayIso.slice(0, 7)}-01`,
+            month_end: todayIso,
+            currency: 'IDR',
+            source: null,
+            is_total: true,
+            income: 2500000,
+            expense: 80000,
+            net: 2420000,
+            txn_count: 3,
+          },
+        ]);
       }
-      if (url.includes('/categories')) {
-        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockCategories) });
+      if (pathname.endsWith('/v_monthly_source_summary')) {
+        return respond([
+          {
+            workspace_id: wsId,
+            month_start: `${todayIso.slice(0, 7)}-01`,
+            source: 'freelance',
+            currency: 'IDR',
+            income: 2500000,
+            expense: 0,
+            net: 2500000,
+            txn_count: 1,
+          },
+        ]);
       }
-      if (url.includes('/projects')) {
-        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockProjects) });
+      if (pathname.endsWith('/v_monthly_category_summary')) {
+        return respond([
+          {
+            workspace_id: wsId,
+            month_start: `${todayIso.slice(0, 7)}-01`,
+            category_id: 'cat-1',
+            category_name: 'Makan & Minum',
+            type: 'expense',
+            total: 48000,
+            txn_count: 1,
+          },
+        ]);
       }
-      if (url.includes('/events')) {
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(
-            mockAgenda
-              .filter((a) => a.item_type === 'event')
-              .map((e) => ({
-                id: e.id,
-                workspace_id: wsId,
-                project_id: e.project_id,
-                kind: e.kind,
-                title: e.title,
-                starts_at: e.starts_at,
-                ends_at: e.ends_at,
-                location: e.location,
-                all_day: false,
-              }))
-          ),
-        });
+      if (pathname.endsWith('/v_receivables')) {
+        return respond([
+          {
+            payment_id: 'rec-1',
+            project_id: 'proj-2',
+            project_name: 'Redesign Portal Klien',
+            client_name: 'Studio Kreatif',
+            label: 'Termin 2 Desain UI',
+            amount: 3500000,
+            remaining_amount: 3500000,
+            due_date: todayIso,
+            status: 'menunggu',
+            is_overdue: false,
+            days_overdue: 0,
+          },
+        ]);
       }
-      if (url.includes('/tasks')) {
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(
-            mockAgenda
-              .filter((a) => a.item_type === 'task')
-              .map((t) => ({
-                id: t.id,
-                workspace_id: wsId,
-                project_id: t.project_id,
-                kind: t.kind,
-                title: t.title,
-                status: 'hari_ini',
-                priority: t.priority,
-                due_at: t.due_at,
-                projects: { name: t.project_name },
-              }))
-          ),
-        });
+      if (pathname.endsWith('/v_project_profit')) {
+        return respond([
+          {
+            project_id: 'proj-2',
+            workspace_id: wsId,
+            name: 'Redesign Portal Klien',
+            kind: 'freelance',
+            status: 'berjalan',
+            contract_value: 8500000,
+            total_income: 2500000,
+            total_expense: 0,
+            net_profit: 2500000,
+          },
+        ]);
       }
-      if (url.includes('/recurring_bills')) {
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify([
-            {
-              id: 'bill-1',
+      if (pathname.endsWith('/v_budget_progress')) {
+        return respond([
+          {
+            budget_id: 'b-1',
+            category_id: 'cat-1',
+            category_name: 'Makan & Minum',
+            period: 'monthly',
+            budget_amount: 1500000,
+            spent_amount: 1220000,
+            remaining_amount: 280000,
+            usage_percent: 81.3,
+            notify_at_percent: 80,
+            is_warning: true,
+            is_over_budget: false,
+          },
+        ]);
+      }
+      if (pathname.endsWith('/accounts')) return respond(mockAccounts);
+      if (pathname.endsWith('/categories')) return respond(mockCategories);
+      if (pathname.endsWith('/projects')) return respond(mockProjects);
+      if (pathname.endsWith('/events')) {
+        return respond(
+          mockAgenda
+            .filter((a) => a.item_type === 'event')
+            .map((e) => ({
+              id: e.id,
               workspace_id: wsId,
-              name: 'Cloud Server & Domain',
-              amount: 185000,
-              category_id: 'cat-3',
-              account_id: 'acc-1',
-              schedule_type: 'monthly',
-              schedule_value: 15,
-              active: true,
-              auto_create_draft: true,
-              categories: { name: 'Langganan & Cloud' },
-              accounts: { name: 'BCA Utama' },
-            },
-          ]),
-        });
+              project_id: e.project_id,
+              kind: e.kind,
+              title: e.title,
+              starts_at: e.starts_at,
+              ends_at: e.ends_at,
+              location: e.location,
+              all_day: false,
+            }))
+        );
       }
-      if (url.includes('/savings_goals')) {
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify([
-            {
-              id: 'goal-1',
+      if (pathname.endsWith('/tasks')) {
+        return respond(
+          mockAgenda
+            .filter((a) => a.item_type === 'task')
+            .map((t, index) => ({
+              id: t.id,
               workspace_id: wsId,
-              name: 'Dana Darurat 6 Bulan',
-              target_amount: 15000000,
-              current_amount: 9500000,
-              target_date: '2026-12-31',
-              is_completed: false,
-            },
-          ]),
-        });
+              project_id: t.project_id,
+              kind: t.kind,
+              title: t.title,
+              description: null,
+              status: index === 0 ? 'doing' : 'todo',
+              priority: t.priority,
+              due_at: t.due_at,
+              due_is_date_only: false,
+              sort_order: index + 1,
+              progress_percent: index === 0 ? 50 : 25,
+              revision_count: 0,
+              latest_revision_note: null,
+              tags: [],
+              projects: { name: t.project_name },
+              task_checklist_items: [],
+            }))
+        );
       }
-      if (url.includes('/transactions')) {
-        if (route.request().method() === 'HEAD') {
-          return route.fulfill({ status: 200, headers: { 'content-range': '0-0/1' }, body: '' });
-        }
-        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockTransactions) });
+      if (pathname.endsWith('/recurring_bills')) {
+        return respond([
+          {
+            id: 'bill-1',
+            workspace_id: wsId,
+            name: 'Cloud Server & Domain',
+            amount: 185000,
+            category_id: 'cat-3',
+            account_id: 'acc-1',
+            schedule_type: 'monthly',
+            schedule_value: 15,
+            active: true,
+            auto_create_draft: true,
+            categories: { name: 'Langganan & Cloud' },
+            accounts: { name: 'BCA Utama' },
+          },
+        ]);
       }
-      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      if (pathname.endsWith('/savings_goals')) {
+        return respond([
+          {
+            id: 'goal-1',
+            workspace_id: wsId,
+            name: 'Dana Darurat 6 Bulan',
+            target_amount: 15000000,
+            current_amount: 9500000,
+            target_date: '2026-12-31',
+            is_completed: false,
+          },
+        ]);
+      }
+      if (pathname.endsWith('/transactions')) {
+        return respond(mockTransactions);
+      }
+      return respond([]);
     });
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/hari-ini', { waitUntil: 'load' });
+    await expect(page).toHaveURL(/\/hari-ini/, { timeout: 20000 });
+    await expect(page.locator('main')).toBeVisible();
 
     const dashboardRoutes = [
       { slug: 'hari-ini', path: '/hari-ini' },
@@ -420,18 +585,27 @@ test.describe('Fase D Visual Regression & Sesudah Screenshots', () => {
     for (const r of dashboardRoutes) {
       mockMode = 'data';
       await page.setViewportSize({ width: 1280, height: 800 });
-      await page.goto(r.path, { waitUntil: 'domcontentloaded' });
-      await expect(page.locator('main')).toBeVisible();
-      await page.waitForTimeout(250);
+      await page.goto(r.path, { waitUntil: 'load' });
+      await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 });
+      await expect(page.locator('main')).toBeVisible({ timeout: 20000 });
+      await page.waitForFunction(
+        () => {
+          const mainText = (document.querySelector('main')?.innerText || '').trim();
+          const busyCount = document.querySelectorAll('[aria-busy="true"], main .animate-pulse').length;
+          return mainText.length > 0 && busyCount === 0;
+        },
+        null,
+        { timeout: 25000 }
+      );
       await setTheme(page, 'light');
-      await page.screenshot({ path: path.join(outDir, `web-desktop-${r.slug}-data.png`) });
+      await page.screenshot({ path: path.join(outDir, `web-desktop-${r.slug}-data.png`), animations: 'disabled' });
 
       await setTheme(page, 'dark');
-      await page.screenshot({ path: path.join(outDir, `web-desktop-${r.slug}-gelap.png`) });
+      await page.screenshot({ path: path.join(outDir, `web-desktop-${r.slug}-gelap.png`), animations: 'disabled' });
 
       await page.setViewportSize({ width: 390, height: 844 });
       await setTheme(page, 'light');
-      await page.screenshot({ path: path.join(outDir, `web-mobile-${r.slug}-data.png`) });
+      await page.screenshot({ path: path.join(outDir, `web-mobile-${r.slug}-data.png`), animations: 'disabled' });
     }
 
     // Empty & Error states on main routes
@@ -443,18 +617,20 @@ test.describe('Fase D Visual Regression & Sesudah Screenshots', () => {
     ]) {
       mockMode = 'empty';
       await page.setViewportSize({ width: 1280, height: 800 });
-      await page.goto(r.path, { waitUntil: 'domcontentloaded' });
-      await expect(page.locator('main')).toBeVisible();
-      await page.waitForTimeout(250);
+      await page.goto(r.path, { waitUntil: 'load' });
+      await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 });
+      await expect(page.locator('main')).toBeVisible({ timeout: 20000 });
+      await page.waitForTimeout(200);
       await setTheme(page, 'light');
-      await page.screenshot({ path: path.join(outDir, `web-desktop-${r.slug}-empty.png`) });
+      await page.screenshot({ path: path.join(outDir, `web-desktop-${r.slug}-empty.png`), animations: 'disabled' });
 
       mockMode = 'error';
-      await page.goto(r.path, { waitUntil: 'domcontentloaded' });
-      await expect(page.locator('main')).toBeVisible();
-      await page.waitForTimeout(250);
+      await page.goto(r.path, { waitUntil: 'load' });
+      await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 });
+      await expect(page.locator('main')).toBeVisible({ timeout: 20000 });
+      await page.waitForTimeout(200);
       await setTheme(page, 'light');
-      await page.screenshot({ path: path.join(outDir, `web-desktop-${r.slug}-error.png`) });
+      await page.screenshot({ path: path.join(outDir, `web-desktop-${r.slug}-error.png`), animations: 'disabled' });
     }
   });
 });

@@ -1,23 +1,29 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowDownLeft,
   ArrowRightLeft,
   ArrowUpRight,
+  Download,
   Edit2,
   Plus,
+  Printer,
   RotateCcw,
   Search,
   Trash2,
+  Upload,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import {
-  formatCurrency,
   formatDateIndo,
   formatTransactionGroupDate,
   getDateKeyInTimezone,
 } from '@/lib/format';
+import { exportTransactionsToCsv } from '@/lib/finance-v2';
+import { usePrivacyMode } from '@/lib/privacy-mode';
+import { RealtimeStatusBadge, useOrbitRealtime } from '@/lib/use-orbit-realtime';
 import type { Database } from '@/types/database';
 import {
   Button,
@@ -38,6 +44,7 @@ import {
   type EditableTransaction,
   TransactionFormModal,
 } from '@/components/transaction-form-modal';
+import { CsvImportModal } from '@/components/finance/csv-import-modal';
 
 type TransactionRow = Database['public']['Tables']['transactions']['Row'] & {
   category_name?: string | null;
@@ -50,8 +57,12 @@ interface DailyTransactionGroup {
   items: TransactionRow[];
 }
 
-export default function TransaksiPage() {
+function TransaksiPageContent() {
   const supabase = createClient();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { formatAmount } = usePrivacyMode();
 
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
@@ -70,6 +81,8 @@ export default function TransaksiPage() {
 
   const [showModal, setShowModal] = useState(false);
   const [editingTx, setEditingTx] = useState<EditableTransaction | null>(null);
+  const [showCsvImportModal, setShowCsvImportModal] = useState(false);
+  const [statusNotice, setStatusNotice] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -149,6 +162,19 @@ export default function TransaksiPage() {
     }
   }, [supabase, showDeleted]);
 
+  const { status: realtimeStatus } = useOrbitRealtime({
+    workspaceId,
+    tables: ['transactions'],
+    onChange: loadData,
+  });
+
+  useEffect(() => {
+    if (searchParams.get('quick') === 'new' || searchParams.get('new') === '1') {
+      setEditingTx(null);
+      setShowModal(true);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     loadData();
     const onTxCreated = () => loadData();
@@ -223,34 +249,100 @@ export default function TransaksiPage() {
     return Array.from(map.values()).sort((a, b) => b.dateKey.localeCompare(a.dateKey));
   }, [filtered]);
 
+  const handleExportCsv = () => {
+    const csvContent = exportTransactionsToCsv(
+      filtered.map((t) => ({
+        occurred_at: t.occurred_at || new Date().toISOString(),
+        type: t.type,
+        category_name: t.category_name ?? null,
+        account_name: t.account_name ?? null,
+        source: t.source || 'personal',
+        project_name: null,
+        merchant: t.merchant,
+        note: t.note,
+        status: t.status,
+        currency: t.currency || 'IDR',
+        amount: Number(t.amount ?? 0),
+        amount_base: Number(t.amount_base ?? t.amount ?? 0),
+      }))
+    );
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `orbit-transaksi-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setStatusNotice(`Berhasil mengekspor ${filtered.length} transaksi ke CSV.`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header & Tombol Tambah Transaksi */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Uang</h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Uang</h1>
+            <RealtimeStatusBadge status={realtimeStatus} />
+          </div>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Kelola transaksi harian, akun, dan perencanaan arus kas.
+            Kelola transaksi harian, mutasi CSV, dan ekspor laporan arus kas.
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          onClick={() => {
-            setEditingTx(null);
-            setShowModal(true);
-          }}
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          <span>Tambah Transaksi</span>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
+          <Button
+            variant="secondary"
+            onClick={() => setShowCsvImportModal(true)}
+            disabled={!workspaceId}
+          >
+            <Upload className="h-4 w-4" aria-hidden="true" />
+            <span>Impor CSV</span>
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={handleExportCsv}
+            disabled={filtered.length === 0}
+          >
+            <Download className="h-4 w-4" aria-hidden="true" />
+            <span>Ekspor CSV</span>
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => window.print()}
+          >
+            <Printer className="h-4 w-4" aria-hidden="true" />
+            <span>Cetak / PDF</span>
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setEditingTx(null);
+              setShowModal(true);
+            }}
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            <span>Tambah Transaksi</span>
+          </Button>
+        </div>
       </div>
+
+      {statusNotice && (
+        <div
+          role="status"
+          className="rounded-md border border-primary bg-primary-subtle px-4 py-2.5 text-xs font-medium text-primary print:hidden"
+        >
+          {statusNotice}
+        </div>
+      )}
 
       {/* Sub-navigasi Grup Uang (Transaksi | Akun | Ringkasan + Pintasan Inbox, Anggaran, Tagihan, Target) */}
       <MoneySubNav draftCount={draftCount} />
 
       {/* Bar Pencarian & Filter */}
-      <Card className="p-4">
+      <Card className="p-4 print:hidden">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-center">
           <div className="relative sm:col-span-2">
             <Search
@@ -368,7 +460,7 @@ export default function TransaksiPage() {
                     )}
                   >
                     Subtotal: {isPositive ? '+' : '-'}
-                    {formatCurrency(Math.abs(group.subtotalNet))}
+                    {formatAmount(Math.abs(group.subtotalNet))}
                   </span>
                 </div>
 
@@ -455,11 +547,11 @@ export default function TransaksiPage() {
                               )}
                             >
                               {isExpense ? '-' : '+'}
-                              {formatCurrency(rawAmount, t.currency || 'IDR')}
+                              {formatAmount(rawAmount, t.currency || 'IDR')}
                             </div>
                           </div>
 
-                          <div className="flex items-center">
+                          <div className="flex items-center print:hidden">
                             {isDeleted ? (
                               <Button
                                 variant="ghost"
@@ -527,6 +619,13 @@ export default function TransaksiPage() {
         onClose={() => {
           setShowModal(false);
           setEditingTx(null);
+          if (searchParams.get('quick') === 'new' || searchParams.get('new') === '1') {
+            const nextParams = new URLSearchParams(searchParams.toString());
+            nextParams.delete('quick');
+            nextParams.delete('new');
+            const qs = nextParams.toString();
+            router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+          }
         }}
         workspaceId={workspaceId}
         initialAccounts={accounts}
@@ -534,6 +633,35 @@ export default function TransaksiPage() {
         editingTransaction={editingTx}
         onSuccess={loadData}
       />
+
+      {workspaceId && (
+        <CsvImportModal
+          open={showCsvImportModal}
+          onClose={() => setShowCsvImportModal(false)}
+          workspaceId={workspaceId}
+          accounts={accounts}
+          categories={categories}
+          onImported={(count) => {
+            setStatusNotice(`Berhasil mengimpor ${count} baris mutasi CSV ke Orbit.`);
+            loadData();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+export default function TransaksiPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-4">
+          <Skeleton className="h-12 w-64" />
+          <Skeleton className="h-48 w-full" />
+        </div>
+      }
+    >
+      <TransaksiPageContent />
+    </Suspense>
   );
 }

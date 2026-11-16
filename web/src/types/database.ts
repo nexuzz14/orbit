@@ -86,6 +86,8 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          deleted_at: string | null
+          file_name: string | null
           id: string
           mime: string
           owner_id: string
@@ -97,6 +99,8 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
+          file_name?: string | null
           id?: string
           mime: string
           owner_id: string
@@ -108,6 +112,8 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
+          file_name?: string | null
           id?: string
           mime?: string
           owner_id?: string
@@ -223,6 +229,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      calendar_connections: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          external_calendar_id: string
+          id: string
+          last_synced_at: string | null
+          provider: string
+          sync_direction: string
+          sync_token: string | null
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          external_calendar_id?: string
+          id?: string
+          last_synced_at?: string | null
+          provider?: string
+          sync_direction?: string
+          sync_token?: string | null
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          external_calendar_id?: string
+          id?: string
+          last_synced_at?: string | null
+          provider?: string
+          sync_direction?: string
+          sync_token?: string | null
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
       }
       categories: {
         Row: {
@@ -412,6 +460,81 @@ export type Database = {
           },
         ]
       }
+      comments: {
+        Row: {
+          author_id: string | null
+          body: string
+          created_at: string
+          deleted_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          parent_comment_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          created_at?: string
+          deleted_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          parent_comment_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          created_at?: string
+          deleted_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          parent_comment_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      entity_links: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          relation_type: string
+          source_id: string
+          source_type: string
+          target_id: string
+          target_type: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          relation_type?: string
+          source_id: string
+          source_type: string
+          target_id: string
+          target_type: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          relation_type?: string
+          source_id?: string
+          source_type?: string
+          target_id?: string
+          target_type?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       event_exceptions: {
         Row: {
           action: Database["public"]["Enums"]["exception_action"]
@@ -467,8 +590,12 @@ export type Database = {
           deleted_at: string | null
           description: string | null
           ends_at: string
+          external_etag: string | null
+          external_event_id: string | null
+          external_provider: string | null
           id: string
           kind: Database["public"]["Enums"]["activity_kind"]
+          last_synced_at: string | null
           location: string | null
           project_id: string | null
           recurrence: Json | null
@@ -486,8 +613,12 @@ export type Database = {
           deleted_at?: string | null
           description?: string | null
           ends_at: string
+          external_etag?: string | null
+          external_event_id?: string | null
+          external_provider?: string | null
           id?: string
           kind: Database["public"]["Enums"]["activity_kind"]
+          last_synced_at?: string | null
           location?: string | null
           project_id?: string | null
           recurrence?: Json | null
@@ -505,8 +636,12 @@ export type Database = {
           deleted_at?: string | null
           description?: string | null
           ends_at?: string
+          external_etag?: string | null
+          external_event_id?: string | null
+          external_provider?: string | null
           id?: string
           kind?: Database["public"]["Enums"]["activity_kind"]
+          last_synced_at?: string | null
           location?: string | null
           project_id?: string | null
           recurrence?: Json | null
@@ -1348,65 +1483,263 @@ export type Database = {
           },
         ]
       }
+      saved_views: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          filter_json: Json
+          id: string
+          is_pinned: boolean
+          name: string
+          scope: string
+          sort_json: Json
+          sort_order: number
+          updated_at: string
+          view_mode: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          filter_json?: Json
+          id?: string
+          is_pinned?: boolean
+          name: string
+          scope: string
+          sort_json?: Json
+          sort_order?: number
+          updated_at?: string
+          view_mode?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          filter_json?: Json
+          id?: string
+          is_pinned?: boolean
+          name?: string
+          scope?: string
+          sort_json?: Json
+          sort_order?: number
+          updated_at?: string
+          view_mode?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      task_status_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          from_status: Database["public"]["Enums"]["task_status"] | null
+          id: string
+          note: string | null
+          task_id: string
+          to_status: Database["public"]["Enums"]["task_status"]
+          workspace_id: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["task_status"] | null
+          id?: string
+          note?: string | null
+          task_id: string
+          to_status: Database["public"]["Enums"]["task_status"]
+          workspace_id: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["task_status"] | null
+          id?: string
+          note?: string | null
+          task_id?: string
+          to_status?: Database["public"]["Enums"]["task_status"]
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      task_templates: {
+        Row: {
+          blocks_json: Json | null
+          checklist_json: Json
+          created_at: string
+          created_by: string | null
+          default_estimate_minutes: number | null
+          default_priority: Database["public"]["Enums"]["task_priority"]
+          deleted_at: string | null
+          id: string
+          kind: Database["public"]["Enums"]["activity_kind"]
+          name: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          blocks_json?: Json | null
+          checklist_json?: Json
+          created_at?: string
+          created_by?: string | null
+          default_estimate_minutes?: number | null
+          default_priority?: Database["public"]["Enums"]["task_priority"]
+          deleted_at?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["activity_kind"]
+          name: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          blocks_json?: Json | null
+          checklist_json?: Json
+          created_at?: string
+          created_by?: string | null
+          default_estimate_minutes?: number | null
+          default_priority?: Database["public"]["Enums"]["task_priority"]
+          deleted_at?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["activity_kind"]
+          name?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      task_time_logs: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          duration_seconds: number
+          ended_at: string | null
+          id: string
+          mode: string
+          note: string | null
+          started_at: string
+          task_id: string
+          updated_at: string
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          duration_seconds?: number
+          ended_at?: string | null
+          id?: string
+          mode?: string
+          note?: string | null
+          started_at: string
+          task_id: string
+          updated_at?: string
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          duration_seconds?: number
+          ended_at?: string | null
+          id?: string
+          mode?: string
+          note?: string | null
+          started_at?: string
+          task_id?: string
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
+          assignee_id: string | null
           completed_at: string | null
           created_at: string
           created_by: string | null
           deleted_at: string | null
           description: string | null
+          description_blocks: Json | null
           due_at: string | null
           due_is_date_only: boolean
           estimate_minutes: number | null
           id: string
           kind: Database["public"]["Enums"]["activity_kind"]
+          latest_revision_note: string | null
           milestone_payment_id: string | null
+          parent_task_id: string | null
           priority: Database["public"]["Enums"]["task_priority"]
+          progress_percent: number
           project_id: string | null
+          recurrence_parent_id: string | null
+          recurrence_rule: Json | null
+          revision_count: number
           sort_order: number
           status: Database["public"]["Enums"]["task_status"]
+          status_changed_at: string
           tags: string[]
           title: string
           updated_at: string
           workspace_id: string
         }
         Insert: {
+          assignee_id?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
           description?: string | null
+          description_blocks?: Json | null
           due_at?: string | null
           due_is_date_only?: boolean
           estimate_minutes?: number | null
           id?: string
           kind: Database["public"]["Enums"]["activity_kind"]
+          latest_revision_note?: string | null
           milestone_payment_id?: string | null
+          parent_task_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
+          progress_percent?: number
           project_id?: string | null
+          recurrence_parent_id?: string | null
+          recurrence_rule?: Json | null
+          revision_count?: number
           sort_order?: number
           status?: Database["public"]["Enums"]["task_status"]
+          status_changed_at?: string
           tags?: string[]
           title: string
           updated_at?: string
           workspace_id: string
         }
         Update: {
+          assignee_id?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
           description?: string | null
+          description_blocks?: Json | null
           due_at?: string | null
           due_is_date_only?: boolean
           estimate_minutes?: number | null
           id?: string
           kind?: Database["public"]["Enums"]["activity_kind"]
+          latest_revision_note?: string | null
           milestone_payment_id?: string | null
+          parent_task_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
+          progress_percent?: number
           project_id?: string | null
+          recurrence_parent_id?: string | null
+          recurrence_rule?: Json | null
+          revision_count?: number
           sort_order?: number
           status?: Database["public"]["Enums"]["task_status"]
+          status_changed_at?: string
           tags?: string[]
           title?: string
           updated_at?: string
@@ -1699,6 +2032,45 @@ export type Database = {
           },
         ]
       }
+      user_devices: {
+        Row: {
+          created_at: string
+          device_name: string | null
+          fcm_token: string | null
+          id: string
+          last_seen_at: string
+          platform: string
+          push_subscription: Json | null
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_name?: string | null
+          fcm_token?: string | null
+          id?: string
+          last_seen_at?: string
+          platform: string
+          push_subscription?: Json | null
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          device_name?: string | null
+          fcm_token?: string | null
+          id?: string
+          last_seen_at?: string
+          platform?: string
+          push_subscription?: Json | null
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       workspace_invites: {
         Row: {
           accepted_at: string | null
@@ -1980,6 +2352,18 @@ export type Database = {
           },
         ]
       }
+      v_task_board_summary: {
+        Row: {
+          doing_count: number | null
+          done_14d_count: number | null
+          overdue_count: number | null
+          revisi_count: number | null
+          stagnant_5d_count: number | null
+          todo_count: number | null
+          workspace_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       fn_agenda: {
@@ -2018,35 +2402,18 @@ export type Database = {
         Args: { p_transaction_id: string }
         Returns: number
       }
+      fn_change_task_status: {
+        Args: {
+          p_note?: string | null
+          p_sort_order?: number | null
+          p_task_id: string
+          p_to_status: Database["public"]["Enums"]["task_status"]
+        }
+        Returns: Database["public"]["Tables"]["tasks"]["Row"]
+      }
       fn_complete_task: {
         Args: { p_task_id: string }
-        Returns: {
-          completed_at: string | null
-          created_at: string
-          created_by: string | null
-          deleted_at: string | null
-          description: string | null
-          due_at: string | null
-          due_is_date_only: boolean
-          estimate_minutes: number | null
-          id: string
-          kind: Database["public"]["Enums"]["activity_kind"]
-          milestone_payment_id: string | null
-          priority: Database["public"]["Enums"]["task_priority"]
-          project_id: string | null
-          sort_order: number
-          status: Database["public"]["Enums"]["task_status"]
-          tags: string[]
-          title: string
-          updated_at: string
-          workspace_id: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "tasks"
-          isOneToOne: true
-          isSetofReturn: false
-        }
+        Returns: Database["public"]["Tables"]["tasks"]["Row"]
       }
       fn_confirm_draft: {
         Args: {
@@ -2151,6 +2518,21 @@ export type Database = {
         Args: { p_target_date?: string }
         Returns: number
       }
+      fn_global_search: {
+        Args: {
+          p_limit?: number
+          p_query: string
+          p_workspace_id: string
+        }
+        Returns: {
+          entity_id: string
+          entity_type: string
+          kind: string
+          status_label: string
+          subtitle: string
+          title: string
+        }[]
+      }
       fn_log_sync_conflict: {
         Args: {
           p_payload: Json
@@ -2250,7 +2632,7 @@ export type Database = {
         | "data_export"
         | "account_deleted"
       task_priority: "rendah" | "sedang" | "tinggi"
-      task_status: "todo" | "doing" | "done"
+      task_status: "todo" | "doing" | "revisi" | "done"
       transaction_origin:
         | "manual"
         | "sentence"
@@ -2425,7 +2807,7 @@ export const Constants = {
         "account_deleted",
       ],
       task_priority: ["rendah", "sedang", "tinggi"],
-      task_status: ["todo", "doing", "done"],
+      task_status: ["todo", "doing", "revisi", "done"],
       transaction_origin: [
         "manual",
         "sentence",
@@ -2496,8 +2878,20 @@ export type SavingsAllocation = Tables<'savings_allocations'>;
 export type ExpectedIncome = Tables<'expected_incomes'>;
 export type NotificationSettings = Tables<'notification_settings'>;
 
+// Orbit v2 (v5.2 & v5.3) Table & View Aliases
+export type TaskStatusHistory = Tables<'task_status_history'>;
+export type TaskComment = Tables<'comments'>;
+export type EntityLink = Tables<'entity_links'>;
+export type SavedView = Tables<'saved_views'>;
+export type TaskTemplate = Tables<'task_templates'>;
+export type TaskTimeLog = Tables<'task_time_logs'>;
+export type Attachment = Tables<'attachments'>;
+export type CalendarConnection = Tables<'calendar_connections'>;
+export type UserDevice = Tables<'user_devices'>;
+
 // View Row Aliases
 export type AccountBalance = Views<'v_account_balances'>;
 export type MonthlySummary = Views<'v_monthly_summary'>;
 export type BudgetProgress = Views<'v_budget_progress'>;
+export type TaskBoardSummary = Views<'v_task_board_summary'>;
 

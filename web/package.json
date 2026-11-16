@@ -8,18 +8,27 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test:unit": "npx tsx --test src/lib/format.test.ts src/lib/middleware_security.test.ts",
+    "test:unit": "npx tsx --test src/lib/format.test.ts src/lib/middleware_security.test.ts src/lib/task-v2.test.ts src/lib/calendar-sync.test.ts src/lib/finance-v2.test.ts src/lib/smart-alerts.test.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.48.1",
+    "@tiptap/pm": "^3.34.0",
+    "@tiptap/react": "^3.34.0",
+    "@tiptap/starter-kit": "^3.34.0",
+    "@types/web-push": "^3.6.4",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "lucide-react": "^0.474.0",
     "next": "^15.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^3.0.1",
+    "web-push": "^4.0.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {

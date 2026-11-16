@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:orbit_app/core/constants/app_colors.dart';
 import 'package:orbit_app/core/database/database.dart';
+import 'package:orbit_app/core/services/notification_scheduler_service.dart';
 import 'package:orbit_app/core/services/sync_service.dart';
 import 'package:orbit_app/core/widgets/orbit_widgets.dart';
 
@@ -157,6 +158,7 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
       );
 
       widget.onSaved?.call();
+      await NotificationSchedulerService.rescheduleAll(_db);
       if (mounted) {
         Navigator.of(context).pop(true);
       }

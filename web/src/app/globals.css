@@ -3,17 +3,38 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  color-scheme: light;
+  --background: #ffffff;
+  --sidebar: #f7f7f5;
+  --foreground: #11181c;
   --card: #ffffff;
-  --card-foreground: #0f172a;
-  --subtle: #f1f5f9;
-  --border: #e2e8f0;
+  --card-foreground: #11181c;
+  --subtle: #efefed;
+  --hover: #f4f4f2;
+  --border: #e6e6e3;
+  --border-strong: #d1d1cc;
   --primary: #0284c7;
   --primary-foreground: #ffffff;
   --primary-subtle: #e0f2fe;
-  --muted: #f1f5f9;
-  --muted-foreground: #475569;
+  --muted: #f7f7f5;
+  --muted-foreground: #555550;
+  --text-muted: #80807a;
+
+  --status-todo-fg: #475569;
+  --status-todo-bg: #f1f5f9;
+  --status-todo-border: #e2e8f0;
+
+  --status-doing-fg: #0369a1;
+  --status-doing-bg: #e0f2fe;
+  --status-doing-border: #bae6fd;
+
+  --status-revisi-fg: #b45309;
+  --status-revisi-bg: #fef3c7;
+  --status-revisi-border: #fde68a;
+
+  --status-done-fg: #15803d;
+  --status-done-bg: #dcfce7;
+  --status-done-border: #bbf7d0;
 
   --income: #15803d;
   --income-subtle: #dcfce7;
@@ -39,23 +60,44 @@
   --kind-kuliah-bg: #fef3c7;
   --kind-kuliah-border: #fde68a;
 
-  --kind-pribadi-fg: #334155;
-  --kind-pribadi-bg: #f1f5f9;
-  --kind-pribadi-border: #e2e8f0;
+  --kind-pribadi-fg: #3f3f46;
+  --kind-pribadi-bg: #f4f4f5;
+  --kind-pribadi-border: #e4e4e7;
 }
 
 .dark {
-  --background: #0f172a;
-  --foreground: #f8fafc;
-  --card: #1e293b;
-  --card-foreground: #f8fafc;
-  --subtle: #334155;
-  --border: #334155;
+  color-scheme: dark;
+  --background: #191919;
+  --sidebar: #202020;
+  --foreground: #f3f3f2;
+  --card: #242424;
+  --card-foreground: #f3f3f2;
+  --subtle: #2f2f2f;
+  --hover: #2a2a2a;
+  --border: #323232;
+  --border-strong: #454545;
   --primary: #38bdf8;
   --primary-foreground: #0f172a;
   --primary-subtle: #0c4a6e;
-  --muted: #1e293b;
-  --muted-foreground: #cbd5e1;
+  --muted: #202020;
+  --muted-foreground: #b3b3ae;
+  --text-muted: #7e7e78;
+
+  --status-todo-fg: #cbd5e1;
+  --status-todo-bg: #27272a;
+  --status-todo-border: #3f3f46;
+
+  --status-doing-fg: #7dd3fc;
+  --status-doing-bg: #0c4a6e;
+  --status-doing-border: #075985;
+
+  --status-revisi-fg: #fcd34d;
+  --status-revisi-bg: #451a03;
+  --status-revisi-border: #78350f;
+
+  --status-done-fg: #4ade80;
+  --status-done-bg: #052e16;
+  --status-done-border: #14532d;
 
   --income: #4ade80;
   --income-subtle: #052e16;
@@ -81,9 +123,9 @@
   --kind-kuliah-bg: #451a03;
   --kind-kuliah-border: #78350f;
 
-  --kind-pribadi-fg: #cbd5e1;
-  --kind-pribadi-bg: #1e293b;
-  --kind-pribadi-border: #475569;
+  --kind-pribadi-fg: #d4d4d8;
+  --kind-pribadi-bg: #27272a;
+  --kind-pribadi-border: #3f3f46;
 }
 
 body {
@@ -114,5 +156,39 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Aturan cetak PDF bersih untuk laporan keuangan, ringkasan, dan proyek */
+@media print {
+  @page {
+    margin: 12mm;
+    size: auto;
+  }
+
+  :root,
+  .dark {
+    color-scheme: light !important;
+    --background: #ffffff !important;
+    --foreground: #171717 !important;
+    --card: #ffffff !important;
+    --card-foreground: #171717 !important;
+    --subtle: #f7f7f6 !important;
+    --border: #d4d4d8 !important;
+    --muted-foreground: #52525b !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #171717 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }

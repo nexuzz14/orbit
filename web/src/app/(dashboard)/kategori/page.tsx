@@ -237,7 +237,7 @@ export default function KategoriPage() {
                       {subcategories.map((sub) => (
                         <div
                           key={sub.id}
-                          className="flex items-center justify-between text-xs text-muted-foreground hover:text-foreground py-1 px-2 rounded-lg hover:bg-muted/40 transition-colors"
+                          className="min-h-11 flex items-center justify-between text-xs text-muted-foreground hover:text-foreground py-1 px-2 rounded-md hover:bg-hover transition-colors"
                         >
                           <div className="flex items-center gap-2">
                             <CornerDownRight className="w-3.5 h-3.5 text-muted-foreground/60" />
@@ -342,7 +342,7 @@ export default function KategoriPage() {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           {formError && (
-            <div className="p-3 text-xs rounded-lg bg-expense/10 text-expense border border-expense/20">
+            <div className="p-3 text-xs rounded-lg bg-expense-subtle text-expense border border-expense-border">
               {formError}
             </div>
           )}

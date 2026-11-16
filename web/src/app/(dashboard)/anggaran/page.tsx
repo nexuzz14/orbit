@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { formatCurrency } from '@/lib/format';
+import { usePrivacyMode } from '@/lib/privacy-mode';
 import type { BudgetProgress, Category } from '@/types/database';
 import {
   PieChart,
@@ -30,6 +30,7 @@ import {
 
 export default function AnggaranPage() {
   const supabase = createClient();
+  const { formatAmount } = usePrivacyMode();
   const [budgets, setBudgets] = useState<BudgetProgress[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
@@ -249,11 +250,11 @@ export default function AnggaranPage() {
               Anggaran Efektif
             </div>
             <div className="text-2xl font-bold mt-1 tracking-tight text-foreground tabular-nums">
-              {formatCurrency(totalEffective)}
+              {formatAmount(totalEffective)}
             </div>
             {totalEffective !== totalBase && (
               <div className="text-xs text-muted-foreground mt-1 tabular-nums">
-                Dasar: {formatCurrency(totalBase)}
+                Dasar: {formatAmount(totalBase)}
               </div>
             )}
           </CardContent>
@@ -265,7 +266,7 @@ export default function AnggaranPage() {
               Total Terpakai
             </div>
             <div className="text-2xl font-bold mt-1 tracking-tight text-expense tabular-nums">
-              {formatCurrency(totalSpent)}
+              {formatAmount(totalSpent)}
             </div>
             <div className="text-xs text-muted-foreground mt-1 tabular-nums">
               {totalEffective > 0
@@ -285,7 +286,7 @@ export default function AnggaranPage() {
                 totalRemaining < 0 ? 'text-expense' : 'text-income'
               }`}
             >
-              {formatCurrency(totalRemaining)}
+              {formatAmount(totalRemaining)}
             </div>
             <div className="text-xs text-muted-foreground mt-1">
               {totalRemaining < 0 ? 'Defisit anggaran' : 'Saldo tersedia'}
@@ -362,7 +363,7 @@ export default function AnggaranPage() {
               }
 
               return (
-                <div key={b.budget_id} className="p-4 space-y-3 hover:bg-muted/20 transition-colors">
+                <div key={b.budget_id} className="p-4 space-y-3 hover:bg-hover transition-colors">
                   <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-sm text-foreground">{b.category_name}</span>
@@ -375,13 +376,13 @@ export default function AnggaranPage() {
                     <div className="flex items-center gap-3">
                       <div className="text-right tabular-nums">
                         <div className="text-sm font-bold text-foreground">
-                          {formatCurrency(b.spent_amount || 0)}{' '}
+                          {formatAmount(b.spent_amount || 0)}{' '}
                           <span className="text-xs font-normal text-muted-foreground">
-                            / {formatCurrency(b.effective_budget_amount || 0)}
+                            / {formatAmount(b.effective_budget_amount || 0)}
                           </span>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          Sisa: {formatCurrency(b.remaining_amount || 0)}
+                          Sisa: {formatAmount(b.remaining_amount || 0)}
                         </div>
                       </div>
 
@@ -409,7 +410,7 @@ export default function AnggaranPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                    <div className="w-full bg-subtle border border-border/60 rounded-full h-2 overflow-hidden">
                       <div
                         className={`h-full transition-all duration-200 ${barColor}`}
                         style={{ width: `${pct}%` }}
@@ -418,7 +419,7 @@ export default function AnggaranPage() {
                     <div className="flex justify-between items-center text-xs text-muted-foreground tabular-nums">
                       <span>{b.percentage_spent?.toFixed(1) || '0.0'}% terpakai</span>
                       {b.rollover_amount && b.rollover_amount > 0 ? (
-                        <span>Termasuk sisa bulan lalu: +{formatCurrency(b.rollover_amount)}</span>
+                        <span>Termasuk sisa bulan lalu: +{formatAmount(b.rollover_amount)}</span>
                       ) : null}
                     </div>
                   </div>
@@ -437,7 +438,7 @@ export default function AnggaranPage() {
       >
         <form onSubmit={handleSave} className="space-y-4">
           {formError && (
-            <div className="p-3 text-xs bg-expense/10 text-expense border border-expense/20 rounded-lg">
+            <div className="p-3 text-xs bg-expense-subtle text-expense border border-expense-border rounded-lg">
               {formError}
             </div>
           )}

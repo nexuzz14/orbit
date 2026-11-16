@@ -2,7 +2,10 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { formatCurrency, formatDateIndo } from '@/lib/format';
+import { formatDateIndo } from '@/lib/format';
+import { parseReceiptOrNotificationText, type ParsedReceiptDraft } from '@/lib/smart-alerts';
+import { usePrivacyMode } from '@/lib/privacy-mode';
+import { RealtimeStatusBadge, useOrbitRealtime } from '@/lib/use-orbit-realtime';
 import type { Database, TransactionSource } from '@/types/database';
 import {
   Inbox as InboxIcon,
@@ -12,11 +15,20 @@ import {
   AlertCircle,
   Sparkles,
   Link as LinkIcon,
+  FileText,
+  Image as ImageIcon,
+  ShieldCheck,
+  ScanText,
 } from 'lucide-react';
 import {
   Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
   Button,
+  Input,
   Select,
+  Textarea,
   Dialog,
   KindBadge,
   StatusBadge,
@@ -35,7 +47,33 @@ type Option = {
   id: string;
   name: string;
   type?: string;
+  currency?: string;
 };
+
+async function stripImageExifViaCanvas(file: File): Promise<string> {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new window.Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('Gagal membaca berkas gambar lokal.'));
+      el.src = objectUrl;
+    });
+    const maxDim = 1280;
+    const scale = Math.min(1, maxDim / Math.max(img.width || 1, img.height || 1));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.width * scale));
+    canvas.height = Math.max(1, Math.round(img.height * scale));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Konteks kanvas 2D tidak tersedia.');
+    }
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.85);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
 
 interface MatchedExpectedIncome {
   expected_income_id: string;
@@ -50,11 +88,23 @@ interface MatchedExpectedIncome {
 
 export default function InboxPage() {
   const supabase = createClient();
+  const { formatAmount } = usePrivacyMode();
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<DraftRow[]>([]);
-  const [, setAccounts] = useState<Option[]>([]);
+  const [accounts, setAccounts] = useState<Option[]>([]);
   const [categories, setCategories] = useState<Option[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [rawExtractText, setRawExtractText] = useState('');
+  const [parsedPreview, setParsedPreview] = useState<ParsedReceiptDraft | null>(null);
+  const [extractAccountId, setExtractAccountId] = useState('');
+  const [extractCategoryId, setExtractCategoryId] = useState('');
+  const [extractError, setExtractError] = useState<string | null>(null);
+  const [extractSuccess, setExtractSuccess] = useState<string | null>(null);
+  const [savingExtractedDraft, setSavingExtractedDraft] = useState(false);
+  const [sanitizedImagePreview, setSanitizedImagePreview] = useState<string | null>(null);
+  const [sanitizedImageName, setSanitizedImageName] = useState<string | null>(null);
 
   const [selectedDraft, setSelectedDraft] = useState<DraftRow | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -82,9 +132,10 @@ export default function InboxPage() {
       }
 
       const wsId = memberData.workspace_id;
+      setWorkspaceId(wsId);
 
       const [accRes, catRes, draftRes] = await Promise.all([
-        supabase.from('accounts').select('id, name').eq('workspace_id', wsId).is('deleted_at', null),
+        supabase.from('accounts').select('id, name, currency').eq('workspace_id', wsId).is('deleted_at', null),
         supabase.from('categories').select('id, name, type').eq('workspace_id', wsId).is('deleted_at', null),
         supabase
           .from('transactions')
@@ -97,10 +148,14 @@ export default function InboxPage() {
 
       if (draftRes.error) throw draftRes.error;
 
-      const accMap = new Map((accRes.data || []).map((a) => [a.id, a.name]));
+      const accList = (accRes.data || []) as Option[];
+      const accMap = new Map(accList.map((a) => [a.id, a.name]));
       const catMap = new Map((catRes.data || []).map((c) => [c.id, c.name]));
 
-      setAccounts(accRes.data || []);
+      setAccounts(accList);
+      if (accList.length > 0 && !extractAccountId) {
+        setExtractAccountId(accList[0].id);
+      }
       setCategories(catRes.data || []);
 
       const enriched: DraftRow[] = (draftRes.data || []).map((d) => ({
@@ -115,11 +170,129 @@ export default function InboxPage() {
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, [supabase, extractAccountId]);
 
   useEffect(() => {
     loadDrafts();
   }, [loadDrafts]);
+
+  const { status: realtimeStatus } = useOrbitRealtime({
+    workspaceId,
+    tables: ['transactions'],
+    onChange: loadDrafts,
+  });
+
+  const handleLoadTextFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setExtractError(null);
+    setExtractSuccess(null);
+    try {
+      const content = await file.text();
+      setRawExtractText(content);
+      const res = parseReceiptOrNotificationText(content);
+      if (res.ok) {
+        setParsedPreview(res.parsed);
+      } else {
+        setParsedPreview(null);
+        setExtractError(res.error);
+      }
+    } catch {
+      setExtractError('Gagal membaca berkas teks struk/notifikasi.');
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const handleAttachLocalImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setExtractError(null);
+    try {
+      const cleanDataUrl = await stripImageExifViaCanvas(file);
+      setSanitizedImagePreview(cleanDataUrl);
+      setSanitizedImageName(file.name);
+    } catch (err: unknown) {
+      setExtractError(
+        err instanceof Error ? err.message : 'Gagal memproses lampiran gambar secara lokal.'
+      );
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const handleAnalyzeExtractText = () => {
+    setExtractError(null);
+    setExtractSuccess(null);
+    const res = parseReceiptOrNotificationText(rawExtractText);
+    if (!res.ok) {
+      setParsedPreview(null);
+      setExtractError(res.error);
+      return;
+    }
+    setParsedPreview(res.parsed);
+  };
+
+  const handleSaveExtractedDraft = async () => {
+    if (!workspaceId) {
+      setExtractError('Workspace belum siap. Muat ulang halaman dan coba lagi.');
+      return;
+    }
+    if (!parsedPreview || !Number.isFinite(parsedPreview.amount) || parsedPreview.amount <= 0) {
+      setExtractError('Nominal hasil ekstraksi wajib lebih besar dari 0 sebelum disimpan.');
+      return;
+    }
+    const targetAccId = extractAccountId || accounts[0]?.id;
+    if (!targetAccId) {
+      setExtractError('Buat minimal 1 rekening di Uang / Akun untuk menyimpan draft.');
+      return;
+    }
+
+    const targetAccount = accounts.find((a) => a.id === targetAccId);
+    setSavingExtractedDraft(true);
+    setExtractError(null);
+    setExtractSuccess(null);
+
+    try {
+      const { error: insertErr } = await supabase.from('transactions').insert({
+        workspace_id: workspaceId,
+        account_id: targetAccId,
+        category_id: extractCategoryId || null,
+        type: parsedPreview.type,
+        amount: parsedPreview.amount,
+        amount_base: parsedPreview.amount,
+        currency: targetAccount?.currency || 'IDR',
+        merchant: parsedPreview.merchant,
+        note: parsedPreview.note,
+        occurred_at: parsedPreview.occurredAt,
+        source: 'personal',
+        status: 'draft',
+        draft_state: parsedPreview.needsReview ? 'perlu_dicek' : 'perlu_dilengkapi',
+        origin: parsedPreview.origin,
+      });
+
+      if (insertErr) {
+        throw new Error(insertErr.message);
+      }
+
+      setExtractSuccess(
+        parsedPreview.needsReview
+          ? 'Draft tersimpan ke Inbox dengan label Perlu dicek untuk verifikasi manual.'
+          : 'Draft hasil ekstraksi tersimpan ke Inbox dan siap dilengkapi atau dikonfirmasi.'
+      );
+      setRawExtractText('');
+      setParsedPreview(null);
+      setSanitizedImagePreview(null);
+      setSanitizedImageName(null);
+      await loadDrafts();
+    } catch (err: unknown) {
+      setExtractError(
+        err instanceof Error ? err.message : 'Gagal menyimpan draft ke Inbox.'
+      );
+    } finally {
+      setSavingExtractedDraft(false);
+    }
+  };
 
   const handleQuickConfirm = async (draft: DraftRow) => {
     if (!draft.category_id || !draft.source) {
@@ -248,13 +421,237 @@ export default function InboxPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Uang</h1>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Uang</h1>
+          <RealtimeStatusBadge status={realtimeStatus} />
+        </div>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Inbox draft dari jalur otomatis menunggu konfirmasi Anda sebelum masuk ke saldo riil
+          Inbox draft dari tagihan berulang, impor CSV, ekstraksi teks struk/notifikasi, atau aplikasi pendamping Android sebelum masuk ke saldo riil
         </p>
       </div>
 
       <MoneySubNav draftCount={drafts.length} />
+
+      {/* Panel Ekstrak Struk & Teks Notifikasi */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ScanText className="w-4 h-4 text-primary" />
+            <span>Ekstrak Struk &amp; Teks Notifikasi</span>
+          </CardTitle>
+          <StatusBadge variant="neutral">Hasil Masuk ke Draft Inbox</StatusBadge>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Tempel pesan notifikasi bank/e-wallet Indonesia (BCA, Mandiri, BNI, BRI, GoPay, OVO, DANA, ShopeePay) atau teks struk (Alfamart, Indomaret). Catatan: OCR gambar otomatis berjalan offline di Android melalui ML Kit; di Web, ekstraksi teks menghasilkan draft <code className="font-mono text-foreground">status: draft</code> untuk ditinjau.
+          </p>
+
+          <Textarea
+            rows={4}
+            aria-label="Teks struk atau notifikasi transaksi"
+            placeholder="Contoh: BCA Mobile: Pembayaran QRIS di Kopi Kenangan sebesar Rp 45.000,00 pada 15/11/2026 09:30 WIB berhasil."
+            value={rawExtractText}
+            onChange={(e) => setRawExtractText(e.target.value)}
+          />
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Button
+              type="button"
+              onClick={handleAnalyzeExtractText}
+              data-testid="inbox-extract-btn"
+            >
+              <ScanText className="w-4 h-4" />
+              <span>Ekstrak Teks</span>
+            </Button>
+
+            <label className="min-h-11 inline-flex items-center gap-2 rounded-md border border-border bg-card px-3.5 text-xs font-medium text-foreground hover:bg-hover cursor-pointer transition-colors">
+              <FileText className="w-4 h-4 text-primary" />
+              <span>Muat Berkas .txt</span>
+              <input
+                type="file"
+                accept=".txt,text/plain"
+                onChange={handleLoadTextFile}
+                className="sr-only"
+              />
+            </label>
+
+            <label className="min-h-11 inline-flex items-center gap-2 rounded-md border border-border bg-card px-3.5 text-xs font-medium text-foreground hover:bg-hover cursor-pointer transition-colors">
+              <ImageIcon className="w-4 h-4 text-primary" />
+              <span>Lampirkan Foto Struk (Bebas EXIF)</span>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={handleAttachLocalImage}
+                className="sr-only"
+              />
+            </label>
+          </div>
+
+          {sanitizedImagePreview && (
+            <div className="rounded-lg border border-border bg-subtle p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+              <img
+                src={sanitizedImagePreview}
+                alt="Pratinjau lampiran struk yang sudah dibersihkan EXIF"
+                className="h-20 w-20 object-cover rounded-md border border-border bg-card shrink-0"
+              />
+              <div className="space-y-1 text-xs">
+                <div className="font-semibold text-foreground flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-income" />
+                  <span>Lampiran lokal siap ({sanitizedImageName})</span>
+                </div>
+                <p className="text-muted-foreground">
+                  Metadata EXIF/lokasi kamera telah dihapus di browser via kanvas lokal. Salin teks penting dari struk ke kolom di atas untuk ekstraksi otomatis.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {extractError && (
+            <div
+              role="alert"
+              className="rounded-md border border-expense-border bg-expense-subtle p-3 text-xs text-expense flex items-center gap-2"
+            >
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{extractError}</span>
+            </div>
+          )}
+
+          {extractSuccess && (
+            <div
+              role="status"
+              className="rounded-md border border-income-border bg-income-subtle p-3 text-xs text-income flex items-center gap-2"
+            >
+              <Check className="w-4 h-4 shrink-0" />
+              <span>{extractSuccess}</span>
+            </div>
+          )}
+
+          {parsedPreview && (
+            <div
+              data-testid="inbox-extract-preview"
+              className="rounded-lg border border-border bg-subtle p-4 space-y-3"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-foreground">
+                    Pratinjau Draft Terdeteksi
+                  </span>
+                  {parsedPreview.needsReview ? (
+                    <StatusBadge variant="expense">Perlu dicek</StatusBadge>
+                  ) : (
+                    <StatusBadge variant="warning">Siap ke Inbox Draft</StatusBadge>
+                  )}
+                  <StatusBadge variant="neutral">
+                    {parsedPreview.origin === 'receipt' ? 'Struk' : 'Notifikasi'}
+                  </StatusBadge>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  Keyakinan: <strong className="uppercase">{parsedPreview.confidence}</strong>
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                <div className="rounded-md border border-border bg-card p-2.5">
+                  <div className="text-muted-foreground">Merchant / Sumber</div>
+                  <div className="font-semibold text-foreground mt-0.5 truncate">
+                    {parsedPreview.merchant}
+                  </div>
+                </div>
+                <div className="rounded-md border border-border bg-card p-2.5">
+                  <div className="text-muted-foreground">Nominal</div>
+                  <div
+                    className={`font-bold mt-0.5 tabular-nums ${
+                      parsedPreview.type === 'expense' ? 'text-expense' : 'text-income'
+                    }`}
+                  >
+                    {parsedPreview.type === 'expense' ? '-' : '+'}
+                    {formatAmount(parsedPreview.amount, 'IDR')}
+                  </div>
+                </div>
+                <div className="rounded-md border border-border bg-card p-2.5">
+                  <div className="text-muted-foreground">Jenis Transaksi</div>
+                  <div className="font-semibold text-foreground mt-0.5">
+                    {parsedPreview.type === 'expense' ? 'Pengeluaran' : 'Pemasukan'}
+                  </div>
+                </div>
+                <div className="rounded-md border border-border bg-card p-2.5">
+                  <div className="text-muted-foreground">Waktu (WIB)</div>
+                  <div className="font-semibold text-foreground mt-0.5 tabular-nums">
+                    {formatDateIndo(parsedPreview.occurredAt)}
+                  </div>
+                </div>
+              </div>
+
+              {parsedPreview.reviewReasons.length > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  Catatan verifikasi: {parsedPreview.reviewReasons.join('; ')}.
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">
+                    Rekening Draft
+                  </label>
+                  <Select
+                    value={extractAccountId}
+                    onChange={(e) => setExtractAccountId(e.target.value)}
+                    aria-label="Pilih rekening tujuan draft"
+                  >
+                    {accounts.length === 0 ? (
+                      <option value="">Belum ada rekening</option>
+                    ) : (
+                      accounts.map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.name}
+                        </option>
+                      ))
+                    )}
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">
+                    Kategori Awal (Opsional)
+                  </label>
+                  <Select
+                    value={extractCategoryId}
+                    onChange={(e) => setExtractCategoryId(e.target.value)}
+                    aria-label="Pilih kategori awal draft"
+                  >
+                    <option value="">Lengkapi nanti di Inbox</option>
+                    {categories
+                      .filter((c) => !c.type || c.type === parsedPreview.type)
+                      .map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap justify-end gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setParsedPreview(null)}
+                >
+                  Batal
+                </Button>
+                <Button
+                  type="button"
+                  disabled={savingExtractedDraft}
+                  onClick={handleSaveExtractedDraft}
+                  data-testid="inbox-save-draft-btn"
+                >
+                  {savingExtractedDraft ? 'Menyimpan...' : 'Simpan ke Inbox Draft'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {loadError ? (
         <ErrorState message={loadError} onRetry={loadDrafts} />
@@ -280,7 +677,7 @@ export default function InboxPage() {
             return (
               <div
                 key={d.id}
-                className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/20 transition-colors"
+                className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-hover transition-colors"
               >
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -313,7 +710,7 @@ export default function InboxPage() {
                       }`}
                     >
                       {isExpense ? '-' : '+'}
-                      {formatCurrency(Number(d.amount), d.currency)}
+                      {formatAmount(Number(d.amount), d.currency)}
                     </div>
                     <div className="text-xs text-muted-foreground uppercase">{d.type}</div>
                   </div>
@@ -369,13 +766,13 @@ export default function InboxPage() {
         {selectedDraft && (
           <div className="space-y-4">
             {confirmError && (
-              <div className="p-3 text-xs rounded-lg bg-expense/10 text-expense border border-expense/20 flex items-center gap-2">
+              <div className="p-3 text-xs rounded-lg bg-expense-subtle text-expense border border-expense-border flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{confirmError}</span>
               </div>
             )}
 
-            <div className="p-3.5 bg-muted/50 border border-border rounded-lg text-xs space-y-1 tabular-nums">
+            <div className="p-3.5 bg-subtle border border-border rounded-lg text-xs space-y-1 tabular-nums">
               <div>
                 Merchant / Keterangan:{' '}
                 <strong className="text-foreground">
@@ -385,14 +782,14 @@ export default function InboxPage() {
               <div>
                 Nominal:{' '}
                 <strong className="text-foreground">
-                  {formatCurrency(Number(selectedDraft.amount), selectedDraft.currency)}
+                  {formatAmount(Number(selectedDraft.amount), selectedDraft.currency)}
                 </strong>
               </div>
               <div>Waktu: {formatDateIndo(selectedDraft.occurred_at)}</div>
             </div>
 
             {matchedIncome && (
-              <div className="p-3.5 rounded-lg border border-primary/30 bg-primary/5 space-y-2">
+              <div className="p-3.5 rounded-lg border border-primary bg-primary-subtle space-y-2">
                 <div className="flex items-center gap-2 text-xs font-semibold text-primary">
                   <Sparkles className="w-4 h-4" />
                   <span>Rekomendasi Pencocokan Rencana Ditemukan</span>
@@ -400,7 +797,7 @@ export default function InboxPage() {
                 <div className="text-xs text-foreground space-y-0.5 tabular-nums">
                   <div className="font-medium">{matchedIncome.title}</div>
                   <div className="text-muted-foreground">
-                    Target: {formatCurrency(matchedIncome.expected_amount)} | Keyakinan:{' '}
+                    Target: {formatAmount(matchedIncome.expected_amount)} | Keyakinan:{' '}
                     <span className="font-semibold uppercase">{matchedIncome.confidence}</span>
                   </div>
                 </div>

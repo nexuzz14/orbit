@@ -1019,6 +1019,12 @@ class $LocalTransactionsTable extends LocalTransactions
   late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
       'category_id', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _projectIdMeta =
+      const VerificationMeta('projectId');
+  @override
+  late final GeneratedColumn<String> projectId = GeneratedColumn<String>(
+      'project_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _typeMeta = const VerificationMeta('type');
   @override
   late final GeneratedColumn<String> type = GeneratedColumn<String>(
@@ -1099,6 +1105,7 @@ class $LocalTransactionsTable extends LocalTransactions
         workspaceId,
         accountId,
         categoryId,
+        projectId,
         type,
         status,
         draftState,
@@ -1147,6 +1154,10 @@ class $LocalTransactionsTable extends LocalTransactions
           _categoryIdMeta,
           categoryId.isAcceptableOrUnknown(
               data['category_id']!, _categoryIdMeta));
+    }
+    if (data.containsKey('project_id')) {
+      context.handle(_projectIdMeta,
+          projectId.isAcceptableOrUnknown(data['project_id']!, _projectIdMeta));
     }
     if (data.containsKey('type')) {
       context.handle(
@@ -1235,6 +1246,8 @@ class $LocalTransactionsTable extends LocalTransactions
           .read(DriftSqlType.string, data['${effectivePrefix}account_id'])!,
       categoryId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}category_id']),
+      projectId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}project_id']),
       type: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}type'])!,
       status: attachedDatabase.typeMapping
@@ -1276,6 +1289,7 @@ class LocalTransaction extends DataClass
   final String workspaceId;
   final String accountId;
   final String? categoryId;
+  final String? projectId;
   final String type;
   final String status;
   final String? draftState;
@@ -1294,6 +1308,7 @@ class LocalTransaction extends DataClass
       required this.workspaceId,
       required this.accountId,
       this.categoryId,
+      this.projectId,
       required this.type,
       required this.status,
       this.draftState,
@@ -1315,6 +1330,9 @@ class LocalTransaction extends DataClass
     map['account_id'] = Variable<String>(accountId);
     if (!nullToAbsent || categoryId != null) {
       map['category_id'] = Variable<String>(categoryId);
+    }
+    if (!nullToAbsent || projectId != null) {
+      map['project_id'] = Variable<String>(projectId);
     }
     map['type'] = Variable<String>(type);
     map['status'] = Variable<String>(status);
@@ -1354,6 +1372,9 @@ class LocalTransaction extends DataClass
       categoryId: categoryId == null && nullToAbsent
           ? const Value.absent()
           : Value(categoryId),
+      projectId: projectId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(projectId),
       type: Value(type),
       status: Value(status),
       draftState: draftState == null && nullToAbsent
@@ -1389,6 +1410,7 @@ class LocalTransaction extends DataClass
       workspaceId: serializer.fromJson<String>(json['workspaceId']),
       accountId: serializer.fromJson<String>(json['accountId']),
       categoryId: serializer.fromJson<String?>(json['categoryId']),
+      projectId: serializer.fromJson<String?>(json['projectId']),
       type: serializer.fromJson<String>(json['type']),
       status: serializer.fromJson<String>(json['status']),
       draftState: serializer.fromJson<String?>(json['draftState']),
@@ -1413,6 +1435,7 @@ class LocalTransaction extends DataClass
       'workspaceId': serializer.toJson<String>(workspaceId),
       'accountId': serializer.toJson<String>(accountId),
       'categoryId': serializer.toJson<String?>(categoryId),
+      'projectId': serializer.toJson<String?>(projectId),
       'type': serializer.toJson<String>(type),
       'status': serializer.toJson<String>(status),
       'draftState': serializer.toJson<String?>(draftState),
@@ -1434,6 +1457,7 @@ class LocalTransaction extends DataClass
           String? workspaceId,
           String? accountId,
           Value<String?> categoryId = const Value.absent(),
+          Value<String?> projectId = const Value.absent(),
           String? type,
           String? status,
           Value<String?> draftState = const Value.absent(),
@@ -1452,6 +1476,7 @@ class LocalTransaction extends DataClass
         workspaceId: workspaceId ?? this.workspaceId,
         accountId: accountId ?? this.accountId,
         categoryId: categoryId.present ? categoryId.value : this.categoryId,
+        projectId: projectId.present ? projectId.value : this.projectId,
         type: type ?? this.type,
         status: status ?? this.status,
         draftState: draftState.present ? draftState.value : this.draftState,
@@ -1478,6 +1503,7 @@ class LocalTransaction extends DataClass
       accountId: data.accountId.present ? data.accountId.value : this.accountId,
       categoryId:
           data.categoryId.present ? data.categoryId.value : this.categoryId,
+      projectId: data.projectId.present ? data.projectId.value : this.projectId,
       type: data.type.present ? data.type.value : this.type,
       status: data.status.present ? data.status.value : this.status,
       draftState:
@@ -1507,6 +1533,7 @@ class LocalTransaction extends DataClass
           ..write('workspaceId: $workspaceId, ')
           ..write('accountId: $accountId, ')
           ..write('categoryId: $categoryId, ')
+          ..write('projectId: $projectId, ')
           ..write('type: $type, ')
           ..write('status: $status, ')
           ..write('draftState: $draftState, ')
@@ -1530,6 +1557,7 @@ class LocalTransaction extends DataClass
       workspaceId,
       accountId,
       categoryId,
+      projectId,
       type,
       status,
       draftState,
@@ -1551,6 +1579,7 @@ class LocalTransaction extends DataClass
           other.workspaceId == this.workspaceId &&
           other.accountId == this.accountId &&
           other.categoryId == this.categoryId &&
+          other.projectId == this.projectId &&
           other.type == this.type &&
           other.status == this.status &&
           other.draftState == this.draftState &&
@@ -1571,6 +1600,7 @@ class LocalTransactionsCompanion extends UpdateCompanion<LocalTransaction> {
   final Value<String> workspaceId;
   final Value<String> accountId;
   final Value<String?> categoryId;
+  final Value<String?> projectId;
   final Value<String> type;
   final Value<String> status;
   final Value<String?> draftState;
@@ -1590,6 +1620,7 @@ class LocalTransactionsCompanion extends UpdateCompanion<LocalTransaction> {
     this.workspaceId = const Value.absent(),
     this.accountId = const Value.absent(),
     this.categoryId = const Value.absent(),
+    this.projectId = const Value.absent(),
     this.type = const Value.absent(),
     this.status = const Value.absent(),
     this.draftState = const Value.absent(),
@@ -1610,6 +1641,7 @@ class LocalTransactionsCompanion extends UpdateCompanion<LocalTransaction> {
     required String workspaceId,
     required String accountId,
     this.categoryId = const Value.absent(),
+    this.projectId = const Value.absent(),
     required String type,
     required String status,
     this.draftState = const Value.absent(),
@@ -1637,6 +1669,7 @@ class LocalTransactionsCompanion extends UpdateCompanion<LocalTransaction> {
     Expression<String>? workspaceId,
     Expression<String>? accountId,
     Expression<String>? categoryId,
+    Expression<String>? projectId,
     Expression<String>? type,
     Expression<String>? status,
     Expression<String>? draftState,
@@ -1657,6 +1690,7 @@ class LocalTransactionsCompanion extends UpdateCompanion<LocalTransaction> {
       if (workspaceId != null) 'workspace_id': workspaceId,
       if (accountId != null) 'account_id': accountId,
       if (categoryId != null) 'category_id': categoryId,
+      if (projectId != null) 'project_id': projectId,
       if (type != null) 'type': type,
       if (status != null) 'status': status,
       if (draftState != null) 'draft_state': draftState,
@@ -1679,6 +1713,7 @@ class LocalTransactionsCompanion extends UpdateCompanion<LocalTransaction> {
       Value<String>? workspaceId,
       Value<String>? accountId,
       Value<String?>? categoryId,
+      Value<String?>? projectId,
       Value<String>? type,
       Value<String>? status,
       Value<String?>? draftState,
@@ -1698,6 +1733,7 @@ class LocalTransactionsCompanion extends UpdateCompanion<LocalTransaction> {
       workspaceId: workspaceId ?? this.workspaceId,
       accountId: accountId ?? this.accountId,
       categoryId: categoryId ?? this.categoryId,
+      projectId: projectId ?? this.projectId,
       type: type ?? this.type,
       status: status ?? this.status,
       draftState: draftState ?? this.draftState,
@@ -1729,6 +1765,9 @@ class LocalTransactionsCompanion extends UpdateCompanion<LocalTransaction> {
     }
     if (categoryId.present) {
       map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (projectId.present) {
+      map['project_id'] = Variable<String>(projectId.value);
     }
     if (type.present) {
       map['type'] = Variable<String>(type.value);
@@ -1782,6 +1821,7 @@ class LocalTransactionsCompanion extends UpdateCompanion<LocalTransaction> {
           ..write('workspaceId: $workspaceId, ')
           ..write('accountId: $accountId, ')
           ..write('categoryId: $categoryId, ')
+          ..write('projectId: $projectId, ')
           ..write('type: $type, ')
           ..write('status: $status, ')
           ..write('draftState: $draftState, ')
@@ -3295,6 +3335,84 @@ class $LocalTasksTable extends LocalTasks
   late final GeneratedColumn<String> milestonePaymentId =
       GeneratedColumn<String>('milestone_payment_id', aliasedName, true,
           type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _sortOrderMeta =
+      const VerificationMeta('sortOrder');
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+      'sort_order', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _progressPercentMeta =
+      const VerificationMeta('progressPercent');
+  @override
+  late final GeneratedColumn<int> progressPercent = GeneratedColumn<int>(
+      'progress_percent', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _revisionCountMeta =
+      const VerificationMeta('revisionCount');
+  @override
+  late final GeneratedColumn<int> revisionCount = GeneratedColumn<int>(
+      'revision_count', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _latestRevisionNoteMeta =
+      const VerificationMeta('latestRevisionNote');
+  @override
+  late final GeneratedColumn<String> latestRevisionNote =
+      GeneratedColumn<String>('latest_revision_note', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _statusChangedAtMeta =
+      const VerificationMeta('statusChangedAt');
+  @override
+  late final GeneratedColumn<DateTime> statusChangedAt =
+      GeneratedColumn<DateTime>('status_changed_at', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _parentTaskIdMeta =
+      const VerificationMeta('parentTaskId');
+  @override
+  late final GeneratedColumn<String> parentTaskId = GeneratedColumn<String>(
+      'parent_task_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _assigneeIdMeta =
+      const VerificationMeta('assigneeId');
+  @override
+  late final GeneratedColumn<String> assigneeId = GeneratedColumn<String>(
+      'assignee_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _descriptionBlocksJsonMeta =
+      const VerificationMeta('descriptionBlocksJson');
+  @override
+  late final GeneratedColumn<String> descriptionBlocksJson =
+      GeneratedColumn<String>('description_blocks_json', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _recurrenceRuleJsonMeta =
+      const VerificationMeta('recurrenceRuleJson');
+  @override
+  late final GeneratedColumn<String> recurrenceRuleJson =
+      GeneratedColumn<String>('recurrence_rule_json', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _recurrenceParentIdMeta =
+      const VerificationMeta('recurrenceParentId');
+  @override
+  late final GeneratedColumn<String> recurrenceParentId =
+      GeneratedColumn<String>('recurrence_parent_id', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _tagsJsonMeta =
+      const VerificationMeta('tagsJson');
+  @override
+  late final GeneratedColumn<String> tagsJson = GeneratedColumn<String>(
+      'tags_json', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _estimateMinutesMeta =
+      const VerificationMeta('estimateMinutes');
+  @override
+  late final GeneratedColumn<int> estimateMinutes = GeneratedColumn<int>(
+      'estimate_minutes', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _deletedAtMeta =
       const VerificationMeta('deletedAt');
   @override
@@ -3315,6 +3433,18 @@ class $LocalTasksTable extends LocalTasks
         dueIsDateOnly,
         completedAt,
         milestonePaymentId,
+        sortOrder,
+        progressPercent,
+        revisionCount,
+        latestRevisionNote,
+        statusChangedAt,
+        parentTaskId,
+        assigneeId,
+        descriptionBlocksJson,
+        recurrenceRuleJson,
+        recurrenceParentId,
+        tagsJson,
+        estimateMinutes,
         deletedAt
       ];
   @override
@@ -3392,6 +3522,74 @@ class $LocalTasksTable extends LocalTasks
           milestonePaymentId.isAcceptableOrUnknown(
               data['milestone_payment_id']!, _milestonePaymentIdMeta));
     }
+    if (data.containsKey('sort_order')) {
+      context.handle(_sortOrderMeta,
+          sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta));
+    }
+    if (data.containsKey('progress_percent')) {
+      context.handle(
+          _progressPercentMeta,
+          progressPercent.isAcceptableOrUnknown(
+              data['progress_percent']!, _progressPercentMeta));
+    }
+    if (data.containsKey('revision_count')) {
+      context.handle(
+          _revisionCountMeta,
+          revisionCount.isAcceptableOrUnknown(
+              data['revision_count']!, _revisionCountMeta));
+    }
+    if (data.containsKey('latest_revision_note')) {
+      context.handle(
+          _latestRevisionNoteMeta,
+          latestRevisionNote.isAcceptableOrUnknown(
+              data['latest_revision_note']!, _latestRevisionNoteMeta));
+    }
+    if (data.containsKey('status_changed_at')) {
+      context.handle(
+          _statusChangedAtMeta,
+          statusChangedAt.isAcceptableOrUnknown(
+              data['status_changed_at']!, _statusChangedAtMeta));
+    }
+    if (data.containsKey('parent_task_id')) {
+      context.handle(
+          _parentTaskIdMeta,
+          parentTaskId.isAcceptableOrUnknown(
+              data['parent_task_id']!, _parentTaskIdMeta));
+    }
+    if (data.containsKey('assignee_id')) {
+      context.handle(
+          _assigneeIdMeta,
+          assigneeId.isAcceptableOrUnknown(
+              data['assignee_id']!, _assigneeIdMeta));
+    }
+    if (data.containsKey('description_blocks_json')) {
+      context.handle(
+          _descriptionBlocksJsonMeta,
+          descriptionBlocksJson.isAcceptableOrUnknown(
+              data['description_blocks_json']!, _descriptionBlocksJsonMeta));
+    }
+    if (data.containsKey('recurrence_rule_json')) {
+      context.handle(
+          _recurrenceRuleJsonMeta,
+          recurrenceRuleJson.isAcceptableOrUnknown(
+              data['recurrence_rule_json']!, _recurrenceRuleJsonMeta));
+    }
+    if (data.containsKey('recurrence_parent_id')) {
+      context.handle(
+          _recurrenceParentIdMeta,
+          recurrenceParentId.isAcceptableOrUnknown(
+              data['recurrence_parent_id']!, _recurrenceParentIdMeta));
+    }
+    if (data.containsKey('tags_json')) {
+      context.handle(_tagsJsonMeta,
+          tagsJson.isAcceptableOrUnknown(data['tags_json']!, _tagsJsonMeta));
+    }
+    if (data.containsKey('estimate_minutes')) {
+      context.handle(
+          _estimateMinutesMeta,
+          estimateMinutes.isAcceptableOrUnknown(
+              data['estimate_minutes']!, _estimateMinutesMeta));
+    }
     if (data.containsKey('deleted_at')) {
       context.handle(_deletedAtMeta,
           deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
@@ -3429,6 +3627,31 @@ class $LocalTasksTable extends LocalTasks
           .read(DriftSqlType.dateTime, data['${effectivePrefix}completed_at']),
       milestonePaymentId: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}milestone_payment_id']),
+      sortOrder: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}sort_order'])!,
+      progressPercent: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}progress_percent'])!,
+      revisionCount: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}revision_count'])!,
+      latestRevisionNote: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}latest_revision_note']),
+      statusChangedAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}status_changed_at']),
+      parentTaskId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}parent_task_id']),
+      assigneeId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}assignee_id']),
+      descriptionBlocksJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}description_blocks_json']),
+      recurrenceRuleJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}recurrence_rule_json']),
+      recurrenceParentId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}recurrence_parent_id']),
+      tagsJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}tags_json']),
+      estimateMinutes: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}estimate_minutes']),
       deletedAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
     );
@@ -3453,6 +3676,18 @@ class LocalTask extends DataClass implements Insertable<LocalTask> {
   final bool dueIsDateOnly;
   final DateTime? completedAt;
   final String? milestonePaymentId;
+  final int sortOrder;
+  final int progressPercent;
+  final int revisionCount;
+  final String? latestRevisionNote;
+  final DateTime? statusChangedAt;
+  final String? parentTaskId;
+  final String? assigneeId;
+  final String? descriptionBlocksJson;
+  final String? recurrenceRuleJson;
+  final String? recurrenceParentId;
+  final String? tagsJson;
+  final int? estimateMinutes;
   final DateTime? deletedAt;
   const LocalTask(
       {required this.id,
@@ -3467,6 +3702,18 @@ class LocalTask extends DataClass implements Insertable<LocalTask> {
       required this.dueIsDateOnly,
       this.completedAt,
       this.milestonePaymentId,
+      required this.sortOrder,
+      required this.progressPercent,
+      required this.revisionCount,
+      this.latestRevisionNote,
+      this.statusChangedAt,
+      this.parentTaskId,
+      this.assigneeId,
+      this.descriptionBlocksJson,
+      this.recurrenceRuleJson,
+      this.recurrenceParentId,
+      this.tagsJson,
+      this.estimateMinutes,
       this.deletedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3492,6 +3739,36 @@ class LocalTask extends DataClass implements Insertable<LocalTask> {
     }
     if (!nullToAbsent || milestonePaymentId != null) {
       map['milestone_payment_id'] = Variable<String>(milestonePaymentId);
+    }
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['progress_percent'] = Variable<int>(progressPercent);
+    map['revision_count'] = Variable<int>(revisionCount);
+    if (!nullToAbsent || latestRevisionNote != null) {
+      map['latest_revision_note'] = Variable<String>(latestRevisionNote);
+    }
+    if (!nullToAbsent || statusChangedAt != null) {
+      map['status_changed_at'] = Variable<DateTime>(statusChangedAt);
+    }
+    if (!nullToAbsent || parentTaskId != null) {
+      map['parent_task_id'] = Variable<String>(parentTaskId);
+    }
+    if (!nullToAbsent || assigneeId != null) {
+      map['assignee_id'] = Variable<String>(assigneeId);
+    }
+    if (!nullToAbsent || descriptionBlocksJson != null) {
+      map['description_blocks_json'] = Variable<String>(descriptionBlocksJson);
+    }
+    if (!nullToAbsent || recurrenceRuleJson != null) {
+      map['recurrence_rule_json'] = Variable<String>(recurrenceRuleJson);
+    }
+    if (!nullToAbsent || recurrenceParentId != null) {
+      map['recurrence_parent_id'] = Variable<String>(recurrenceParentId);
+    }
+    if (!nullToAbsent || tagsJson != null) {
+      map['tags_json'] = Variable<String>(tagsJson);
+    }
+    if (!nullToAbsent || estimateMinutes != null) {
+      map['estimate_minutes'] = Variable<int>(estimateMinutes);
     }
     if (!nullToAbsent || deletedAt != null) {
       map['deleted_at'] = Variable<DateTime>(deletedAt);
@@ -3522,6 +3799,36 @@ class LocalTask extends DataClass implements Insertable<LocalTask> {
       milestonePaymentId: milestonePaymentId == null && nullToAbsent
           ? const Value.absent()
           : Value(milestonePaymentId),
+      sortOrder: Value(sortOrder),
+      progressPercent: Value(progressPercent),
+      revisionCount: Value(revisionCount),
+      latestRevisionNote: latestRevisionNote == null && nullToAbsent
+          ? const Value.absent()
+          : Value(latestRevisionNote),
+      statusChangedAt: statusChangedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(statusChangedAt),
+      parentTaskId: parentTaskId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentTaskId),
+      assigneeId: assigneeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(assigneeId),
+      descriptionBlocksJson: descriptionBlocksJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(descriptionBlocksJson),
+      recurrenceRuleJson: recurrenceRuleJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recurrenceRuleJson),
+      recurrenceParentId: recurrenceParentId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recurrenceParentId),
+      tagsJson: tagsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tagsJson),
+      estimateMinutes: estimateMinutes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(estimateMinutes),
       deletedAt: deletedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(deletedAt),
@@ -3545,6 +3852,22 @@ class LocalTask extends DataClass implements Insertable<LocalTask> {
       completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
       milestonePaymentId:
           serializer.fromJson<String?>(json['milestonePaymentId']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      progressPercent: serializer.fromJson<int>(json['progressPercent']),
+      revisionCount: serializer.fromJson<int>(json['revisionCount']),
+      latestRevisionNote:
+          serializer.fromJson<String?>(json['latestRevisionNote']),
+      statusChangedAt: serializer.fromJson<DateTime?>(json['statusChangedAt']),
+      parentTaskId: serializer.fromJson<String?>(json['parentTaskId']),
+      assigneeId: serializer.fromJson<String?>(json['assigneeId']),
+      descriptionBlocksJson:
+          serializer.fromJson<String?>(json['descriptionBlocksJson']),
+      recurrenceRuleJson:
+          serializer.fromJson<String?>(json['recurrenceRuleJson']),
+      recurrenceParentId:
+          serializer.fromJson<String?>(json['recurrenceParentId']),
+      tagsJson: serializer.fromJson<String?>(json['tagsJson']),
+      estimateMinutes: serializer.fromJson<int?>(json['estimateMinutes']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
     );
   }
@@ -3564,6 +3887,19 @@ class LocalTask extends DataClass implements Insertable<LocalTask> {
       'dueIsDateOnly': serializer.toJson<bool>(dueIsDateOnly),
       'completedAt': serializer.toJson<DateTime?>(completedAt),
       'milestonePaymentId': serializer.toJson<String?>(milestonePaymentId),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'progressPercent': serializer.toJson<int>(progressPercent),
+      'revisionCount': serializer.toJson<int>(revisionCount),
+      'latestRevisionNote': serializer.toJson<String?>(latestRevisionNote),
+      'statusChangedAt': serializer.toJson<DateTime?>(statusChangedAt),
+      'parentTaskId': serializer.toJson<String?>(parentTaskId),
+      'assigneeId': serializer.toJson<String?>(assigneeId),
+      'descriptionBlocksJson':
+          serializer.toJson<String?>(descriptionBlocksJson),
+      'recurrenceRuleJson': serializer.toJson<String?>(recurrenceRuleJson),
+      'recurrenceParentId': serializer.toJson<String?>(recurrenceParentId),
+      'tagsJson': serializer.toJson<String?>(tagsJson),
+      'estimateMinutes': serializer.toJson<int?>(estimateMinutes),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
     };
   }
@@ -3581,6 +3917,18 @@ class LocalTask extends DataClass implements Insertable<LocalTask> {
           bool? dueIsDateOnly,
           Value<DateTime?> completedAt = const Value.absent(),
           Value<String?> milestonePaymentId = const Value.absent(),
+          int? sortOrder,
+          int? progressPercent,
+          int? revisionCount,
+          Value<String?> latestRevisionNote = const Value.absent(),
+          Value<DateTime?> statusChangedAt = const Value.absent(),
+          Value<String?> parentTaskId = const Value.absent(),
+          Value<String?> assigneeId = const Value.absent(),
+          Value<String?> descriptionBlocksJson = const Value.absent(),
+          Value<String?> recurrenceRuleJson = const Value.absent(),
+          Value<String?> recurrenceParentId = const Value.absent(),
+          Value<String?> tagsJson = const Value.absent(),
+          Value<int?> estimateMinutes = const Value.absent(),
           Value<DateTime?> deletedAt = const Value.absent()}) =>
       LocalTask(
         id: id ?? this.id,
@@ -3597,6 +3945,31 @@ class LocalTask extends DataClass implements Insertable<LocalTask> {
         milestonePaymentId: milestonePaymentId.present
             ? milestonePaymentId.value
             : this.milestonePaymentId,
+        sortOrder: sortOrder ?? this.sortOrder,
+        progressPercent: progressPercent ?? this.progressPercent,
+        revisionCount: revisionCount ?? this.revisionCount,
+        latestRevisionNote: latestRevisionNote.present
+            ? latestRevisionNote.value
+            : this.latestRevisionNote,
+        statusChangedAt: statusChangedAt.present
+            ? statusChangedAt.value
+            : this.statusChangedAt,
+        parentTaskId:
+            parentTaskId.present ? parentTaskId.value : this.parentTaskId,
+        assigneeId: assigneeId.present ? assigneeId.value : this.assigneeId,
+        descriptionBlocksJson: descriptionBlocksJson.present
+            ? descriptionBlocksJson.value
+            : this.descriptionBlocksJson,
+        recurrenceRuleJson: recurrenceRuleJson.present
+            ? recurrenceRuleJson.value
+            : this.recurrenceRuleJson,
+        recurrenceParentId: recurrenceParentId.present
+            ? recurrenceParentId.value
+            : this.recurrenceParentId,
+        tagsJson: tagsJson.present ? tagsJson.value : this.tagsJson,
+        estimateMinutes: estimateMinutes.present
+            ? estimateMinutes.value
+            : this.estimateMinutes,
         deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
       );
   LocalTask copyWithCompanion(LocalTasksCompanion data) {
@@ -3620,6 +3993,37 @@ class LocalTask extends DataClass implements Insertable<LocalTask> {
       milestonePaymentId: data.milestonePaymentId.present
           ? data.milestonePaymentId.value
           : this.milestonePaymentId,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      progressPercent: data.progressPercent.present
+          ? data.progressPercent.value
+          : this.progressPercent,
+      revisionCount: data.revisionCount.present
+          ? data.revisionCount.value
+          : this.revisionCount,
+      latestRevisionNote: data.latestRevisionNote.present
+          ? data.latestRevisionNote.value
+          : this.latestRevisionNote,
+      statusChangedAt: data.statusChangedAt.present
+          ? data.statusChangedAt.value
+          : this.statusChangedAt,
+      parentTaskId: data.parentTaskId.present
+          ? data.parentTaskId.value
+          : this.parentTaskId,
+      assigneeId:
+          data.assigneeId.present ? data.assigneeId.value : this.assigneeId,
+      descriptionBlocksJson: data.descriptionBlocksJson.present
+          ? data.descriptionBlocksJson.value
+          : this.descriptionBlocksJson,
+      recurrenceRuleJson: data.recurrenceRuleJson.present
+          ? data.recurrenceRuleJson.value
+          : this.recurrenceRuleJson,
+      recurrenceParentId: data.recurrenceParentId.present
+          ? data.recurrenceParentId.value
+          : this.recurrenceParentId,
+      tagsJson: data.tagsJson.present ? data.tagsJson.value : this.tagsJson,
+      estimateMinutes: data.estimateMinutes.present
+          ? data.estimateMinutes.value
+          : this.estimateMinutes,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
   }
@@ -3639,26 +4043,51 @@ class LocalTask extends DataClass implements Insertable<LocalTask> {
           ..write('dueIsDateOnly: $dueIsDateOnly, ')
           ..write('completedAt: $completedAt, ')
           ..write('milestonePaymentId: $milestonePaymentId, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('progressPercent: $progressPercent, ')
+          ..write('revisionCount: $revisionCount, ')
+          ..write('latestRevisionNote: $latestRevisionNote, ')
+          ..write('statusChangedAt: $statusChangedAt, ')
+          ..write('parentTaskId: $parentTaskId, ')
+          ..write('assigneeId: $assigneeId, ')
+          ..write('descriptionBlocksJson: $descriptionBlocksJson, ')
+          ..write('recurrenceRuleJson: $recurrenceRuleJson, ')
+          ..write('recurrenceParentId: $recurrenceParentId, ')
+          ..write('tagsJson: $tagsJson, ')
+          ..write('estimateMinutes: $estimateMinutes, ')
           ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      workspaceId,
-      projectId,
-      kind,
-      title,
-      description,
-      status,
-      priority,
-      dueAt,
-      dueIsDateOnly,
-      completedAt,
-      milestonePaymentId,
-      deletedAt);
+  int get hashCode => Object.hashAll([
+        id,
+        workspaceId,
+        projectId,
+        kind,
+        title,
+        description,
+        status,
+        priority,
+        dueAt,
+        dueIsDateOnly,
+        completedAt,
+        milestonePaymentId,
+        sortOrder,
+        progressPercent,
+        revisionCount,
+        latestRevisionNote,
+        statusChangedAt,
+        parentTaskId,
+        assigneeId,
+        descriptionBlocksJson,
+        recurrenceRuleJson,
+        recurrenceParentId,
+        tagsJson,
+        estimateMinutes,
+        deletedAt
+      ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3675,6 +4104,18 @@ class LocalTask extends DataClass implements Insertable<LocalTask> {
           other.dueIsDateOnly == this.dueIsDateOnly &&
           other.completedAt == this.completedAt &&
           other.milestonePaymentId == this.milestonePaymentId &&
+          other.sortOrder == this.sortOrder &&
+          other.progressPercent == this.progressPercent &&
+          other.revisionCount == this.revisionCount &&
+          other.latestRevisionNote == this.latestRevisionNote &&
+          other.statusChangedAt == this.statusChangedAt &&
+          other.parentTaskId == this.parentTaskId &&
+          other.assigneeId == this.assigneeId &&
+          other.descriptionBlocksJson == this.descriptionBlocksJson &&
+          other.recurrenceRuleJson == this.recurrenceRuleJson &&
+          other.recurrenceParentId == this.recurrenceParentId &&
+          other.tagsJson == this.tagsJson &&
+          other.estimateMinutes == this.estimateMinutes &&
           other.deletedAt == this.deletedAt);
 }
 
@@ -3691,6 +4132,18 @@ class LocalTasksCompanion extends UpdateCompanion<LocalTask> {
   final Value<bool> dueIsDateOnly;
   final Value<DateTime?> completedAt;
   final Value<String?> milestonePaymentId;
+  final Value<int> sortOrder;
+  final Value<int> progressPercent;
+  final Value<int> revisionCount;
+  final Value<String?> latestRevisionNote;
+  final Value<DateTime?> statusChangedAt;
+  final Value<String?> parentTaskId;
+  final Value<String?> assigneeId;
+  final Value<String?> descriptionBlocksJson;
+  final Value<String?> recurrenceRuleJson;
+  final Value<String?> recurrenceParentId;
+  final Value<String?> tagsJson;
+  final Value<int?> estimateMinutes;
   final Value<DateTime?> deletedAt;
   final Value<int> rowid;
   const LocalTasksCompanion({
@@ -3706,6 +4159,18 @@ class LocalTasksCompanion extends UpdateCompanion<LocalTask> {
     this.dueIsDateOnly = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.milestonePaymentId = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.progressPercent = const Value.absent(),
+    this.revisionCount = const Value.absent(),
+    this.latestRevisionNote = const Value.absent(),
+    this.statusChangedAt = const Value.absent(),
+    this.parentTaskId = const Value.absent(),
+    this.assigneeId = const Value.absent(),
+    this.descriptionBlocksJson = const Value.absent(),
+    this.recurrenceRuleJson = const Value.absent(),
+    this.recurrenceParentId = const Value.absent(),
+    this.tagsJson = const Value.absent(),
+    this.estimateMinutes = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -3722,6 +4187,18 @@ class LocalTasksCompanion extends UpdateCompanion<LocalTask> {
     this.dueIsDateOnly = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.milestonePaymentId = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.progressPercent = const Value.absent(),
+    this.revisionCount = const Value.absent(),
+    this.latestRevisionNote = const Value.absent(),
+    this.statusChangedAt = const Value.absent(),
+    this.parentTaskId = const Value.absent(),
+    this.assigneeId = const Value.absent(),
+    this.descriptionBlocksJson = const Value.absent(),
+    this.recurrenceRuleJson = const Value.absent(),
+    this.recurrenceParentId = const Value.absent(),
+    this.tagsJson = const Value.absent(),
+    this.estimateMinutes = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
@@ -3741,6 +4218,18 @@ class LocalTasksCompanion extends UpdateCompanion<LocalTask> {
     Expression<bool>? dueIsDateOnly,
     Expression<DateTime>? completedAt,
     Expression<String>? milestonePaymentId,
+    Expression<int>? sortOrder,
+    Expression<int>? progressPercent,
+    Expression<int>? revisionCount,
+    Expression<String>? latestRevisionNote,
+    Expression<DateTime>? statusChangedAt,
+    Expression<String>? parentTaskId,
+    Expression<String>? assigneeId,
+    Expression<String>? descriptionBlocksJson,
+    Expression<String>? recurrenceRuleJson,
+    Expression<String>? recurrenceParentId,
+    Expression<String>? tagsJson,
+    Expression<int>? estimateMinutes,
     Expression<DateTime>? deletedAt,
     Expression<int>? rowid,
   }) {
@@ -3758,6 +4247,22 @@ class LocalTasksCompanion extends UpdateCompanion<LocalTask> {
       if (completedAt != null) 'completed_at': completedAt,
       if (milestonePaymentId != null)
         'milestone_payment_id': milestonePaymentId,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (progressPercent != null) 'progress_percent': progressPercent,
+      if (revisionCount != null) 'revision_count': revisionCount,
+      if (latestRevisionNote != null)
+        'latest_revision_note': latestRevisionNote,
+      if (statusChangedAt != null) 'status_changed_at': statusChangedAt,
+      if (parentTaskId != null) 'parent_task_id': parentTaskId,
+      if (assigneeId != null) 'assignee_id': assigneeId,
+      if (descriptionBlocksJson != null)
+        'description_blocks_json': descriptionBlocksJson,
+      if (recurrenceRuleJson != null)
+        'recurrence_rule_json': recurrenceRuleJson,
+      if (recurrenceParentId != null)
+        'recurrence_parent_id': recurrenceParentId,
+      if (tagsJson != null) 'tags_json': tagsJson,
+      if (estimateMinutes != null) 'estimate_minutes': estimateMinutes,
       if (deletedAt != null) 'deleted_at': deletedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -3776,6 +4281,18 @@ class LocalTasksCompanion extends UpdateCompanion<LocalTask> {
       Value<bool>? dueIsDateOnly,
       Value<DateTime?>? completedAt,
       Value<String?>? milestonePaymentId,
+      Value<int>? sortOrder,
+      Value<int>? progressPercent,
+      Value<int>? revisionCount,
+      Value<String?>? latestRevisionNote,
+      Value<DateTime?>? statusChangedAt,
+      Value<String?>? parentTaskId,
+      Value<String?>? assigneeId,
+      Value<String?>? descriptionBlocksJson,
+      Value<String?>? recurrenceRuleJson,
+      Value<String?>? recurrenceParentId,
+      Value<String?>? tagsJson,
+      Value<int?>? estimateMinutes,
       Value<DateTime?>? deletedAt,
       Value<int>? rowid}) {
     return LocalTasksCompanion(
@@ -3791,6 +4308,19 @@ class LocalTasksCompanion extends UpdateCompanion<LocalTask> {
       dueIsDateOnly: dueIsDateOnly ?? this.dueIsDateOnly,
       completedAt: completedAt ?? this.completedAt,
       milestonePaymentId: milestonePaymentId ?? this.milestonePaymentId,
+      sortOrder: sortOrder ?? this.sortOrder,
+      progressPercent: progressPercent ?? this.progressPercent,
+      revisionCount: revisionCount ?? this.revisionCount,
+      latestRevisionNote: latestRevisionNote ?? this.latestRevisionNote,
+      statusChangedAt: statusChangedAt ?? this.statusChangedAt,
+      parentTaskId: parentTaskId ?? this.parentTaskId,
+      assigneeId: assigneeId ?? this.assigneeId,
+      descriptionBlocksJson:
+          descriptionBlocksJson ?? this.descriptionBlocksJson,
+      recurrenceRuleJson: recurrenceRuleJson ?? this.recurrenceRuleJson,
+      recurrenceParentId: recurrenceParentId ?? this.recurrenceParentId,
+      tagsJson: tagsJson ?? this.tagsJson,
+      estimateMinutes: estimateMinutes ?? this.estimateMinutes,
       deletedAt: deletedAt ?? this.deletedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -3835,6 +4365,43 @@ class LocalTasksCompanion extends UpdateCompanion<LocalTask> {
     if (milestonePaymentId.present) {
       map['milestone_payment_id'] = Variable<String>(milestonePaymentId.value);
     }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (progressPercent.present) {
+      map['progress_percent'] = Variable<int>(progressPercent.value);
+    }
+    if (revisionCount.present) {
+      map['revision_count'] = Variable<int>(revisionCount.value);
+    }
+    if (latestRevisionNote.present) {
+      map['latest_revision_note'] = Variable<String>(latestRevisionNote.value);
+    }
+    if (statusChangedAt.present) {
+      map['status_changed_at'] = Variable<DateTime>(statusChangedAt.value);
+    }
+    if (parentTaskId.present) {
+      map['parent_task_id'] = Variable<String>(parentTaskId.value);
+    }
+    if (assigneeId.present) {
+      map['assignee_id'] = Variable<String>(assigneeId.value);
+    }
+    if (descriptionBlocksJson.present) {
+      map['description_blocks_json'] =
+          Variable<String>(descriptionBlocksJson.value);
+    }
+    if (recurrenceRuleJson.present) {
+      map['recurrence_rule_json'] = Variable<String>(recurrenceRuleJson.value);
+    }
+    if (recurrenceParentId.present) {
+      map['recurrence_parent_id'] = Variable<String>(recurrenceParentId.value);
+    }
+    if (tagsJson.present) {
+      map['tags_json'] = Variable<String>(tagsJson.value);
+    }
+    if (estimateMinutes.present) {
+      map['estimate_minutes'] = Variable<int>(estimateMinutes.value);
+    }
     if (deletedAt.present) {
       map['deleted_at'] = Variable<DateTime>(deletedAt.value);
     }
@@ -3859,6 +4426,18 @@ class LocalTasksCompanion extends UpdateCompanion<LocalTask> {
           ..write('dueIsDateOnly: $dueIsDateOnly, ')
           ..write('completedAt: $completedAt, ')
           ..write('milestonePaymentId: $milestonePaymentId, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('progressPercent: $progressPercent, ')
+          ..write('revisionCount: $revisionCount, ')
+          ..write('latestRevisionNote: $latestRevisionNote, ')
+          ..write('statusChangedAt: $statusChangedAt, ')
+          ..write('parentTaskId: $parentTaskId, ')
+          ..write('assigneeId: $assigneeId, ')
+          ..write('descriptionBlocksJson: $descriptionBlocksJson, ')
+          ..write('recurrenceRuleJson: $recurrenceRuleJson, ')
+          ..write('recurrenceParentId: $recurrenceParentId, ')
+          ..write('tagsJson: $tagsJson, ')
+          ..write('estimateMinutes: $estimateMinutes, ')
           ..write('deletedAt: $deletedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -4259,6 +4838,30 @@ class $LocalEventsTable extends LocalEvents
   late final GeneratedColumn<String> recurrence = GeneratedColumn<String>(
       'recurrence', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _externalProviderMeta =
+      const VerificationMeta('externalProvider');
+  @override
+  late final GeneratedColumn<String> externalProvider = GeneratedColumn<String>(
+      'external_provider', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _externalEventIdMeta =
+      const VerificationMeta('externalEventId');
+  @override
+  late final GeneratedColumn<String> externalEventId = GeneratedColumn<String>(
+      'external_event_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _externalEtagMeta =
+      const VerificationMeta('externalEtag');
+  @override
+  late final GeneratedColumn<String> externalEtag = GeneratedColumn<String>(
+      'external_etag', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _lastSyncedAtMeta =
+      const VerificationMeta('lastSyncedAt');
+  @override
+  late final GeneratedColumn<DateTime> lastSyncedAt = GeneratedColumn<DateTime>(
+      'last_synced_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _deletedAtMeta =
       const VerificationMeta('deletedAt');
   @override
@@ -4279,6 +4882,10 @@ class $LocalEventsTable extends LocalEvents
         allDay,
         timezone,
         recurrence,
+        externalProvider,
+        externalEventId,
+        externalEtag,
+        lastSyncedAt,
         deletedAt
       ];
   @override
@@ -4356,6 +4963,30 @@ class $LocalEventsTable extends LocalEvents
           recurrence.isAcceptableOrUnknown(
               data['recurrence']!, _recurrenceMeta));
     }
+    if (data.containsKey('external_provider')) {
+      context.handle(
+          _externalProviderMeta,
+          externalProvider.isAcceptableOrUnknown(
+              data['external_provider']!, _externalProviderMeta));
+    }
+    if (data.containsKey('external_event_id')) {
+      context.handle(
+          _externalEventIdMeta,
+          externalEventId.isAcceptableOrUnknown(
+              data['external_event_id']!, _externalEventIdMeta));
+    }
+    if (data.containsKey('external_etag')) {
+      context.handle(
+          _externalEtagMeta,
+          externalEtag.isAcceptableOrUnknown(
+              data['external_etag']!, _externalEtagMeta));
+    }
+    if (data.containsKey('last_synced_at')) {
+      context.handle(
+          _lastSyncedAtMeta,
+          lastSyncedAt.isAcceptableOrUnknown(
+              data['last_synced_at']!, _lastSyncedAtMeta));
+    }
     if (data.containsKey('deleted_at')) {
       context.handle(_deletedAtMeta,
           deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
@@ -4393,6 +5024,14 @@ class $LocalEventsTable extends LocalEvents
           .read(DriftSqlType.string, data['${effectivePrefix}timezone'])!,
       recurrence: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}recurrence']),
+      externalProvider: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}external_provider']),
+      externalEventId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}external_event_id']),
+      externalEtag: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}external_etag']),
+      lastSyncedAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}last_synced_at']),
       deletedAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
     );
@@ -4417,6 +5056,10 @@ class LocalEvent extends DataClass implements Insertable<LocalEvent> {
   final bool allDay;
   final String timezone;
   final String? recurrence;
+  final String? externalProvider;
+  final String? externalEventId;
+  final String? externalEtag;
+  final DateTime? lastSyncedAt;
   final DateTime? deletedAt;
   const LocalEvent(
       {required this.id,
@@ -4431,6 +5074,10 @@ class LocalEvent extends DataClass implements Insertable<LocalEvent> {
       required this.allDay,
       required this.timezone,
       this.recurrence,
+      this.externalProvider,
+      this.externalEventId,
+      this.externalEtag,
+      this.lastSyncedAt,
       this.deletedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4454,6 +5101,18 @@ class LocalEvent extends DataClass implements Insertable<LocalEvent> {
     map['timezone'] = Variable<String>(timezone);
     if (!nullToAbsent || recurrence != null) {
       map['recurrence'] = Variable<String>(recurrence);
+    }
+    if (!nullToAbsent || externalProvider != null) {
+      map['external_provider'] = Variable<String>(externalProvider);
+    }
+    if (!nullToAbsent || externalEventId != null) {
+      map['external_event_id'] = Variable<String>(externalEventId);
+    }
+    if (!nullToAbsent || externalEtag != null) {
+      map['external_etag'] = Variable<String>(externalEtag);
+    }
+    if (!nullToAbsent || lastSyncedAt != null) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt);
     }
     if (!nullToAbsent || deletedAt != null) {
       map['deleted_at'] = Variable<DateTime>(deletedAt);
@@ -4483,6 +5142,18 @@ class LocalEvent extends DataClass implements Insertable<LocalEvent> {
       recurrence: recurrence == null && nullToAbsent
           ? const Value.absent()
           : Value(recurrence),
+      externalProvider: externalProvider == null && nullToAbsent
+          ? const Value.absent()
+          : Value(externalProvider),
+      externalEventId: externalEventId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(externalEventId),
+      externalEtag: externalEtag == null && nullToAbsent
+          ? const Value.absent()
+          : Value(externalEtag),
+      lastSyncedAt: lastSyncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSyncedAt),
       deletedAt: deletedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(deletedAt),
@@ -4505,6 +5176,10 @@ class LocalEvent extends DataClass implements Insertable<LocalEvent> {
       allDay: serializer.fromJson<bool>(json['allDay']),
       timezone: serializer.fromJson<String>(json['timezone']),
       recurrence: serializer.fromJson<String?>(json['recurrence']),
+      externalProvider: serializer.fromJson<String?>(json['externalProvider']),
+      externalEventId: serializer.fromJson<String?>(json['externalEventId']),
+      externalEtag: serializer.fromJson<String?>(json['externalEtag']),
+      lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
     );
   }
@@ -4524,6 +5199,10 @@ class LocalEvent extends DataClass implements Insertable<LocalEvent> {
       'allDay': serializer.toJson<bool>(allDay),
       'timezone': serializer.toJson<String>(timezone),
       'recurrence': serializer.toJson<String?>(recurrence),
+      'externalProvider': serializer.toJson<String?>(externalProvider),
+      'externalEventId': serializer.toJson<String?>(externalEventId),
+      'externalEtag': serializer.toJson<String?>(externalEtag),
+      'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
     };
   }
@@ -4541,6 +5220,10 @@ class LocalEvent extends DataClass implements Insertable<LocalEvent> {
           bool? allDay,
           String? timezone,
           Value<String?> recurrence = const Value.absent(),
+          Value<String?> externalProvider = const Value.absent(),
+          Value<String?> externalEventId = const Value.absent(),
+          Value<String?> externalEtag = const Value.absent(),
+          Value<DateTime?> lastSyncedAt = const Value.absent(),
           Value<DateTime?> deletedAt = const Value.absent()}) =>
       LocalEvent(
         id: id ?? this.id,
@@ -4555,6 +5238,16 @@ class LocalEvent extends DataClass implements Insertable<LocalEvent> {
         allDay: allDay ?? this.allDay,
         timezone: timezone ?? this.timezone,
         recurrence: recurrence.present ? recurrence.value : this.recurrence,
+        externalProvider: externalProvider.present
+            ? externalProvider.value
+            : this.externalProvider,
+        externalEventId: externalEventId.present
+            ? externalEventId.value
+            : this.externalEventId,
+        externalEtag:
+            externalEtag.present ? externalEtag.value : this.externalEtag,
+        lastSyncedAt:
+            lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
         deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
       );
   LocalEvent copyWithCompanion(LocalEventsCompanion data) {
@@ -4574,6 +5267,18 @@ class LocalEvent extends DataClass implements Insertable<LocalEvent> {
       timezone: data.timezone.present ? data.timezone.value : this.timezone,
       recurrence:
           data.recurrence.present ? data.recurrence.value : this.recurrence,
+      externalProvider: data.externalProvider.present
+          ? data.externalProvider.value
+          : this.externalProvider,
+      externalEventId: data.externalEventId.present
+          ? data.externalEventId.value
+          : this.externalEventId,
+      externalEtag: data.externalEtag.present
+          ? data.externalEtag.value
+          : this.externalEtag,
+      lastSyncedAt: data.lastSyncedAt.present
+          ? data.lastSyncedAt.value
+          : this.lastSyncedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
   }
@@ -4593,6 +5298,10 @@ class LocalEvent extends DataClass implements Insertable<LocalEvent> {
           ..write('allDay: $allDay, ')
           ..write('timezone: $timezone, ')
           ..write('recurrence: $recurrence, ')
+          ..write('externalProvider: $externalProvider, ')
+          ..write('externalEventId: $externalEventId, ')
+          ..write('externalEtag: $externalEtag, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
@@ -4612,6 +5321,10 @@ class LocalEvent extends DataClass implements Insertable<LocalEvent> {
       allDay,
       timezone,
       recurrence,
+      externalProvider,
+      externalEventId,
+      externalEtag,
+      lastSyncedAt,
       deletedAt);
   @override
   bool operator ==(Object other) =>
@@ -4629,6 +5342,10 @@ class LocalEvent extends DataClass implements Insertable<LocalEvent> {
           other.allDay == this.allDay &&
           other.timezone == this.timezone &&
           other.recurrence == this.recurrence &&
+          other.externalProvider == this.externalProvider &&
+          other.externalEventId == this.externalEventId &&
+          other.externalEtag == this.externalEtag &&
+          other.lastSyncedAt == this.lastSyncedAt &&
           other.deletedAt == this.deletedAt);
 }
 
@@ -4645,6 +5362,10 @@ class LocalEventsCompanion extends UpdateCompanion<LocalEvent> {
   final Value<bool> allDay;
   final Value<String> timezone;
   final Value<String?> recurrence;
+  final Value<String?> externalProvider;
+  final Value<String?> externalEventId;
+  final Value<String?> externalEtag;
+  final Value<DateTime?> lastSyncedAt;
   final Value<DateTime?> deletedAt;
   final Value<int> rowid;
   const LocalEventsCompanion({
@@ -4660,6 +5381,10 @@ class LocalEventsCompanion extends UpdateCompanion<LocalEvent> {
     this.allDay = const Value.absent(),
     this.timezone = const Value.absent(),
     this.recurrence = const Value.absent(),
+    this.externalProvider = const Value.absent(),
+    this.externalEventId = const Value.absent(),
+    this.externalEtag = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -4676,6 +5401,10 @@ class LocalEventsCompanion extends UpdateCompanion<LocalEvent> {
     this.allDay = const Value.absent(),
     this.timezone = const Value.absent(),
     this.recurrence = const Value.absent(),
+    this.externalProvider = const Value.absent(),
+    this.externalEventId = const Value.absent(),
+    this.externalEtag = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
@@ -4697,6 +5426,10 @@ class LocalEventsCompanion extends UpdateCompanion<LocalEvent> {
     Expression<bool>? allDay,
     Expression<String>? timezone,
     Expression<String>? recurrence,
+    Expression<String>? externalProvider,
+    Expression<String>? externalEventId,
+    Expression<String>? externalEtag,
+    Expression<DateTime>? lastSyncedAt,
     Expression<DateTime>? deletedAt,
     Expression<int>? rowid,
   }) {
@@ -4713,6 +5446,10 @@ class LocalEventsCompanion extends UpdateCompanion<LocalEvent> {
       if (allDay != null) 'all_day': allDay,
       if (timezone != null) 'timezone': timezone,
       if (recurrence != null) 'recurrence': recurrence,
+      if (externalProvider != null) 'external_provider': externalProvider,
+      if (externalEventId != null) 'external_event_id': externalEventId,
+      if (externalEtag != null) 'external_etag': externalEtag,
+      if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -4731,6 +5468,10 @@ class LocalEventsCompanion extends UpdateCompanion<LocalEvent> {
       Value<bool>? allDay,
       Value<String>? timezone,
       Value<String?>? recurrence,
+      Value<String?>? externalProvider,
+      Value<String?>? externalEventId,
+      Value<String?>? externalEtag,
+      Value<DateTime?>? lastSyncedAt,
       Value<DateTime?>? deletedAt,
       Value<int>? rowid}) {
     return LocalEventsCompanion(
@@ -4746,6 +5487,10 @@ class LocalEventsCompanion extends UpdateCompanion<LocalEvent> {
       allDay: allDay ?? this.allDay,
       timezone: timezone ?? this.timezone,
       recurrence: recurrence ?? this.recurrence,
+      externalProvider: externalProvider ?? this.externalProvider,
+      externalEventId: externalEventId ?? this.externalEventId,
+      externalEtag: externalEtag ?? this.externalEtag,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       deletedAt: deletedAt ?? this.deletedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -4790,6 +5535,18 @@ class LocalEventsCompanion extends UpdateCompanion<LocalEvent> {
     if (recurrence.present) {
       map['recurrence'] = Variable<String>(recurrence.value);
     }
+    if (externalProvider.present) {
+      map['external_provider'] = Variable<String>(externalProvider.value);
+    }
+    if (externalEventId.present) {
+      map['external_event_id'] = Variable<String>(externalEventId.value);
+    }
+    if (externalEtag.present) {
+      map['external_etag'] = Variable<String>(externalEtag.value);
+    }
+    if (lastSyncedAt.present) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt.value);
+    }
     if (deletedAt.present) {
       map['deleted_at'] = Variable<DateTime>(deletedAt.value);
     }
@@ -4814,6 +5571,10 @@ class LocalEventsCompanion extends UpdateCompanion<LocalEvent> {
           ..write('allDay: $allDay, ')
           ..write('timezone: $timezone, ')
           ..write('recurrence: $recurrence, ')
+          ..write('externalProvider: $externalProvider, ')
+          ..write('externalEventId: $externalEventId, ')
+          ..write('externalEtag: $externalEtag, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('deletedAt: $deletedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -8484,6 +9245,4643 @@ class LocalIncomeSplitRulesCompanion
   }
 }
 
+class $LocalTaskStatusHistoriesTable extends LocalTaskStatusHistories
+    with TableInfo<$LocalTaskStatusHistoriesTable, LocalTaskStatusHistory> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalTaskStatusHistoriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _workspaceIdMeta =
+      const VerificationMeta('workspaceId');
+  @override
+  late final GeneratedColumn<String> workspaceId = GeneratedColumn<String>(
+      'workspace_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _taskIdMeta = const VerificationMeta('taskId');
+  @override
+  late final GeneratedColumn<String> taskId = GeneratedColumn<String>(
+      'task_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _fromStatusMeta =
+      const VerificationMeta('fromStatus');
+  @override
+  late final GeneratedColumn<String> fromStatus = GeneratedColumn<String>(
+      'from_status', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _toStatusMeta =
+      const VerificationMeta('toStatus');
+  @override
+  late final GeneratedColumn<String> toStatus = GeneratedColumn<String>(
+      'to_status', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+      'note', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _changedByMeta =
+      const VerificationMeta('changedBy');
+  @override
+  late final GeneratedColumn<String> changedBy = GeneratedColumn<String>(
+      'changed_by', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        workspaceId,
+        taskId,
+        fromStatus,
+        toStatus,
+        note,
+        changedBy,
+        createdAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_task_status_histories';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<LocalTaskStatusHistory> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('workspace_id')) {
+      context.handle(
+          _workspaceIdMeta,
+          workspaceId.isAcceptableOrUnknown(
+              data['workspace_id']!, _workspaceIdMeta));
+    } else if (isInserting) {
+      context.missing(_workspaceIdMeta);
+    }
+    if (data.containsKey('task_id')) {
+      context.handle(_taskIdMeta,
+          taskId.isAcceptableOrUnknown(data['task_id']!, _taskIdMeta));
+    } else if (isInserting) {
+      context.missing(_taskIdMeta);
+    }
+    if (data.containsKey('from_status')) {
+      context.handle(
+          _fromStatusMeta,
+          fromStatus.isAcceptableOrUnknown(
+              data['from_status']!, _fromStatusMeta));
+    }
+    if (data.containsKey('to_status')) {
+      context.handle(_toStatusMeta,
+          toStatus.isAcceptableOrUnknown(data['to_status']!, _toStatusMeta));
+    } else if (isInserting) {
+      context.missing(_toStatusMeta);
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+          _noteMeta, note.isAcceptableOrUnknown(data['note']!, _noteMeta));
+    }
+    if (data.containsKey('changed_by')) {
+      context.handle(_changedByMeta,
+          changedBy.isAcceptableOrUnknown(data['changed_by']!, _changedByMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalTaskStatusHistory map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalTaskStatusHistory(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      workspaceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}workspace_id'])!,
+      taskId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}task_id'])!,
+      fromStatus: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}from_status']),
+      toStatus: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}to_status'])!,
+      note: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}note']),
+      changedBy: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}changed_by']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $LocalTaskStatusHistoriesTable createAlias(String alias) {
+    return $LocalTaskStatusHistoriesTable(attachedDatabase, alias);
+  }
+}
+
+class LocalTaskStatusHistory extends DataClass
+    implements Insertable<LocalTaskStatusHistory> {
+  final String id;
+  final String workspaceId;
+  final String taskId;
+  final String? fromStatus;
+  final String toStatus;
+  final String? note;
+  final String? changedBy;
+  final DateTime createdAt;
+  const LocalTaskStatusHistory(
+      {required this.id,
+      required this.workspaceId,
+      required this.taskId,
+      this.fromStatus,
+      required this.toStatus,
+      this.note,
+      this.changedBy,
+      required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['workspace_id'] = Variable<String>(workspaceId);
+    map['task_id'] = Variable<String>(taskId);
+    if (!nullToAbsent || fromStatus != null) {
+      map['from_status'] = Variable<String>(fromStatus);
+    }
+    map['to_status'] = Variable<String>(toStatus);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    if (!nullToAbsent || changedBy != null) {
+      map['changed_by'] = Variable<String>(changedBy);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  LocalTaskStatusHistoriesCompanion toCompanion(bool nullToAbsent) {
+    return LocalTaskStatusHistoriesCompanion(
+      id: Value(id),
+      workspaceId: Value(workspaceId),
+      taskId: Value(taskId),
+      fromStatus: fromStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fromStatus),
+      toStatus: Value(toStatus),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      changedBy: changedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(changedBy),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory LocalTaskStatusHistory.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalTaskStatusHistory(
+      id: serializer.fromJson<String>(json['id']),
+      workspaceId: serializer.fromJson<String>(json['workspaceId']),
+      taskId: serializer.fromJson<String>(json['taskId']),
+      fromStatus: serializer.fromJson<String?>(json['fromStatus']),
+      toStatus: serializer.fromJson<String>(json['toStatus']),
+      note: serializer.fromJson<String?>(json['note']),
+      changedBy: serializer.fromJson<String?>(json['changedBy']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'workspaceId': serializer.toJson<String>(workspaceId),
+      'taskId': serializer.toJson<String>(taskId),
+      'fromStatus': serializer.toJson<String?>(fromStatus),
+      'toStatus': serializer.toJson<String>(toStatus),
+      'note': serializer.toJson<String?>(note),
+      'changedBy': serializer.toJson<String?>(changedBy),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  LocalTaskStatusHistory copyWith(
+          {String? id,
+          String? workspaceId,
+          String? taskId,
+          Value<String?> fromStatus = const Value.absent(),
+          String? toStatus,
+          Value<String?> note = const Value.absent(),
+          Value<String?> changedBy = const Value.absent(),
+          DateTime? createdAt}) =>
+      LocalTaskStatusHistory(
+        id: id ?? this.id,
+        workspaceId: workspaceId ?? this.workspaceId,
+        taskId: taskId ?? this.taskId,
+        fromStatus: fromStatus.present ? fromStatus.value : this.fromStatus,
+        toStatus: toStatus ?? this.toStatus,
+        note: note.present ? note.value : this.note,
+        changedBy: changedBy.present ? changedBy.value : this.changedBy,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  LocalTaskStatusHistory copyWithCompanion(
+      LocalTaskStatusHistoriesCompanion data) {
+    return LocalTaskStatusHistory(
+      id: data.id.present ? data.id.value : this.id,
+      workspaceId:
+          data.workspaceId.present ? data.workspaceId.value : this.workspaceId,
+      taskId: data.taskId.present ? data.taskId.value : this.taskId,
+      fromStatus:
+          data.fromStatus.present ? data.fromStatus.value : this.fromStatus,
+      toStatus: data.toStatus.present ? data.toStatus.value : this.toStatus,
+      note: data.note.present ? data.note.value : this.note,
+      changedBy: data.changedBy.present ? data.changedBy.value : this.changedBy,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalTaskStatusHistory(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('taskId: $taskId, ')
+          ..write('fromStatus: $fromStatus, ')
+          ..write('toStatus: $toStatus, ')
+          ..write('note: $note, ')
+          ..write('changedBy: $changedBy, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, workspaceId, taskId, fromStatus, toStatus,
+      note, changedBy, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalTaskStatusHistory &&
+          other.id == this.id &&
+          other.workspaceId == this.workspaceId &&
+          other.taskId == this.taskId &&
+          other.fromStatus == this.fromStatus &&
+          other.toStatus == this.toStatus &&
+          other.note == this.note &&
+          other.changedBy == this.changedBy &&
+          other.createdAt == this.createdAt);
+}
+
+class LocalTaskStatusHistoriesCompanion
+    extends UpdateCompanion<LocalTaskStatusHistory> {
+  final Value<String> id;
+  final Value<String> workspaceId;
+  final Value<String> taskId;
+  final Value<String?> fromStatus;
+  final Value<String> toStatus;
+  final Value<String?> note;
+  final Value<String?> changedBy;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const LocalTaskStatusHistoriesCompanion({
+    this.id = const Value.absent(),
+    this.workspaceId = const Value.absent(),
+    this.taskId = const Value.absent(),
+    this.fromStatus = const Value.absent(),
+    this.toStatus = const Value.absent(),
+    this.note = const Value.absent(),
+    this.changedBy = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalTaskStatusHistoriesCompanion.insert({
+    required String id,
+    required String workspaceId,
+    required String taskId,
+    this.fromStatus = const Value.absent(),
+    required String toStatus,
+    this.note = const Value.absent(),
+    this.changedBy = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        workspaceId = Value(workspaceId),
+        taskId = Value(taskId),
+        toStatus = Value(toStatus),
+        createdAt = Value(createdAt);
+  static Insertable<LocalTaskStatusHistory> custom({
+    Expression<String>? id,
+    Expression<String>? workspaceId,
+    Expression<String>? taskId,
+    Expression<String>? fromStatus,
+    Expression<String>? toStatus,
+    Expression<String>? note,
+    Expression<String>? changedBy,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (workspaceId != null) 'workspace_id': workspaceId,
+      if (taskId != null) 'task_id': taskId,
+      if (fromStatus != null) 'from_status': fromStatus,
+      if (toStatus != null) 'to_status': toStatus,
+      if (note != null) 'note': note,
+      if (changedBy != null) 'changed_by': changedBy,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalTaskStatusHistoriesCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? workspaceId,
+      Value<String>? taskId,
+      Value<String?>? fromStatus,
+      Value<String>? toStatus,
+      Value<String?>? note,
+      Value<String?>? changedBy,
+      Value<DateTime>? createdAt,
+      Value<int>? rowid}) {
+    return LocalTaskStatusHistoriesCompanion(
+      id: id ?? this.id,
+      workspaceId: workspaceId ?? this.workspaceId,
+      taskId: taskId ?? this.taskId,
+      fromStatus: fromStatus ?? this.fromStatus,
+      toStatus: toStatus ?? this.toStatus,
+      note: note ?? this.note,
+      changedBy: changedBy ?? this.changedBy,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (workspaceId.present) {
+      map['workspace_id'] = Variable<String>(workspaceId.value);
+    }
+    if (taskId.present) {
+      map['task_id'] = Variable<String>(taskId.value);
+    }
+    if (fromStatus.present) {
+      map['from_status'] = Variable<String>(fromStatus.value);
+    }
+    if (toStatus.present) {
+      map['to_status'] = Variable<String>(toStatus.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (changedBy.present) {
+      map['changed_by'] = Variable<String>(changedBy.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalTaskStatusHistoriesCompanion(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('taskId: $taskId, ')
+          ..write('fromStatus: $fromStatus, ')
+          ..write('toStatus: $toStatus, ')
+          ..write('note: $note, ')
+          ..write('changedBy: $changedBy, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalCommentsTable extends LocalComments
+    with TableInfo<$LocalCommentsTable, LocalComment> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalCommentsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _workspaceIdMeta =
+      const VerificationMeta('workspaceId');
+  @override
+  late final GeneratedColumn<String> workspaceId = GeneratedColumn<String>(
+      'workspace_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _entityTypeMeta =
+      const VerificationMeta('entityType');
+  @override
+  late final GeneratedColumn<String> entityType = GeneratedColumn<String>(
+      'entity_type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _entityIdMeta =
+      const VerificationMeta('entityId');
+  @override
+  late final GeneratedColumn<String> entityId = GeneratedColumn<String>(
+      'entity_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _parentCommentIdMeta =
+      const VerificationMeta('parentCommentId');
+  @override
+  late final GeneratedColumn<String> parentCommentId = GeneratedColumn<String>(
+      'parent_comment_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  @override
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+      'body', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _authorIdMeta =
+      const VerificationMeta('authorId');
+  @override
+  late final GeneratedColumn<String> authorId = GeneratedColumn<String>(
+      'author_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        workspaceId,
+        entityType,
+        entityId,
+        parentCommentId,
+        body,
+        authorId,
+        createdAt,
+        updatedAt,
+        deletedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_comments';
+  @override
+  VerificationContext validateIntegrity(Insertable<LocalComment> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('workspace_id')) {
+      context.handle(
+          _workspaceIdMeta,
+          workspaceId.isAcceptableOrUnknown(
+              data['workspace_id']!, _workspaceIdMeta));
+    } else if (isInserting) {
+      context.missing(_workspaceIdMeta);
+    }
+    if (data.containsKey('entity_type')) {
+      context.handle(
+          _entityTypeMeta,
+          entityType.isAcceptableOrUnknown(
+              data['entity_type']!, _entityTypeMeta));
+    } else if (isInserting) {
+      context.missing(_entityTypeMeta);
+    }
+    if (data.containsKey('entity_id')) {
+      context.handle(_entityIdMeta,
+          entityId.isAcceptableOrUnknown(data['entity_id']!, _entityIdMeta));
+    } else if (isInserting) {
+      context.missing(_entityIdMeta);
+    }
+    if (data.containsKey('parent_comment_id')) {
+      context.handle(
+          _parentCommentIdMeta,
+          parentCommentId.isAcceptableOrUnknown(
+              data['parent_comment_id']!, _parentCommentIdMeta));
+    }
+    if (data.containsKey('body')) {
+      context.handle(
+          _bodyMeta, body.isAcceptableOrUnknown(data['body']!, _bodyMeta));
+    } else if (isInserting) {
+      context.missing(_bodyMeta);
+    }
+    if (data.containsKey('author_id')) {
+      context.handle(_authorIdMeta,
+          authorId.isAcceptableOrUnknown(data['author_id']!, _authorIdMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalComment map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalComment(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      workspaceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}workspace_id'])!,
+      entityType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}entity_type'])!,
+      entityId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}entity_id'])!,
+      parentCommentId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}parent_comment_id']),
+      body: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}body'])!,
+      authorId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}author_id']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+    );
+  }
+
+  @override
+  $LocalCommentsTable createAlias(String alias) {
+    return $LocalCommentsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalComment extends DataClass implements Insertable<LocalComment> {
+  final String id;
+  final String workspaceId;
+  final String entityType;
+  final String entityId;
+  final String? parentCommentId;
+  final String body;
+  final String? authorId;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  const LocalComment(
+      {required this.id,
+      required this.workspaceId,
+      required this.entityType,
+      required this.entityId,
+      this.parentCommentId,
+      required this.body,
+      this.authorId,
+      required this.createdAt,
+      required this.updatedAt,
+      this.deletedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['workspace_id'] = Variable<String>(workspaceId);
+    map['entity_type'] = Variable<String>(entityType);
+    map['entity_id'] = Variable<String>(entityId);
+    if (!nullToAbsent || parentCommentId != null) {
+      map['parent_comment_id'] = Variable<String>(parentCommentId);
+    }
+    map['body'] = Variable<String>(body);
+    if (!nullToAbsent || authorId != null) {
+      map['author_id'] = Variable<String>(authorId);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  LocalCommentsCompanion toCompanion(bool nullToAbsent) {
+    return LocalCommentsCompanion(
+      id: Value(id),
+      workspaceId: Value(workspaceId),
+      entityType: Value(entityType),
+      entityId: Value(entityId),
+      parentCommentId: parentCommentId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentCommentId),
+      body: Value(body),
+      authorId: authorId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(authorId),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory LocalComment.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalComment(
+      id: serializer.fromJson<String>(json['id']),
+      workspaceId: serializer.fromJson<String>(json['workspaceId']),
+      entityType: serializer.fromJson<String>(json['entityType']),
+      entityId: serializer.fromJson<String>(json['entityId']),
+      parentCommentId: serializer.fromJson<String?>(json['parentCommentId']),
+      body: serializer.fromJson<String>(json['body']),
+      authorId: serializer.fromJson<String?>(json['authorId']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'workspaceId': serializer.toJson<String>(workspaceId),
+      'entityType': serializer.toJson<String>(entityType),
+      'entityId': serializer.toJson<String>(entityId),
+      'parentCommentId': serializer.toJson<String?>(parentCommentId),
+      'body': serializer.toJson<String>(body),
+      'authorId': serializer.toJson<String?>(authorId),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  LocalComment copyWith(
+          {String? id,
+          String? workspaceId,
+          String? entityType,
+          String? entityId,
+          Value<String?> parentCommentId = const Value.absent(),
+          String? body,
+          Value<String?> authorId = const Value.absent(),
+          DateTime? createdAt,
+          DateTime? updatedAt,
+          Value<DateTime?> deletedAt = const Value.absent()}) =>
+      LocalComment(
+        id: id ?? this.id,
+        workspaceId: workspaceId ?? this.workspaceId,
+        entityType: entityType ?? this.entityType,
+        entityId: entityId ?? this.entityId,
+        parentCommentId: parentCommentId.present
+            ? parentCommentId.value
+            : this.parentCommentId,
+        body: body ?? this.body,
+        authorId: authorId.present ? authorId.value : this.authorId,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+      );
+  LocalComment copyWithCompanion(LocalCommentsCompanion data) {
+    return LocalComment(
+      id: data.id.present ? data.id.value : this.id,
+      workspaceId:
+          data.workspaceId.present ? data.workspaceId.value : this.workspaceId,
+      entityType:
+          data.entityType.present ? data.entityType.value : this.entityType,
+      entityId: data.entityId.present ? data.entityId.value : this.entityId,
+      parentCommentId: data.parentCommentId.present
+          ? data.parentCommentId.value
+          : this.parentCommentId,
+      body: data.body.present ? data.body.value : this.body,
+      authorId: data.authorId.present ? data.authorId.value : this.authorId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalComment(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('entityType: $entityType, ')
+          ..write('entityId: $entityId, ')
+          ..write('parentCommentId: $parentCommentId, ')
+          ..write('body: $body, ')
+          ..write('authorId: $authorId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, workspaceId, entityType, entityId,
+      parentCommentId, body, authorId, createdAt, updatedAt, deletedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalComment &&
+          other.id == this.id &&
+          other.workspaceId == this.workspaceId &&
+          other.entityType == this.entityType &&
+          other.entityId == this.entityId &&
+          other.parentCommentId == this.parentCommentId &&
+          other.body == this.body &&
+          other.authorId == this.authorId &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class LocalCommentsCompanion extends UpdateCompanion<LocalComment> {
+  final Value<String> id;
+  final Value<String> workspaceId;
+  final Value<String> entityType;
+  final Value<String> entityId;
+  final Value<String?> parentCommentId;
+  final Value<String> body;
+  final Value<String?> authorId;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const LocalCommentsCompanion({
+    this.id = const Value.absent(),
+    this.workspaceId = const Value.absent(),
+    this.entityType = const Value.absent(),
+    this.entityId = const Value.absent(),
+    this.parentCommentId = const Value.absent(),
+    this.body = const Value.absent(),
+    this.authorId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalCommentsCompanion.insert({
+    required String id,
+    required String workspaceId,
+    required String entityType,
+    required String entityId,
+    this.parentCommentId = const Value.absent(),
+    required String body,
+    this.authorId = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        workspaceId = Value(workspaceId),
+        entityType = Value(entityType),
+        entityId = Value(entityId),
+        body = Value(body),
+        createdAt = Value(createdAt),
+        updatedAt = Value(updatedAt);
+  static Insertable<LocalComment> custom({
+    Expression<String>? id,
+    Expression<String>? workspaceId,
+    Expression<String>? entityType,
+    Expression<String>? entityId,
+    Expression<String>? parentCommentId,
+    Expression<String>? body,
+    Expression<String>? authorId,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (workspaceId != null) 'workspace_id': workspaceId,
+      if (entityType != null) 'entity_type': entityType,
+      if (entityId != null) 'entity_id': entityId,
+      if (parentCommentId != null) 'parent_comment_id': parentCommentId,
+      if (body != null) 'body': body,
+      if (authorId != null) 'author_id': authorId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalCommentsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? workspaceId,
+      Value<String>? entityType,
+      Value<String>? entityId,
+      Value<String?>? parentCommentId,
+      Value<String>? body,
+      Value<String?>? authorId,
+      Value<DateTime>? createdAt,
+      Value<DateTime>? updatedAt,
+      Value<DateTime?>? deletedAt,
+      Value<int>? rowid}) {
+    return LocalCommentsCompanion(
+      id: id ?? this.id,
+      workspaceId: workspaceId ?? this.workspaceId,
+      entityType: entityType ?? this.entityType,
+      entityId: entityId ?? this.entityId,
+      parentCommentId: parentCommentId ?? this.parentCommentId,
+      body: body ?? this.body,
+      authorId: authorId ?? this.authorId,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (workspaceId.present) {
+      map['workspace_id'] = Variable<String>(workspaceId.value);
+    }
+    if (entityType.present) {
+      map['entity_type'] = Variable<String>(entityType.value);
+    }
+    if (entityId.present) {
+      map['entity_id'] = Variable<String>(entityId.value);
+    }
+    if (parentCommentId.present) {
+      map['parent_comment_id'] = Variable<String>(parentCommentId.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (authorId.present) {
+      map['author_id'] = Variable<String>(authorId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalCommentsCompanion(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('entityType: $entityType, ')
+          ..write('entityId: $entityId, ')
+          ..write('parentCommentId: $parentCommentId, ')
+          ..write('body: $body, ')
+          ..write('authorId: $authorId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalEntityLinksTable extends LocalEntityLinks
+    with TableInfo<$LocalEntityLinksTable, LocalEntityLink> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalEntityLinksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _workspaceIdMeta =
+      const VerificationMeta('workspaceId');
+  @override
+  late final GeneratedColumn<String> workspaceId = GeneratedColumn<String>(
+      'workspace_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _sourceTypeMeta =
+      const VerificationMeta('sourceType');
+  @override
+  late final GeneratedColumn<String> sourceType = GeneratedColumn<String>(
+      'source_type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _sourceIdMeta =
+      const VerificationMeta('sourceId');
+  @override
+  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>(
+      'source_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _targetTypeMeta =
+      const VerificationMeta('targetType');
+  @override
+  late final GeneratedColumn<String> targetType = GeneratedColumn<String>(
+      'target_type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _targetIdMeta =
+      const VerificationMeta('targetId');
+  @override
+  late final GeneratedColumn<String> targetId = GeneratedColumn<String>(
+      'target_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _relationTypeMeta =
+      const VerificationMeta('relationType');
+  @override
+  late final GeneratedColumn<String> relationType = GeneratedColumn<String>(
+      'relation_type', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('related'));
+  static const VerificationMeta _createdByMeta =
+      const VerificationMeta('createdBy');
+  @override
+  late final GeneratedColumn<String> createdBy = GeneratedColumn<String>(
+      'created_by', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        workspaceId,
+        sourceType,
+        sourceId,
+        targetType,
+        targetId,
+        relationType,
+        createdBy,
+        createdAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_entity_links';
+  @override
+  VerificationContext validateIntegrity(Insertable<LocalEntityLink> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('workspace_id')) {
+      context.handle(
+          _workspaceIdMeta,
+          workspaceId.isAcceptableOrUnknown(
+              data['workspace_id']!, _workspaceIdMeta));
+    } else if (isInserting) {
+      context.missing(_workspaceIdMeta);
+    }
+    if (data.containsKey('source_type')) {
+      context.handle(
+          _sourceTypeMeta,
+          sourceType.isAcceptableOrUnknown(
+              data['source_type']!, _sourceTypeMeta));
+    } else if (isInserting) {
+      context.missing(_sourceTypeMeta);
+    }
+    if (data.containsKey('source_id')) {
+      context.handle(_sourceIdMeta,
+          sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta));
+    } else if (isInserting) {
+      context.missing(_sourceIdMeta);
+    }
+    if (data.containsKey('target_type')) {
+      context.handle(
+          _targetTypeMeta,
+          targetType.isAcceptableOrUnknown(
+              data['target_type']!, _targetTypeMeta));
+    } else if (isInserting) {
+      context.missing(_targetTypeMeta);
+    }
+    if (data.containsKey('target_id')) {
+      context.handle(_targetIdMeta,
+          targetId.isAcceptableOrUnknown(data['target_id']!, _targetIdMeta));
+    } else if (isInserting) {
+      context.missing(_targetIdMeta);
+    }
+    if (data.containsKey('relation_type')) {
+      context.handle(
+          _relationTypeMeta,
+          relationType.isAcceptableOrUnknown(
+              data['relation_type']!, _relationTypeMeta));
+    }
+    if (data.containsKey('created_by')) {
+      context.handle(_createdByMeta,
+          createdBy.isAcceptableOrUnknown(data['created_by']!, _createdByMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalEntityLink map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalEntityLink(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      workspaceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}workspace_id'])!,
+      sourceType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}source_type'])!,
+      sourceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}source_id'])!,
+      targetType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}target_type'])!,
+      targetId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}target_id'])!,
+      relationType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}relation_type'])!,
+      createdBy: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}created_by']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $LocalEntityLinksTable createAlias(String alias) {
+    return $LocalEntityLinksTable(attachedDatabase, alias);
+  }
+}
+
+class LocalEntityLink extends DataClass implements Insertable<LocalEntityLink> {
+  final String id;
+  final String workspaceId;
+  final String sourceType;
+  final String sourceId;
+  final String targetType;
+  final String targetId;
+  final String relationType;
+  final String? createdBy;
+  final DateTime createdAt;
+  const LocalEntityLink(
+      {required this.id,
+      required this.workspaceId,
+      required this.sourceType,
+      required this.sourceId,
+      required this.targetType,
+      required this.targetId,
+      required this.relationType,
+      this.createdBy,
+      required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['workspace_id'] = Variable<String>(workspaceId);
+    map['source_type'] = Variable<String>(sourceType);
+    map['source_id'] = Variable<String>(sourceId);
+    map['target_type'] = Variable<String>(targetType);
+    map['target_id'] = Variable<String>(targetId);
+    map['relation_type'] = Variable<String>(relationType);
+    if (!nullToAbsent || createdBy != null) {
+      map['created_by'] = Variable<String>(createdBy);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  LocalEntityLinksCompanion toCompanion(bool nullToAbsent) {
+    return LocalEntityLinksCompanion(
+      id: Value(id),
+      workspaceId: Value(workspaceId),
+      sourceType: Value(sourceType),
+      sourceId: Value(sourceId),
+      targetType: Value(targetType),
+      targetId: Value(targetId),
+      relationType: Value(relationType),
+      createdBy: createdBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdBy),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory LocalEntityLink.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalEntityLink(
+      id: serializer.fromJson<String>(json['id']),
+      workspaceId: serializer.fromJson<String>(json['workspaceId']),
+      sourceType: serializer.fromJson<String>(json['sourceType']),
+      sourceId: serializer.fromJson<String>(json['sourceId']),
+      targetType: serializer.fromJson<String>(json['targetType']),
+      targetId: serializer.fromJson<String>(json['targetId']),
+      relationType: serializer.fromJson<String>(json['relationType']),
+      createdBy: serializer.fromJson<String?>(json['createdBy']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'workspaceId': serializer.toJson<String>(workspaceId),
+      'sourceType': serializer.toJson<String>(sourceType),
+      'sourceId': serializer.toJson<String>(sourceId),
+      'targetType': serializer.toJson<String>(targetType),
+      'targetId': serializer.toJson<String>(targetId),
+      'relationType': serializer.toJson<String>(relationType),
+      'createdBy': serializer.toJson<String?>(createdBy),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  LocalEntityLink copyWith(
+          {String? id,
+          String? workspaceId,
+          String? sourceType,
+          String? sourceId,
+          String? targetType,
+          String? targetId,
+          String? relationType,
+          Value<String?> createdBy = const Value.absent(),
+          DateTime? createdAt}) =>
+      LocalEntityLink(
+        id: id ?? this.id,
+        workspaceId: workspaceId ?? this.workspaceId,
+        sourceType: sourceType ?? this.sourceType,
+        sourceId: sourceId ?? this.sourceId,
+        targetType: targetType ?? this.targetType,
+        targetId: targetId ?? this.targetId,
+        relationType: relationType ?? this.relationType,
+        createdBy: createdBy.present ? createdBy.value : this.createdBy,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  LocalEntityLink copyWithCompanion(LocalEntityLinksCompanion data) {
+    return LocalEntityLink(
+      id: data.id.present ? data.id.value : this.id,
+      workspaceId:
+          data.workspaceId.present ? data.workspaceId.value : this.workspaceId,
+      sourceType:
+          data.sourceType.present ? data.sourceType.value : this.sourceType,
+      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
+      targetType:
+          data.targetType.present ? data.targetType.value : this.targetType,
+      targetId: data.targetId.present ? data.targetId.value : this.targetId,
+      relationType: data.relationType.present
+          ? data.relationType.value
+          : this.relationType,
+      createdBy: data.createdBy.present ? data.createdBy.value : this.createdBy,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalEntityLink(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('sourceType: $sourceType, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('targetType: $targetType, ')
+          ..write('targetId: $targetId, ')
+          ..write('relationType: $relationType, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, workspaceId, sourceType, sourceId,
+      targetType, targetId, relationType, createdBy, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalEntityLink &&
+          other.id == this.id &&
+          other.workspaceId == this.workspaceId &&
+          other.sourceType == this.sourceType &&
+          other.sourceId == this.sourceId &&
+          other.targetType == this.targetType &&
+          other.targetId == this.targetId &&
+          other.relationType == this.relationType &&
+          other.createdBy == this.createdBy &&
+          other.createdAt == this.createdAt);
+}
+
+class LocalEntityLinksCompanion extends UpdateCompanion<LocalEntityLink> {
+  final Value<String> id;
+  final Value<String> workspaceId;
+  final Value<String> sourceType;
+  final Value<String> sourceId;
+  final Value<String> targetType;
+  final Value<String> targetId;
+  final Value<String> relationType;
+  final Value<String?> createdBy;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const LocalEntityLinksCompanion({
+    this.id = const Value.absent(),
+    this.workspaceId = const Value.absent(),
+    this.sourceType = const Value.absent(),
+    this.sourceId = const Value.absent(),
+    this.targetType = const Value.absent(),
+    this.targetId = const Value.absent(),
+    this.relationType = const Value.absent(),
+    this.createdBy = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalEntityLinksCompanion.insert({
+    required String id,
+    required String workspaceId,
+    required String sourceType,
+    required String sourceId,
+    required String targetType,
+    required String targetId,
+    this.relationType = const Value.absent(),
+    this.createdBy = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        workspaceId = Value(workspaceId),
+        sourceType = Value(sourceType),
+        sourceId = Value(sourceId),
+        targetType = Value(targetType),
+        targetId = Value(targetId),
+        createdAt = Value(createdAt);
+  static Insertable<LocalEntityLink> custom({
+    Expression<String>? id,
+    Expression<String>? workspaceId,
+    Expression<String>? sourceType,
+    Expression<String>? sourceId,
+    Expression<String>? targetType,
+    Expression<String>? targetId,
+    Expression<String>? relationType,
+    Expression<String>? createdBy,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (workspaceId != null) 'workspace_id': workspaceId,
+      if (sourceType != null) 'source_type': sourceType,
+      if (sourceId != null) 'source_id': sourceId,
+      if (targetType != null) 'target_type': targetType,
+      if (targetId != null) 'target_id': targetId,
+      if (relationType != null) 'relation_type': relationType,
+      if (createdBy != null) 'created_by': createdBy,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalEntityLinksCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? workspaceId,
+      Value<String>? sourceType,
+      Value<String>? sourceId,
+      Value<String>? targetType,
+      Value<String>? targetId,
+      Value<String>? relationType,
+      Value<String?>? createdBy,
+      Value<DateTime>? createdAt,
+      Value<int>? rowid}) {
+    return LocalEntityLinksCompanion(
+      id: id ?? this.id,
+      workspaceId: workspaceId ?? this.workspaceId,
+      sourceType: sourceType ?? this.sourceType,
+      sourceId: sourceId ?? this.sourceId,
+      targetType: targetType ?? this.targetType,
+      targetId: targetId ?? this.targetId,
+      relationType: relationType ?? this.relationType,
+      createdBy: createdBy ?? this.createdBy,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (workspaceId.present) {
+      map['workspace_id'] = Variable<String>(workspaceId.value);
+    }
+    if (sourceType.present) {
+      map['source_type'] = Variable<String>(sourceType.value);
+    }
+    if (sourceId.present) {
+      map['source_id'] = Variable<String>(sourceId.value);
+    }
+    if (targetType.present) {
+      map['target_type'] = Variable<String>(targetType.value);
+    }
+    if (targetId.present) {
+      map['target_id'] = Variable<String>(targetId.value);
+    }
+    if (relationType.present) {
+      map['relation_type'] = Variable<String>(relationType.value);
+    }
+    if (createdBy.present) {
+      map['created_by'] = Variable<String>(createdBy.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalEntityLinksCompanion(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('sourceType: $sourceType, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('targetType: $targetType, ')
+          ..write('targetId: $targetId, ')
+          ..write('relationType: $relationType, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalSavedViewsTable extends LocalSavedViews
+    with TableInfo<$LocalSavedViewsTable, LocalSavedView> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalSavedViewsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _workspaceIdMeta =
+      const VerificationMeta('workspaceId');
+  @override
+  late final GeneratedColumn<String> workspaceId = GeneratedColumn<String>(
+      'workspace_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _createdByMeta =
+      const VerificationMeta('createdBy');
+  @override
+  late final GeneratedColumn<String> createdBy = GeneratedColumn<String>(
+      'created_by', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _scopeMeta = const VerificationMeta('scope');
+  @override
+  late final GeneratedColumn<String> scope = GeneratedColumn<String>(
+      'scope', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _viewModeMeta =
+      const VerificationMeta('viewMode');
+  @override
+  late final GeneratedColumn<String> viewMode = GeneratedColumn<String>(
+      'view_mode', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('list'));
+  static const VerificationMeta _filterJsonMeta =
+      const VerificationMeta('filterJson');
+  @override
+  late final GeneratedColumn<String> filterJson = GeneratedColumn<String>(
+      'filter_json', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('{}'));
+  static const VerificationMeta _sortJsonMeta =
+      const VerificationMeta('sortJson');
+  @override
+  late final GeneratedColumn<String> sortJson = GeneratedColumn<String>(
+      'sort_json', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('{}'));
+  static const VerificationMeta _isPinnedMeta =
+      const VerificationMeta('isPinned');
+  @override
+  late final GeneratedColumn<bool> isPinned = GeneratedColumn<bool>(
+      'is_pinned', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_pinned" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _sortOrderMeta =
+      const VerificationMeta('sortOrder');
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+      'sort_order', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        workspaceId,
+        createdBy,
+        name,
+        scope,
+        viewMode,
+        filterJson,
+        sortJson,
+        isPinned,
+        sortOrder,
+        createdAt,
+        updatedAt,
+        deletedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_saved_views';
+  @override
+  VerificationContext validateIntegrity(Insertable<LocalSavedView> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('workspace_id')) {
+      context.handle(
+          _workspaceIdMeta,
+          workspaceId.isAcceptableOrUnknown(
+              data['workspace_id']!, _workspaceIdMeta));
+    } else if (isInserting) {
+      context.missing(_workspaceIdMeta);
+    }
+    if (data.containsKey('created_by')) {
+      context.handle(_createdByMeta,
+          createdBy.isAcceptableOrUnknown(data['created_by']!, _createdByMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('scope')) {
+      context.handle(
+          _scopeMeta, scope.isAcceptableOrUnknown(data['scope']!, _scopeMeta));
+    } else if (isInserting) {
+      context.missing(_scopeMeta);
+    }
+    if (data.containsKey('view_mode')) {
+      context.handle(_viewModeMeta,
+          viewMode.isAcceptableOrUnknown(data['view_mode']!, _viewModeMeta));
+    }
+    if (data.containsKey('filter_json')) {
+      context.handle(
+          _filterJsonMeta,
+          filterJson.isAcceptableOrUnknown(
+              data['filter_json']!, _filterJsonMeta));
+    }
+    if (data.containsKey('sort_json')) {
+      context.handle(_sortJsonMeta,
+          sortJson.isAcceptableOrUnknown(data['sort_json']!, _sortJsonMeta));
+    }
+    if (data.containsKey('is_pinned')) {
+      context.handle(_isPinnedMeta,
+          isPinned.isAcceptableOrUnknown(data['is_pinned']!, _isPinnedMeta));
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(_sortOrderMeta,
+          sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalSavedView map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalSavedView(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      workspaceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}workspace_id'])!,
+      createdBy: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}created_by']),
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      scope: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}scope'])!,
+      viewMode: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}view_mode'])!,
+      filterJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}filter_json'])!,
+      sortJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sort_json'])!,
+      isPinned: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_pinned'])!,
+      sortOrder: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}sort_order'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at']),
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at']),
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+    );
+  }
+
+  @override
+  $LocalSavedViewsTable createAlias(String alias) {
+    return $LocalSavedViewsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalSavedView extends DataClass implements Insertable<LocalSavedView> {
+  final String id;
+  final String workspaceId;
+  final String? createdBy;
+  final String name;
+  final String scope;
+  final String viewMode;
+  final String filterJson;
+  final String sortJson;
+  final bool isPinned;
+  final int sortOrder;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final DateTime? deletedAt;
+  const LocalSavedView(
+      {required this.id,
+      required this.workspaceId,
+      this.createdBy,
+      required this.name,
+      required this.scope,
+      required this.viewMode,
+      required this.filterJson,
+      required this.sortJson,
+      required this.isPinned,
+      required this.sortOrder,
+      this.createdAt,
+      this.updatedAt,
+      this.deletedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['workspace_id'] = Variable<String>(workspaceId);
+    if (!nullToAbsent || createdBy != null) {
+      map['created_by'] = Variable<String>(createdBy);
+    }
+    map['name'] = Variable<String>(name);
+    map['scope'] = Variable<String>(scope);
+    map['view_mode'] = Variable<String>(viewMode);
+    map['filter_json'] = Variable<String>(filterJson);
+    map['sort_json'] = Variable<String>(sortJson);
+    map['is_pinned'] = Variable<bool>(isPinned);
+    map['sort_order'] = Variable<int>(sortOrder);
+    if (!nullToAbsent || createdAt != null) {
+      map['created_at'] = Variable<DateTime>(createdAt);
+    }
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  LocalSavedViewsCompanion toCompanion(bool nullToAbsent) {
+    return LocalSavedViewsCompanion(
+      id: Value(id),
+      workspaceId: Value(workspaceId),
+      createdBy: createdBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdBy),
+      name: Value(name),
+      scope: Value(scope),
+      viewMode: Value(viewMode),
+      filterJson: Value(filterJson),
+      sortJson: Value(sortJson),
+      isPinned: Value(isPinned),
+      sortOrder: Value(sortOrder),
+      createdAt: createdAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory LocalSavedView.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalSavedView(
+      id: serializer.fromJson<String>(json['id']),
+      workspaceId: serializer.fromJson<String>(json['workspaceId']),
+      createdBy: serializer.fromJson<String?>(json['createdBy']),
+      name: serializer.fromJson<String>(json['name']),
+      scope: serializer.fromJson<String>(json['scope']),
+      viewMode: serializer.fromJson<String>(json['viewMode']),
+      filterJson: serializer.fromJson<String>(json['filterJson']),
+      sortJson: serializer.fromJson<String>(json['sortJson']),
+      isPinned: serializer.fromJson<bool>(json['isPinned']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'workspaceId': serializer.toJson<String>(workspaceId),
+      'createdBy': serializer.toJson<String?>(createdBy),
+      'name': serializer.toJson<String>(name),
+      'scope': serializer.toJson<String>(scope),
+      'viewMode': serializer.toJson<String>(viewMode),
+      'filterJson': serializer.toJson<String>(filterJson),
+      'sortJson': serializer.toJson<String>(sortJson),
+      'isPinned': serializer.toJson<bool>(isPinned),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'createdAt': serializer.toJson<DateTime?>(createdAt),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  LocalSavedView copyWith(
+          {String? id,
+          String? workspaceId,
+          Value<String?> createdBy = const Value.absent(),
+          String? name,
+          String? scope,
+          String? viewMode,
+          String? filterJson,
+          String? sortJson,
+          bool? isPinned,
+          int? sortOrder,
+          Value<DateTime?> createdAt = const Value.absent(),
+          Value<DateTime?> updatedAt = const Value.absent(),
+          Value<DateTime?> deletedAt = const Value.absent()}) =>
+      LocalSavedView(
+        id: id ?? this.id,
+        workspaceId: workspaceId ?? this.workspaceId,
+        createdBy: createdBy.present ? createdBy.value : this.createdBy,
+        name: name ?? this.name,
+        scope: scope ?? this.scope,
+        viewMode: viewMode ?? this.viewMode,
+        filterJson: filterJson ?? this.filterJson,
+        sortJson: sortJson ?? this.sortJson,
+        isPinned: isPinned ?? this.isPinned,
+        sortOrder: sortOrder ?? this.sortOrder,
+        createdAt: createdAt.present ? createdAt.value : this.createdAt,
+        updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+      );
+  LocalSavedView copyWithCompanion(LocalSavedViewsCompanion data) {
+    return LocalSavedView(
+      id: data.id.present ? data.id.value : this.id,
+      workspaceId:
+          data.workspaceId.present ? data.workspaceId.value : this.workspaceId,
+      createdBy: data.createdBy.present ? data.createdBy.value : this.createdBy,
+      name: data.name.present ? data.name.value : this.name,
+      scope: data.scope.present ? data.scope.value : this.scope,
+      viewMode: data.viewMode.present ? data.viewMode.value : this.viewMode,
+      filterJson:
+          data.filterJson.present ? data.filterJson.value : this.filterJson,
+      sortJson: data.sortJson.present ? data.sortJson.value : this.sortJson,
+      isPinned: data.isPinned.present ? data.isPinned.value : this.isPinned,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalSavedView(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('name: $name, ')
+          ..write('scope: $scope, ')
+          ..write('viewMode: $viewMode, ')
+          ..write('filterJson: $filterJson, ')
+          ..write('sortJson: $sortJson, ')
+          ..write('isPinned: $isPinned, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      workspaceId,
+      createdBy,
+      name,
+      scope,
+      viewMode,
+      filterJson,
+      sortJson,
+      isPinned,
+      sortOrder,
+      createdAt,
+      updatedAt,
+      deletedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalSavedView &&
+          other.id == this.id &&
+          other.workspaceId == this.workspaceId &&
+          other.createdBy == this.createdBy &&
+          other.name == this.name &&
+          other.scope == this.scope &&
+          other.viewMode == this.viewMode &&
+          other.filterJson == this.filterJson &&
+          other.sortJson == this.sortJson &&
+          other.isPinned == this.isPinned &&
+          other.sortOrder == this.sortOrder &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class LocalSavedViewsCompanion extends UpdateCompanion<LocalSavedView> {
+  final Value<String> id;
+  final Value<String> workspaceId;
+  final Value<String?> createdBy;
+  final Value<String> name;
+  final Value<String> scope;
+  final Value<String> viewMode;
+  final Value<String> filterJson;
+  final Value<String> sortJson;
+  final Value<bool> isPinned;
+  final Value<int> sortOrder;
+  final Value<DateTime?> createdAt;
+  final Value<DateTime?> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const LocalSavedViewsCompanion({
+    this.id = const Value.absent(),
+    this.workspaceId = const Value.absent(),
+    this.createdBy = const Value.absent(),
+    this.name = const Value.absent(),
+    this.scope = const Value.absent(),
+    this.viewMode = const Value.absent(),
+    this.filterJson = const Value.absent(),
+    this.sortJson = const Value.absent(),
+    this.isPinned = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalSavedViewsCompanion.insert({
+    required String id,
+    required String workspaceId,
+    this.createdBy = const Value.absent(),
+    required String name,
+    required String scope,
+    this.viewMode = const Value.absent(),
+    this.filterJson = const Value.absent(),
+    this.sortJson = const Value.absent(),
+    this.isPinned = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        workspaceId = Value(workspaceId),
+        name = Value(name),
+        scope = Value(scope);
+  static Insertable<LocalSavedView> custom({
+    Expression<String>? id,
+    Expression<String>? workspaceId,
+    Expression<String>? createdBy,
+    Expression<String>? name,
+    Expression<String>? scope,
+    Expression<String>? viewMode,
+    Expression<String>? filterJson,
+    Expression<String>? sortJson,
+    Expression<bool>? isPinned,
+    Expression<int>? sortOrder,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (workspaceId != null) 'workspace_id': workspaceId,
+      if (createdBy != null) 'created_by': createdBy,
+      if (name != null) 'name': name,
+      if (scope != null) 'scope': scope,
+      if (viewMode != null) 'view_mode': viewMode,
+      if (filterJson != null) 'filter_json': filterJson,
+      if (sortJson != null) 'sort_json': sortJson,
+      if (isPinned != null) 'is_pinned': isPinned,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalSavedViewsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? workspaceId,
+      Value<String?>? createdBy,
+      Value<String>? name,
+      Value<String>? scope,
+      Value<String>? viewMode,
+      Value<String>? filterJson,
+      Value<String>? sortJson,
+      Value<bool>? isPinned,
+      Value<int>? sortOrder,
+      Value<DateTime?>? createdAt,
+      Value<DateTime?>? updatedAt,
+      Value<DateTime?>? deletedAt,
+      Value<int>? rowid}) {
+    return LocalSavedViewsCompanion(
+      id: id ?? this.id,
+      workspaceId: workspaceId ?? this.workspaceId,
+      createdBy: createdBy ?? this.createdBy,
+      name: name ?? this.name,
+      scope: scope ?? this.scope,
+      viewMode: viewMode ?? this.viewMode,
+      filterJson: filterJson ?? this.filterJson,
+      sortJson: sortJson ?? this.sortJson,
+      isPinned: isPinned ?? this.isPinned,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (workspaceId.present) {
+      map['workspace_id'] = Variable<String>(workspaceId.value);
+    }
+    if (createdBy.present) {
+      map['created_by'] = Variable<String>(createdBy.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (scope.present) {
+      map['scope'] = Variable<String>(scope.value);
+    }
+    if (viewMode.present) {
+      map['view_mode'] = Variable<String>(viewMode.value);
+    }
+    if (filterJson.present) {
+      map['filter_json'] = Variable<String>(filterJson.value);
+    }
+    if (sortJson.present) {
+      map['sort_json'] = Variable<String>(sortJson.value);
+    }
+    if (isPinned.present) {
+      map['is_pinned'] = Variable<bool>(isPinned.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalSavedViewsCompanion(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('name: $name, ')
+          ..write('scope: $scope, ')
+          ..write('viewMode: $viewMode, ')
+          ..write('filterJson: $filterJson, ')
+          ..write('sortJson: $sortJson, ')
+          ..write('isPinned: $isPinned, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalTaskTemplatesTable extends LocalTaskTemplates
+    with TableInfo<$LocalTaskTemplatesTable, LocalTaskTemplate> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalTaskTemplatesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _workspaceIdMeta =
+      const VerificationMeta('workspaceId');
+  @override
+  late final GeneratedColumn<String> workspaceId = GeneratedColumn<String>(
+      'workspace_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _createdByMeta =
+      const VerificationMeta('createdBy');
+  @override
+  late final GeneratedColumn<String> createdBy = GeneratedColumn<String>(
+      'created_by', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+      'kind', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('pribadi'));
+  static const VerificationMeta _defaultPriorityMeta =
+      const VerificationMeta('defaultPriority');
+  @override
+  late final GeneratedColumn<String> defaultPriority = GeneratedColumn<String>(
+      'default_priority', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('sedang'));
+  static const VerificationMeta _defaultEstimateMinutesMeta =
+      const VerificationMeta('defaultEstimateMinutes');
+  @override
+  late final GeneratedColumn<int> defaultEstimateMinutes = GeneratedColumn<int>(
+      'default_estimate_minutes', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _checklistJsonMeta =
+      const VerificationMeta('checklistJson');
+  @override
+  late final GeneratedColumn<String> checklistJson = GeneratedColumn<String>(
+      'checklist_json', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('[]'));
+  static const VerificationMeta _blocksJsonMeta =
+      const VerificationMeta('blocksJson');
+  @override
+  late final GeneratedColumn<String> blocksJson = GeneratedColumn<String>(
+      'blocks_json', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        workspaceId,
+        createdBy,
+        name,
+        kind,
+        defaultPriority,
+        defaultEstimateMinutes,
+        checklistJson,
+        blocksJson,
+        createdAt,
+        updatedAt,
+        deletedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_task_templates';
+  @override
+  VerificationContext validateIntegrity(Insertable<LocalTaskTemplate> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('workspace_id')) {
+      context.handle(
+          _workspaceIdMeta,
+          workspaceId.isAcceptableOrUnknown(
+              data['workspace_id']!, _workspaceIdMeta));
+    } else if (isInserting) {
+      context.missing(_workspaceIdMeta);
+    }
+    if (data.containsKey('created_by')) {
+      context.handle(_createdByMeta,
+          createdBy.isAcceptableOrUnknown(data['created_by']!, _createdByMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+          _kindMeta, kind.isAcceptableOrUnknown(data['kind']!, _kindMeta));
+    }
+    if (data.containsKey('default_priority')) {
+      context.handle(
+          _defaultPriorityMeta,
+          defaultPriority.isAcceptableOrUnknown(
+              data['default_priority']!, _defaultPriorityMeta));
+    }
+    if (data.containsKey('default_estimate_minutes')) {
+      context.handle(
+          _defaultEstimateMinutesMeta,
+          defaultEstimateMinutes.isAcceptableOrUnknown(
+              data['default_estimate_minutes']!, _defaultEstimateMinutesMeta));
+    }
+    if (data.containsKey('checklist_json')) {
+      context.handle(
+          _checklistJsonMeta,
+          checklistJson.isAcceptableOrUnknown(
+              data['checklist_json']!, _checklistJsonMeta));
+    }
+    if (data.containsKey('blocks_json')) {
+      context.handle(
+          _blocksJsonMeta,
+          blocksJson.isAcceptableOrUnknown(
+              data['blocks_json']!, _blocksJsonMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalTaskTemplate map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalTaskTemplate(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      workspaceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}workspace_id'])!,
+      createdBy: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}created_by']),
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      kind: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}kind'])!,
+      defaultPriority: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}default_priority'])!,
+      defaultEstimateMinutes: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}default_estimate_minutes']),
+      checklistJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}checklist_json'])!,
+      blocksJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}blocks_json']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at']),
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at']),
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+    );
+  }
+
+  @override
+  $LocalTaskTemplatesTable createAlias(String alias) {
+    return $LocalTaskTemplatesTable(attachedDatabase, alias);
+  }
+}
+
+class LocalTaskTemplate extends DataClass
+    implements Insertable<LocalTaskTemplate> {
+  final String id;
+  final String workspaceId;
+  final String? createdBy;
+  final String name;
+  final String kind;
+  final String defaultPriority;
+  final int? defaultEstimateMinutes;
+  final String checklistJson;
+  final String? blocksJson;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final DateTime? deletedAt;
+  const LocalTaskTemplate(
+      {required this.id,
+      required this.workspaceId,
+      this.createdBy,
+      required this.name,
+      required this.kind,
+      required this.defaultPriority,
+      this.defaultEstimateMinutes,
+      required this.checklistJson,
+      this.blocksJson,
+      this.createdAt,
+      this.updatedAt,
+      this.deletedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['workspace_id'] = Variable<String>(workspaceId);
+    if (!nullToAbsent || createdBy != null) {
+      map['created_by'] = Variable<String>(createdBy);
+    }
+    map['name'] = Variable<String>(name);
+    map['kind'] = Variable<String>(kind);
+    map['default_priority'] = Variable<String>(defaultPriority);
+    if (!nullToAbsent || defaultEstimateMinutes != null) {
+      map['default_estimate_minutes'] = Variable<int>(defaultEstimateMinutes);
+    }
+    map['checklist_json'] = Variable<String>(checklistJson);
+    if (!nullToAbsent || blocksJson != null) {
+      map['blocks_json'] = Variable<String>(blocksJson);
+    }
+    if (!nullToAbsent || createdAt != null) {
+      map['created_at'] = Variable<DateTime>(createdAt);
+    }
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  LocalTaskTemplatesCompanion toCompanion(bool nullToAbsent) {
+    return LocalTaskTemplatesCompanion(
+      id: Value(id),
+      workspaceId: Value(workspaceId),
+      createdBy: createdBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdBy),
+      name: Value(name),
+      kind: Value(kind),
+      defaultPriority: Value(defaultPriority),
+      defaultEstimateMinutes: defaultEstimateMinutes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(defaultEstimateMinutes),
+      checklistJson: Value(checklistJson),
+      blocksJson: blocksJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(blocksJson),
+      createdAt: createdAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory LocalTaskTemplate.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalTaskTemplate(
+      id: serializer.fromJson<String>(json['id']),
+      workspaceId: serializer.fromJson<String>(json['workspaceId']),
+      createdBy: serializer.fromJson<String?>(json['createdBy']),
+      name: serializer.fromJson<String>(json['name']),
+      kind: serializer.fromJson<String>(json['kind']),
+      defaultPriority: serializer.fromJson<String>(json['defaultPriority']),
+      defaultEstimateMinutes:
+          serializer.fromJson<int?>(json['defaultEstimateMinutes']),
+      checklistJson: serializer.fromJson<String>(json['checklistJson']),
+      blocksJson: serializer.fromJson<String?>(json['blocksJson']),
+      createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'workspaceId': serializer.toJson<String>(workspaceId),
+      'createdBy': serializer.toJson<String?>(createdBy),
+      'name': serializer.toJson<String>(name),
+      'kind': serializer.toJson<String>(kind),
+      'defaultPriority': serializer.toJson<String>(defaultPriority),
+      'defaultEstimateMinutes': serializer.toJson<int?>(defaultEstimateMinutes),
+      'checklistJson': serializer.toJson<String>(checklistJson),
+      'blocksJson': serializer.toJson<String?>(blocksJson),
+      'createdAt': serializer.toJson<DateTime?>(createdAt),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  LocalTaskTemplate copyWith(
+          {String? id,
+          String? workspaceId,
+          Value<String?> createdBy = const Value.absent(),
+          String? name,
+          String? kind,
+          String? defaultPriority,
+          Value<int?> defaultEstimateMinutes = const Value.absent(),
+          String? checklistJson,
+          Value<String?> blocksJson = const Value.absent(),
+          Value<DateTime?> createdAt = const Value.absent(),
+          Value<DateTime?> updatedAt = const Value.absent(),
+          Value<DateTime?> deletedAt = const Value.absent()}) =>
+      LocalTaskTemplate(
+        id: id ?? this.id,
+        workspaceId: workspaceId ?? this.workspaceId,
+        createdBy: createdBy.present ? createdBy.value : this.createdBy,
+        name: name ?? this.name,
+        kind: kind ?? this.kind,
+        defaultPriority: defaultPriority ?? this.defaultPriority,
+        defaultEstimateMinutes: defaultEstimateMinutes.present
+            ? defaultEstimateMinutes.value
+            : this.defaultEstimateMinutes,
+        checklistJson: checklistJson ?? this.checklistJson,
+        blocksJson: blocksJson.present ? blocksJson.value : this.blocksJson,
+        createdAt: createdAt.present ? createdAt.value : this.createdAt,
+        updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+      );
+  LocalTaskTemplate copyWithCompanion(LocalTaskTemplatesCompanion data) {
+    return LocalTaskTemplate(
+      id: data.id.present ? data.id.value : this.id,
+      workspaceId:
+          data.workspaceId.present ? data.workspaceId.value : this.workspaceId,
+      createdBy: data.createdBy.present ? data.createdBy.value : this.createdBy,
+      name: data.name.present ? data.name.value : this.name,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      defaultPriority: data.defaultPriority.present
+          ? data.defaultPriority.value
+          : this.defaultPriority,
+      defaultEstimateMinutes: data.defaultEstimateMinutes.present
+          ? data.defaultEstimateMinutes.value
+          : this.defaultEstimateMinutes,
+      checklistJson: data.checklistJson.present
+          ? data.checklistJson.value
+          : this.checklistJson,
+      blocksJson:
+          data.blocksJson.present ? data.blocksJson.value : this.blocksJson,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalTaskTemplate(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('name: $name, ')
+          ..write('kind: $kind, ')
+          ..write('defaultPriority: $defaultPriority, ')
+          ..write('defaultEstimateMinutes: $defaultEstimateMinutes, ')
+          ..write('checklistJson: $checklistJson, ')
+          ..write('blocksJson: $blocksJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      workspaceId,
+      createdBy,
+      name,
+      kind,
+      defaultPriority,
+      defaultEstimateMinutes,
+      checklistJson,
+      blocksJson,
+      createdAt,
+      updatedAt,
+      deletedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalTaskTemplate &&
+          other.id == this.id &&
+          other.workspaceId == this.workspaceId &&
+          other.createdBy == this.createdBy &&
+          other.name == this.name &&
+          other.kind == this.kind &&
+          other.defaultPriority == this.defaultPriority &&
+          other.defaultEstimateMinutes == this.defaultEstimateMinutes &&
+          other.checklistJson == this.checklistJson &&
+          other.blocksJson == this.blocksJson &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class LocalTaskTemplatesCompanion extends UpdateCompanion<LocalTaskTemplate> {
+  final Value<String> id;
+  final Value<String> workspaceId;
+  final Value<String?> createdBy;
+  final Value<String> name;
+  final Value<String> kind;
+  final Value<String> defaultPriority;
+  final Value<int?> defaultEstimateMinutes;
+  final Value<String> checklistJson;
+  final Value<String?> blocksJson;
+  final Value<DateTime?> createdAt;
+  final Value<DateTime?> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const LocalTaskTemplatesCompanion({
+    this.id = const Value.absent(),
+    this.workspaceId = const Value.absent(),
+    this.createdBy = const Value.absent(),
+    this.name = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.defaultPriority = const Value.absent(),
+    this.defaultEstimateMinutes = const Value.absent(),
+    this.checklistJson = const Value.absent(),
+    this.blocksJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalTaskTemplatesCompanion.insert({
+    required String id,
+    required String workspaceId,
+    this.createdBy = const Value.absent(),
+    required String name,
+    this.kind = const Value.absent(),
+    this.defaultPriority = const Value.absent(),
+    this.defaultEstimateMinutes = const Value.absent(),
+    this.checklistJson = const Value.absent(),
+    this.blocksJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        workspaceId = Value(workspaceId),
+        name = Value(name);
+  static Insertable<LocalTaskTemplate> custom({
+    Expression<String>? id,
+    Expression<String>? workspaceId,
+    Expression<String>? createdBy,
+    Expression<String>? name,
+    Expression<String>? kind,
+    Expression<String>? defaultPriority,
+    Expression<int>? defaultEstimateMinutes,
+    Expression<String>? checklistJson,
+    Expression<String>? blocksJson,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (workspaceId != null) 'workspace_id': workspaceId,
+      if (createdBy != null) 'created_by': createdBy,
+      if (name != null) 'name': name,
+      if (kind != null) 'kind': kind,
+      if (defaultPriority != null) 'default_priority': defaultPriority,
+      if (defaultEstimateMinutes != null)
+        'default_estimate_minutes': defaultEstimateMinutes,
+      if (checklistJson != null) 'checklist_json': checklistJson,
+      if (blocksJson != null) 'blocks_json': blocksJson,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalTaskTemplatesCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? workspaceId,
+      Value<String?>? createdBy,
+      Value<String>? name,
+      Value<String>? kind,
+      Value<String>? defaultPriority,
+      Value<int?>? defaultEstimateMinutes,
+      Value<String>? checklistJson,
+      Value<String?>? blocksJson,
+      Value<DateTime?>? createdAt,
+      Value<DateTime?>? updatedAt,
+      Value<DateTime?>? deletedAt,
+      Value<int>? rowid}) {
+    return LocalTaskTemplatesCompanion(
+      id: id ?? this.id,
+      workspaceId: workspaceId ?? this.workspaceId,
+      createdBy: createdBy ?? this.createdBy,
+      name: name ?? this.name,
+      kind: kind ?? this.kind,
+      defaultPriority: defaultPriority ?? this.defaultPriority,
+      defaultEstimateMinutes:
+          defaultEstimateMinutes ?? this.defaultEstimateMinutes,
+      checklistJson: checklistJson ?? this.checklistJson,
+      blocksJson: blocksJson ?? this.blocksJson,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (workspaceId.present) {
+      map['workspace_id'] = Variable<String>(workspaceId.value);
+    }
+    if (createdBy.present) {
+      map['created_by'] = Variable<String>(createdBy.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (defaultPriority.present) {
+      map['default_priority'] = Variable<String>(defaultPriority.value);
+    }
+    if (defaultEstimateMinutes.present) {
+      map['default_estimate_minutes'] =
+          Variable<int>(defaultEstimateMinutes.value);
+    }
+    if (checklistJson.present) {
+      map['checklist_json'] = Variable<String>(checklistJson.value);
+    }
+    if (blocksJson.present) {
+      map['blocks_json'] = Variable<String>(blocksJson.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalTaskTemplatesCompanion(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('name: $name, ')
+          ..write('kind: $kind, ')
+          ..write('defaultPriority: $defaultPriority, ')
+          ..write('defaultEstimateMinutes: $defaultEstimateMinutes, ')
+          ..write('checklistJson: $checklistJson, ')
+          ..write('blocksJson: $blocksJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalTaskTimeLogsTable extends LocalTaskTimeLogs
+    with TableInfo<$LocalTaskTimeLogsTable, LocalTaskTimeLog> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalTaskTimeLogsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _workspaceIdMeta =
+      const VerificationMeta('workspaceId');
+  @override
+  late final GeneratedColumn<String> workspaceId = GeneratedColumn<String>(
+      'workspace_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _taskIdMeta = const VerificationMeta('taskId');
+  @override
+  late final GeneratedColumn<String> taskId = GeneratedColumn<String>(
+      'task_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+      'user_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _startedAtMeta =
+      const VerificationMeta('startedAt');
+  @override
+  late final GeneratedColumn<DateTime> startedAt = GeneratedColumn<DateTime>(
+      'started_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _endedAtMeta =
+      const VerificationMeta('endedAt');
+  @override
+  late final GeneratedColumn<DateTime> endedAt = GeneratedColumn<DateTime>(
+      'ended_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _durationSecondsMeta =
+      const VerificationMeta('durationSeconds');
+  @override
+  late final GeneratedColumn<int> durationSeconds = GeneratedColumn<int>(
+      'duration_seconds', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _modeMeta = const VerificationMeta('mode');
+  @override
+  late final GeneratedColumn<String> mode = GeneratedColumn<String>(
+      'mode', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('stopwatch'));
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+      'note', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        workspaceId,
+        taskId,
+        userId,
+        startedAt,
+        endedAt,
+        durationSeconds,
+        mode,
+        note,
+        createdAt,
+        updatedAt,
+        deletedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_task_time_logs';
+  @override
+  VerificationContext validateIntegrity(Insertable<LocalTaskTimeLog> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('workspace_id')) {
+      context.handle(
+          _workspaceIdMeta,
+          workspaceId.isAcceptableOrUnknown(
+              data['workspace_id']!, _workspaceIdMeta));
+    } else if (isInserting) {
+      context.missing(_workspaceIdMeta);
+    }
+    if (data.containsKey('task_id')) {
+      context.handle(_taskIdMeta,
+          taskId.isAcceptableOrUnknown(data['task_id']!, _taskIdMeta));
+    } else if (isInserting) {
+      context.missing(_taskIdMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(_userIdMeta,
+          userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta));
+    }
+    if (data.containsKey('started_at')) {
+      context.handle(_startedAtMeta,
+          startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta));
+    } else if (isInserting) {
+      context.missing(_startedAtMeta);
+    }
+    if (data.containsKey('ended_at')) {
+      context.handle(_endedAtMeta,
+          endedAt.isAcceptableOrUnknown(data['ended_at']!, _endedAtMeta));
+    }
+    if (data.containsKey('duration_seconds')) {
+      context.handle(
+          _durationSecondsMeta,
+          durationSeconds.isAcceptableOrUnknown(
+              data['duration_seconds']!, _durationSecondsMeta));
+    }
+    if (data.containsKey('mode')) {
+      context.handle(
+          _modeMeta, mode.isAcceptableOrUnknown(data['mode']!, _modeMeta));
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+          _noteMeta, note.isAcceptableOrUnknown(data['note']!, _noteMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalTaskTimeLog map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalTaskTimeLog(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      workspaceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}workspace_id'])!,
+      taskId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}task_id'])!,
+      userId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}user_id']),
+      startedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}started_at'])!,
+      endedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}ended_at']),
+      durationSeconds: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}duration_seconds'])!,
+      mode: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}mode'])!,
+      note: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}note']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at']),
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at']),
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+    );
+  }
+
+  @override
+  $LocalTaskTimeLogsTable createAlias(String alias) {
+    return $LocalTaskTimeLogsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalTaskTimeLog extends DataClass
+    implements Insertable<LocalTaskTimeLog> {
+  final String id;
+  final String workspaceId;
+  final String taskId;
+  final String? userId;
+  final DateTime startedAt;
+  final DateTime? endedAt;
+  final int durationSeconds;
+  final String mode;
+  final String? note;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final DateTime? deletedAt;
+  const LocalTaskTimeLog(
+      {required this.id,
+      required this.workspaceId,
+      required this.taskId,
+      this.userId,
+      required this.startedAt,
+      this.endedAt,
+      required this.durationSeconds,
+      required this.mode,
+      this.note,
+      this.createdAt,
+      this.updatedAt,
+      this.deletedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['workspace_id'] = Variable<String>(workspaceId);
+    map['task_id'] = Variable<String>(taskId);
+    if (!nullToAbsent || userId != null) {
+      map['user_id'] = Variable<String>(userId);
+    }
+    map['started_at'] = Variable<DateTime>(startedAt);
+    if (!nullToAbsent || endedAt != null) {
+      map['ended_at'] = Variable<DateTime>(endedAt);
+    }
+    map['duration_seconds'] = Variable<int>(durationSeconds);
+    map['mode'] = Variable<String>(mode);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    if (!nullToAbsent || createdAt != null) {
+      map['created_at'] = Variable<DateTime>(createdAt);
+    }
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  LocalTaskTimeLogsCompanion toCompanion(bool nullToAbsent) {
+    return LocalTaskTimeLogsCompanion(
+      id: Value(id),
+      workspaceId: Value(workspaceId),
+      taskId: Value(taskId),
+      userId:
+          userId == null && nullToAbsent ? const Value.absent() : Value(userId),
+      startedAt: Value(startedAt),
+      endedAt: endedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endedAt),
+      durationSeconds: Value(durationSeconds),
+      mode: Value(mode),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      createdAt: createdAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory LocalTaskTimeLog.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalTaskTimeLog(
+      id: serializer.fromJson<String>(json['id']),
+      workspaceId: serializer.fromJson<String>(json['workspaceId']),
+      taskId: serializer.fromJson<String>(json['taskId']),
+      userId: serializer.fromJson<String?>(json['userId']),
+      startedAt: serializer.fromJson<DateTime>(json['startedAt']),
+      endedAt: serializer.fromJson<DateTime?>(json['endedAt']),
+      durationSeconds: serializer.fromJson<int>(json['durationSeconds']),
+      mode: serializer.fromJson<String>(json['mode']),
+      note: serializer.fromJson<String?>(json['note']),
+      createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'workspaceId': serializer.toJson<String>(workspaceId),
+      'taskId': serializer.toJson<String>(taskId),
+      'userId': serializer.toJson<String?>(userId),
+      'startedAt': serializer.toJson<DateTime>(startedAt),
+      'endedAt': serializer.toJson<DateTime?>(endedAt),
+      'durationSeconds': serializer.toJson<int>(durationSeconds),
+      'mode': serializer.toJson<String>(mode),
+      'note': serializer.toJson<String?>(note),
+      'createdAt': serializer.toJson<DateTime?>(createdAt),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  LocalTaskTimeLog copyWith(
+          {String? id,
+          String? workspaceId,
+          String? taskId,
+          Value<String?> userId = const Value.absent(),
+          DateTime? startedAt,
+          Value<DateTime?> endedAt = const Value.absent(),
+          int? durationSeconds,
+          String? mode,
+          Value<String?> note = const Value.absent(),
+          Value<DateTime?> createdAt = const Value.absent(),
+          Value<DateTime?> updatedAt = const Value.absent(),
+          Value<DateTime?> deletedAt = const Value.absent()}) =>
+      LocalTaskTimeLog(
+        id: id ?? this.id,
+        workspaceId: workspaceId ?? this.workspaceId,
+        taskId: taskId ?? this.taskId,
+        userId: userId.present ? userId.value : this.userId,
+        startedAt: startedAt ?? this.startedAt,
+        endedAt: endedAt.present ? endedAt.value : this.endedAt,
+        durationSeconds: durationSeconds ?? this.durationSeconds,
+        mode: mode ?? this.mode,
+        note: note.present ? note.value : this.note,
+        createdAt: createdAt.present ? createdAt.value : this.createdAt,
+        updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+      );
+  LocalTaskTimeLog copyWithCompanion(LocalTaskTimeLogsCompanion data) {
+    return LocalTaskTimeLog(
+      id: data.id.present ? data.id.value : this.id,
+      workspaceId:
+          data.workspaceId.present ? data.workspaceId.value : this.workspaceId,
+      taskId: data.taskId.present ? data.taskId.value : this.taskId,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+      endedAt: data.endedAt.present ? data.endedAt.value : this.endedAt,
+      durationSeconds: data.durationSeconds.present
+          ? data.durationSeconds.value
+          : this.durationSeconds,
+      mode: data.mode.present ? data.mode.value : this.mode,
+      note: data.note.present ? data.note.value : this.note,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalTaskTimeLog(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('taskId: $taskId, ')
+          ..write('userId: $userId, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('endedAt: $endedAt, ')
+          ..write('durationSeconds: $durationSeconds, ')
+          ..write('mode: $mode, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, workspaceId, taskId, userId, startedAt,
+      endedAt, durationSeconds, mode, note, createdAt, updatedAt, deletedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalTaskTimeLog &&
+          other.id == this.id &&
+          other.workspaceId == this.workspaceId &&
+          other.taskId == this.taskId &&
+          other.userId == this.userId &&
+          other.startedAt == this.startedAt &&
+          other.endedAt == this.endedAt &&
+          other.durationSeconds == this.durationSeconds &&
+          other.mode == this.mode &&
+          other.note == this.note &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class LocalTaskTimeLogsCompanion extends UpdateCompanion<LocalTaskTimeLog> {
+  final Value<String> id;
+  final Value<String> workspaceId;
+  final Value<String> taskId;
+  final Value<String?> userId;
+  final Value<DateTime> startedAt;
+  final Value<DateTime?> endedAt;
+  final Value<int> durationSeconds;
+  final Value<String> mode;
+  final Value<String?> note;
+  final Value<DateTime?> createdAt;
+  final Value<DateTime?> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const LocalTaskTimeLogsCompanion({
+    this.id = const Value.absent(),
+    this.workspaceId = const Value.absent(),
+    this.taskId = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.startedAt = const Value.absent(),
+    this.endedAt = const Value.absent(),
+    this.durationSeconds = const Value.absent(),
+    this.mode = const Value.absent(),
+    this.note = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalTaskTimeLogsCompanion.insert({
+    required String id,
+    required String workspaceId,
+    required String taskId,
+    this.userId = const Value.absent(),
+    required DateTime startedAt,
+    this.endedAt = const Value.absent(),
+    this.durationSeconds = const Value.absent(),
+    this.mode = const Value.absent(),
+    this.note = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        workspaceId = Value(workspaceId),
+        taskId = Value(taskId),
+        startedAt = Value(startedAt);
+  static Insertable<LocalTaskTimeLog> custom({
+    Expression<String>? id,
+    Expression<String>? workspaceId,
+    Expression<String>? taskId,
+    Expression<String>? userId,
+    Expression<DateTime>? startedAt,
+    Expression<DateTime>? endedAt,
+    Expression<int>? durationSeconds,
+    Expression<String>? mode,
+    Expression<String>? note,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (workspaceId != null) 'workspace_id': workspaceId,
+      if (taskId != null) 'task_id': taskId,
+      if (userId != null) 'user_id': userId,
+      if (startedAt != null) 'started_at': startedAt,
+      if (endedAt != null) 'ended_at': endedAt,
+      if (durationSeconds != null) 'duration_seconds': durationSeconds,
+      if (mode != null) 'mode': mode,
+      if (note != null) 'note': note,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalTaskTimeLogsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? workspaceId,
+      Value<String>? taskId,
+      Value<String?>? userId,
+      Value<DateTime>? startedAt,
+      Value<DateTime?>? endedAt,
+      Value<int>? durationSeconds,
+      Value<String>? mode,
+      Value<String?>? note,
+      Value<DateTime?>? createdAt,
+      Value<DateTime?>? updatedAt,
+      Value<DateTime?>? deletedAt,
+      Value<int>? rowid}) {
+    return LocalTaskTimeLogsCompanion(
+      id: id ?? this.id,
+      workspaceId: workspaceId ?? this.workspaceId,
+      taskId: taskId ?? this.taskId,
+      userId: userId ?? this.userId,
+      startedAt: startedAt ?? this.startedAt,
+      endedAt: endedAt ?? this.endedAt,
+      durationSeconds: durationSeconds ?? this.durationSeconds,
+      mode: mode ?? this.mode,
+      note: note ?? this.note,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (workspaceId.present) {
+      map['workspace_id'] = Variable<String>(workspaceId.value);
+    }
+    if (taskId.present) {
+      map['task_id'] = Variable<String>(taskId.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (startedAt.present) {
+      map['started_at'] = Variable<DateTime>(startedAt.value);
+    }
+    if (endedAt.present) {
+      map['ended_at'] = Variable<DateTime>(endedAt.value);
+    }
+    if (durationSeconds.present) {
+      map['duration_seconds'] = Variable<int>(durationSeconds.value);
+    }
+    if (mode.present) {
+      map['mode'] = Variable<String>(mode.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalTaskTimeLogsCompanion(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('taskId: $taskId, ')
+          ..write('userId: $userId, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('endedAt: $endedAt, ')
+          ..write('durationSeconds: $durationSeconds, ')
+          ..write('mode: $mode, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalAttachmentsTable extends LocalAttachments
+    with TableInfo<$LocalAttachmentsTable, LocalAttachment> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalAttachmentsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _workspaceIdMeta =
+      const VerificationMeta('workspaceId');
+  @override
+  late final GeneratedColumn<String> workspaceId = GeneratedColumn<String>(
+      'workspace_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _ownerTableMeta =
+      const VerificationMeta('ownerTable');
+  @override
+  late final GeneratedColumn<String> ownerTable = GeneratedColumn<String>(
+      'owner_table', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _ownerIdMeta =
+      const VerificationMeta('ownerId');
+  @override
+  late final GeneratedColumn<String> ownerId = GeneratedColumn<String>(
+      'owner_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _storagePathMeta =
+      const VerificationMeta('storagePath');
+  @override
+  late final GeneratedColumn<String> storagePath = GeneratedColumn<String>(
+      'storage_path', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _mimeMeta = const VerificationMeta('mime');
+  @override
+  late final GeneratedColumn<String> mime = GeneratedColumn<String>(
+      'mime', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _sizeMeta = const VerificationMeta('size');
+  @override
+  late final GeneratedColumn<int> size = GeneratedColumn<int>(
+      'size', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _fileNameMeta =
+      const VerificationMeta('fileName');
+  @override
+  late final GeneratedColumn<String> fileName = GeneratedColumn<String>(
+      'file_name', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdByMeta =
+      const VerificationMeta('createdBy');
+  @override
+  late final GeneratedColumn<String> createdBy = GeneratedColumn<String>(
+      'created_by', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        workspaceId,
+        ownerTable,
+        ownerId,
+        storagePath,
+        mime,
+        size,
+        fileName,
+        createdBy,
+        createdAt,
+        deletedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_attachments';
+  @override
+  VerificationContext validateIntegrity(Insertable<LocalAttachment> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('workspace_id')) {
+      context.handle(
+          _workspaceIdMeta,
+          workspaceId.isAcceptableOrUnknown(
+              data['workspace_id']!, _workspaceIdMeta));
+    } else if (isInserting) {
+      context.missing(_workspaceIdMeta);
+    }
+    if (data.containsKey('owner_table')) {
+      context.handle(
+          _ownerTableMeta,
+          ownerTable.isAcceptableOrUnknown(
+              data['owner_table']!, _ownerTableMeta));
+    } else if (isInserting) {
+      context.missing(_ownerTableMeta);
+    }
+    if (data.containsKey('owner_id')) {
+      context.handle(_ownerIdMeta,
+          ownerId.isAcceptableOrUnknown(data['owner_id']!, _ownerIdMeta));
+    } else if (isInserting) {
+      context.missing(_ownerIdMeta);
+    }
+    if (data.containsKey('storage_path')) {
+      context.handle(
+          _storagePathMeta,
+          storagePath.isAcceptableOrUnknown(
+              data['storage_path']!, _storagePathMeta));
+    } else if (isInserting) {
+      context.missing(_storagePathMeta);
+    }
+    if (data.containsKey('mime')) {
+      context.handle(
+          _mimeMeta, mime.isAcceptableOrUnknown(data['mime']!, _mimeMeta));
+    } else if (isInserting) {
+      context.missing(_mimeMeta);
+    }
+    if (data.containsKey('size')) {
+      context.handle(
+          _sizeMeta, size.isAcceptableOrUnknown(data['size']!, _sizeMeta));
+    } else if (isInserting) {
+      context.missing(_sizeMeta);
+    }
+    if (data.containsKey('file_name')) {
+      context.handle(_fileNameMeta,
+          fileName.isAcceptableOrUnknown(data['file_name']!, _fileNameMeta));
+    }
+    if (data.containsKey('created_by')) {
+      context.handle(_createdByMeta,
+          createdBy.isAcceptableOrUnknown(data['created_by']!, _createdByMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalAttachment map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalAttachment(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      workspaceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}workspace_id'])!,
+      ownerTable: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}owner_table'])!,
+      ownerId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}owner_id'])!,
+      storagePath: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}storage_path'])!,
+      mime: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}mime'])!,
+      size: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}size'])!,
+      fileName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}file_name']),
+      createdBy: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}created_by']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at']),
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+    );
+  }
+
+  @override
+  $LocalAttachmentsTable createAlias(String alias) {
+    return $LocalAttachmentsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalAttachment extends DataClass implements Insertable<LocalAttachment> {
+  final String id;
+  final String workspaceId;
+  final String ownerTable;
+  final String ownerId;
+  final String storagePath;
+  final String mime;
+  final int size;
+  final String? fileName;
+  final String? createdBy;
+  final DateTime? createdAt;
+  final DateTime? deletedAt;
+  const LocalAttachment(
+      {required this.id,
+      required this.workspaceId,
+      required this.ownerTable,
+      required this.ownerId,
+      required this.storagePath,
+      required this.mime,
+      required this.size,
+      this.fileName,
+      this.createdBy,
+      this.createdAt,
+      this.deletedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['workspace_id'] = Variable<String>(workspaceId);
+    map['owner_table'] = Variable<String>(ownerTable);
+    map['owner_id'] = Variable<String>(ownerId);
+    map['storage_path'] = Variable<String>(storagePath);
+    map['mime'] = Variable<String>(mime);
+    map['size'] = Variable<int>(size);
+    if (!nullToAbsent || fileName != null) {
+      map['file_name'] = Variable<String>(fileName);
+    }
+    if (!nullToAbsent || createdBy != null) {
+      map['created_by'] = Variable<String>(createdBy);
+    }
+    if (!nullToAbsent || createdAt != null) {
+      map['created_at'] = Variable<DateTime>(createdAt);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  LocalAttachmentsCompanion toCompanion(bool nullToAbsent) {
+    return LocalAttachmentsCompanion(
+      id: Value(id),
+      workspaceId: Value(workspaceId),
+      ownerTable: Value(ownerTable),
+      ownerId: Value(ownerId),
+      storagePath: Value(storagePath),
+      mime: Value(mime),
+      size: Value(size),
+      fileName: fileName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fileName),
+      createdBy: createdBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdBy),
+      createdAt: createdAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory LocalAttachment.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalAttachment(
+      id: serializer.fromJson<String>(json['id']),
+      workspaceId: serializer.fromJson<String>(json['workspaceId']),
+      ownerTable: serializer.fromJson<String>(json['ownerTable']),
+      ownerId: serializer.fromJson<String>(json['ownerId']),
+      storagePath: serializer.fromJson<String>(json['storagePath']),
+      mime: serializer.fromJson<String>(json['mime']),
+      size: serializer.fromJson<int>(json['size']),
+      fileName: serializer.fromJson<String?>(json['fileName']),
+      createdBy: serializer.fromJson<String?>(json['createdBy']),
+      createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'workspaceId': serializer.toJson<String>(workspaceId),
+      'ownerTable': serializer.toJson<String>(ownerTable),
+      'ownerId': serializer.toJson<String>(ownerId),
+      'storagePath': serializer.toJson<String>(storagePath),
+      'mime': serializer.toJson<String>(mime),
+      'size': serializer.toJson<int>(size),
+      'fileName': serializer.toJson<String?>(fileName),
+      'createdBy': serializer.toJson<String?>(createdBy),
+      'createdAt': serializer.toJson<DateTime?>(createdAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  LocalAttachment copyWith(
+          {String? id,
+          String? workspaceId,
+          String? ownerTable,
+          String? ownerId,
+          String? storagePath,
+          String? mime,
+          int? size,
+          Value<String?> fileName = const Value.absent(),
+          Value<String?> createdBy = const Value.absent(),
+          Value<DateTime?> createdAt = const Value.absent(),
+          Value<DateTime?> deletedAt = const Value.absent()}) =>
+      LocalAttachment(
+        id: id ?? this.id,
+        workspaceId: workspaceId ?? this.workspaceId,
+        ownerTable: ownerTable ?? this.ownerTable,
+        ownerId: ownerId ?? this.ownerId,
+        storagePath: storagePath ?? this.storagePath,
+        mime: mime ?? this.mime,
+        size: size ?? this.size,
+        fileName: fileName.present ? fileName.value : this.fileName,
+        createdBy: createdBy.present ? createdBy.value : this.createdBy,
+        createdAt: createdAt.present ? createdAt.value : this.createdAt,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+      );
+  LocalAttachment copyWithCompanion(LocalAttachmentsCompanion data) {
+    return LocalAttachment(
+      id: data.id.present ? data.id.value : this.id,
+      workspaceId:
+          data.workspaceId.present ? data.workspaceId.value : this.workspaceId,
+      ownerTable:
+          data.ownerTable.present ? data.ownerTable.value : this.ownerTable,
+      ownerId: data.ownerId.present ? data.ownerId.value : this.ownerId,
+      storagePath:
+          data.storagePath.present ? data.storagePath.value : this.storagePath,
+      mime: data.mime.present ? data.mime.value : this.mime,
+      size: data.size.present ? data.size.value : this.size,
+      fileName: data.fileName.present ? data.fileName.value : this.fileName,
+      createdBy: data.createdBy.present ? data.createdBy.value : this.createdBy,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalAttachment(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('ownerTable: $ownerTable, ')
+          ..write('ownerId: $ownerId, ')
+          ..write('storagePath: $storagePath, ')
+          ..write('mime: $mime, ')
+          ..write('size: $size, ')
+          ..write('fileName: $fileName, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, workspaceId, ownerTable, ownerId,
+      storagePath, mime, size, fileName, createdBy, createdAt, deletedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalAttachment &&
+          other.id == this.id &&
+          other.workspaceId == this.workspaceId &&
+          other.ownerTable == this.ownerTable &&
+          other.ownerId == this.ownerId &&
+          other.storagePath == this.storagePath &&
+          other.mime == this.mime &&
+          other.size == this.size &&
+          other.fileName == this.fileName &&
+          other.createdBy == this.createdBy &&
+          other.createdAt == this.createdAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class LocalAttachmentsCompanion extends UpdateCompanion<LocalAttachment> {
+  final Value<String> id;
+  final Value<String> workspaceId;
+  final Value<String> ownerTable;
+  final Value<String> ownerId;
+  final Value<String> storagePath;
+  final Value<String> mime;
+  final Value<int> size;
+  final Value<String?> fileName;
+  final Value<String?> createdBy;
+  final Value<DateTime?> createdAt;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const LocalAttachmentsCompanion({
+    this.id = const Value.absent(),
+    this.workspaceId = const Value.absent(),
+    this.ownerTable = const Value.absent(),
+    this.ownerId = const Value.absent(),
+    this.storagePath = const Value.absent(),
+    this.mime = const Value.absent(),
+    this.size = const Value.absent(),
+    this.fileName = const Value.absent(),
+    this.createdBy = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalAttachmentsCompanion.insert({
+    required String id,
+    required String workspaceId,
+    required String ownerTable,
+    required String ownerId,
+    required String storagePath,
+    required String mime,
+    required int size,
+    this.fileName = const Value.absent(),
+    this.createdBy = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        workspaceId = Value(workspaceId),
+        ownerTable = Value(ownerTable),
+        ownerId = Value(ownerId),
+        storagePath = Value(storagePath),
+        mime = Value(mime),
+        size = Value(size);
+  static Insertable<LocalAttachment> custom({
+    Expression<String>? id,
+    Expression<String>? workspaceId,
+    Expression<String>? ownerTable,
+    Expression<String>? ownerId,
+    Expression<String>? storagePath,
+    Expression<String>? mime,
+    Expression<int>? size,
+    Expression<String>? fileName,
+    Expression<String>? createdBy,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (workspaceId != null) 'workspace_id': workspaceId,
+      if (ownerTable != null) 'owner_table': ownerTable,
+      if (ownerId != null) 'owner_id': ownerId,
+      if (storagePath != null) 'storage_path': storagePath,
+      if (mime != null) 'mime': mime,
+      if (size != null) 'size': size,
+      if (fileName != null) 'file_name': fileName,
+      if (createdBy != null) 'created_by': createdBy,
+      if (createdAt != null) 'created_at': createdAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalAttachmentsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? workspaceId,
+      Value<String>? ownerTable,
+      Value<String>? ownerId,
+      Value<String>? storagePath,
+      Value<String>? mime,
+      Value<int>? size,
+      Value<String?>? fileName,
+      Value<String?>? createdBy,
+      Value<DateTime?>? createdAt,
+      Value<DateTime?>? deletedAt,
+      Value<int>? rowid}) {
+    return LocalAttachmentsCompanion(
+      id: id ?? this.id,
+      workspaceId: workspaceId ?? this.workspaceId,
+      ownerTable: ownerTable ?? this.ownerTable,
+      ownerId: ownerId ?? this.ownerId,
+      storagePath: storagePath ?? this.storagePath,
+      mime: mime ?? this.mime,
+      size: size ?? this.size,
+      fileName: fileName ?? this.fileName,
+      createdBy: createdBy ?? this.createdBy,
+      createdAt: createdAt ?? this.createdAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (workspaceId.present) {
+      map['workspace_id'] = Variable<String>(workspaceId.value);
+    }
+    if (ownerTable.present) {
+      map['owner_table'] = Variable<String>(ownerTable.value);
+    }
+    if (ownerId.present) {
+      map['owner_id'] = Variable<String>(ownerId.value);
+    }
+    if (storagePath.present) {
+      map['storage_path'] = Variable<String>(storagePath.value);
+    }
+    if (mime.present) {
+      map['mime'] = Variable<String>(mime.value);
+    }
+    if (size.present) {
+      map['size'] = Variable<int>(size.value);
+    }
+    if (fileName.present) {
+      map['file_name'] = Variable<String>(fileName.value);
+    }
+    if (createdBy.present) {
+      map['created_by'] = Variable<String>(createdBy.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalAttachmentsCompanion(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('ownerTable: $ownerTable, ')
+          ..write('ownerId: $ownerId, ')
+          ..write('storagePath: $storagePath, ')
+          ..write('mime: $mime, ')
+          ..write('size: $size, ')
+          ..write('fileName: $fileName, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalWorkspaceMembersTable extends LocalWorkspaceMembers
+    with TableInfo<$LocalWorkspaceMembersTable, LocalWorkspaceMember> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalWorkspaceMembersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _workspaceIdMeta =
+      const VerificationMeta('workspaceId');
+  @override
+  late final GeneratedColumn<String> workspaceId = GeneratedColumn<String>(
+      'workspace_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+      'user_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+      'role', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('editor'));
+  static const VerificationMeta _displayNameMeta =
+      const VerificationMeta('displayName');
+  @override
+  late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
+      'display_name', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _emailMeta = const VerificationMeta('email');
+  @override
+  late final GeneratedColumn<String> email = GeneratedColumn<String>(
+      'email', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [workspaceId, userId, role, displayName, email, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_workspace_members';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<LocalWorkspaceMember> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('workspace_id')) {
+      context.handle(
+          _workspaceIdMeta,
+          workspaceId.isAcceptableOrUnknown(
+              data['workspace_id']!, _workspaceIdMeta));
+    } else if (isInserting) {
+      context.missing(_workspaceIdMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(_userIdMeta,
+          userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta));
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('role')) {
+      context.handle(
+          _roleMeta, role.isAcceptableOrUnknown(data['role']!, _roleMeta));
+    }
+    if (data.containsKey('display_name')) {
+      context.handle(
+          _displayNameMeta,
+          displayName.isAcceptableOrUnknown(
+              data['display_name']!, _displayNameMeta));
+    }
+    if (data.containsKey('email')) {
+      context.handle(
+          _emailMeta, email.isAcceptableOrUnknown(data['email']!, _emailMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {workspaceId, userId};
+  @override
+  LocalWorkspaceMember map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalWorkspaceMember(
+      workspaceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}workspace_id'])!,
+      userId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}user_id'])!,
+      role: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}role'])!,
+      displayName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}display_name']),
+      email: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}email']),
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at']),
+    );
+  }
+
+  @override
+  $LocalWorkspaceMembersTable createAlias(String alias) {
+    return $LocalWorkspaceMembersTable(attachedDatabase, alias);
+  }
+}
+
+class LocalWorkspaceMember extends DataClass
+    implements Insertable<LocalWorkspaceMember> {
+  final String workspaceId;
+  final String userId;
+  final String role;
+  final String? displayName;
+  final String? email;
+  final DateTime? updatedAt;
+  const LocalWorkspaceMember(
+      {required this.workspaceId,
+      required this.userId,
+      required this.role,
+      this.displayName,
+      this.email,
+      this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['workspace_id'] = Variable<String>(workspaceId);
+    map['user_id'] = Variable<String>(userId);
+    map['role'] = Variable<String>(role);
+    if (!nullToAbsent || displayName != null) {
+      map['display_name'] = Variable<String>(displayName);
+    }
+    if (!nullToAbsent || email != null) {
+      map['email'] = Variable<String>(email);
+    }
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
+    return map;
+  }
+
+  LocalWorkspaceMembersCompanion toCompanion(bool nullToAbsent) {
+    return LocalWorkspaceMembersCompanion(
+      workspaceId: Value(workspaceId),
+      userId: Value(userId),
+      role: Value(role),
+      displayName: displayName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(displayName),
+      email:
+          email == null && nullToAbsent ? const Value.absent() : Value(email),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+    );
+  }
+
+  factory LocalWorkspaceMember.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalWorkspaceMember(
+      workspaceId: serializer.fromJson<String>(json['workspaceId']),
+      userId: serializer.fromJson<String>(json['userId']),
+      role: serializer.fromJson<String>(json['role']),
+      displayName: serializer.fromJson<String?>(json['displayName']),
+      email: serializer.fromJson<String?>(json['email']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'workspaceId': serializer.toJson<String>(workspaceId),
+      'userId': serializer.toJson<String>(userId),
+      'role': serializer.toJson<String>(role),
+      'displayName': serializer.toJson<String?>(displayName),
+      'email': serializer.toJson<String?>(email),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+    };
+  }
+
+  LocalWorkspaceMember copyWith(
+          {String? workspaceId,
+          String? userId,
+          String? role,
+          Value<String?> displayName = const Value.absent(),
+          Value<String?> email = const Value.absent(),
+          Value<DateTime?> updatedAt = const Value.absent()}) =>
+      LocalWorkspaceMember(
+        workspaceId: workspaceId ?? this.workspaceId,
+        userId: userId ?? this.userId,
+        role: role ?? this.role,
+        displayName: displayName.present ? displayName.value : this.displayName,
+        email: email.present ? email.value : this.email,
+        updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+      );
+  LocalWorkspaceMember copyWithCompanion(LocalWorkspaceMembersCompanion data) {
+    return LocalWorkspaceMember(
+      workspaceId:
+          data.workspaceId.present ? data.workspaceId.value : this.workspaceId,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      role: data.role.present ? data.role.value : this.role,
+      displayName:
+          data.displayName.present ? data.displayName.value : this.displayName,
+      email: data.email.present ? data.email.value : this.email,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalWorkspaceMember(')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('userId: $userId, ')
+          ..write('role: $role, ')
+          ..write('displayName: $displayName, ')
+          ..write('email: $email, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(workspaceId, userId, role, displayName, email, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalWorkspaceMember &&
+          other.workspaceId == this.workspaceId &&
+          other.userId == this.userId &&
+          other.role == this.role &&
+          other.displayName == this.displayName &&
+          other.email == this.email &&
+          other.updatedAt == this.updatedAt);
+}
+
+class LocalWorkspaceMembersCompanion
+    extends UpdateCompanion<LocalWorkspaceMember> {
+  final Value<String> workspaceId;
+  final Value<String> userId;
+  final Value<String> role;
+  final Value<String?> displayName;
+  final Value<String?> email;
+  final Value<DateTime?> updatedAt;
+  final Value<int> rowid;
+  const LocalWorkspaceMembersCompanion({
+    this.workspaceId = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.role = const Value.absent(),
+    this.displayName = const Value.absent(),
+    this.email = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalWorkspaceMembersCompanion.insert({
+    required String workspaceId,
+    required String userId,
+    this.role = const Value.absent(),
+    this.displayName = const Value.absent(),
+    this.email = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : workspaceId = Value(workspaceId),
+        userId = Value(userId);
+  static Insertable<LocalWorkspaceMember> custom({
+    Expression<String>? workspaceId,
+    Expression<String>? userId,
+    Expression<String>? role,
+    Expression<String>? displayName,
+    Expression<String>? email,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (workspaceId != null) 'workspace_id': workspaceId,
+      if (userId != null) 'user_id': userId,
+      if (role != null) 'role': role,
+      if (displayName != null) 'display_name': displayName,
+      if (email != null) 'email': email,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalWorkspaceMembersCompanion copyWith(
+      {Value<String>? workspaceId,
+      Value<String>? userId,
+      Value<String>? role,
+      Value<String?>? displayName,
+      Value<String?>? email,
+      Value<DateTime?>? updatedAt,
+      Value<int>? rowid}) {
+    return LocalWorkspaceMembersCompanion(
+      workspaceId: workspaceId ?? this.workspaceId,
+      userId: userId ?? this.userId,
+      role: role ?? this.role,
+      displayName: displayName ?? this.displayName,
+      email: email ?? this.email,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (workspaceId.present) {
+      map['workspace_id'] = Variable<String>(workspaceId.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (displayName.present) {
+      map['display_name'] = Variable<String>(displayName.value);
+    }
+    if (email.present) {
+      map['email'] = Variable<String>(email.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalWorkspaceMembersCompanion(')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('userId: $userId, ')
+          ..write('role: $role, ')
+          ..write('displayName: $displayName, ')
+          ..write('email: $email, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalCalendarConnectionsTable extends LocalCalendarConnections
+    with TableInfo<$LocalCalendarConnectionsTable, LocalCalendarConnection> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalCalendarConnectionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+      'user_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _workspaceIdMeta =
+      const VerificationMeta('workspaceId');
+  @override
+  late final GeneratedColumn<String> workspaceId = GeneratedColumn<String>(
+      'workspace_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _providerMeta =
+      const VerificationMeta('provider');
+  @override
+  late final GeneratedColumn<String> provider = GeneratedColumn<String>(
+      'provider', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('google'));
+  static const VerificationMeta _externalCalendarIdMeta =
+      const VerificationMeta('externalCalendarId');
+  @override
+  late final GeneratedColumn<String> externalCalendarId =
+      GeneratedColumn<String>('external_calendar_id', aliasedName, false,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultValue: const Constant('primary'));
+  static const VerificationMeta _syncDirectionMeta =
+      const VerificationMeta('syncDirection');
+  @override
+  late final GeneratedColumn<String> syncDirection = GeneratedColumn<String>(
+      'sync_direction', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('two_way'));
+  static const VerificationMeta _enabledMeta =
+      const VerificationMeta('enabled');
+  @override
+  late final GeneratedColumn<bool> enabled = GeneratedColumn<bool>(
+      'enabled', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("enabled" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _lastSyncedAtMeta =
+      const VerificationMeta('lastSyncedAt');
+  @override
+  late final GeneratedColumn<DateTime> lastSyncedAt = GeneratedColumn<DateTime>(
+      'last_synced_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        userId,
+        workspaceId,
+        provider,
+        externalCalendarId,
+        syncDirection,
+        enabled,
+        lastSyncedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_calendar_connections';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<LocalCalendarConnection> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(_userIdMeta,
+          userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta));
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('workspace_id')) {
+      context.handle(
+          _workspaceIdMeta,
+          workspaceId.isAcceptableOrUnknown(
+              data['workspace_id']!, _workspaceIdMeta));
+    } else if (isInserting) {
+      context.missing(_workspaceIdMeta);
+    }
+    if (data.containsKey('provider')) {
+      context.handle(_providerMeta,
+          provider.isAcceptableOrUnknown(data['provider']!, _providerMeta));
+    }
+    if (data.containsKey('external_calendar_id')) {
+      context.handle(
+          _externalCalendarIdMeta,
+          externalCalendarId.isAcceptableOrUnknown(
+              data['external_calendar_id']!, _externalCalendarIdMeta));
+    }
+    if (data.containsKey('sync_direction')) {
+      context.handle(
+          _syncDirectionMeta,
+          syncDirection.isAcceptableOrUnknown(
+              data['sync_direction']!, _syncDirectionMeta));
+    }
+    if (data.containsKey('enabled')) {
+      context.handle(_enabledMeta,
+          enabled.isAcceptableOrUnknown(data['enabled']!, _enabledMeta));
+    }
+    if (data.containsKey('last_synced_at')) {
+      context.handle(
+          _lastSyncedAtMeta,
+          lastSyncedAt.isAcceptableOrUnknown(
+              data['last_synced_at']!, _lastSyncedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalCalendarConnection map(Map<String, dynamic> data,
+      {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalCalendarConnection(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      userId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}user_id'])!,
+      workspaceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}workspace_id'])!,
+      provider: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}provider'])!,
+      externalCalendarId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}external_calendar_id'])!,
+      syncDirection: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sync_direction'])!,
+      enabled: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}enabled'])!,
+      lastSyncedAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}last_synced_at']),
+    );
+  }
+
+  @override
+  $LocalCalendarConnectionsTable createAlias(String alias) {
+    return $LocalCalendarConnectionsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalCalendarConnection extends DataClass
+    implements Insertable<LocalCalendarConnection> {
+  final String id;
+  final String userId;
+  final String workspaceId;
+  final String provider;
+  final String externalCalendarId;
+  final String syncDirection;
+  final bool enabled;
+  final DateTime? lastSyncedAt;
+  const LocalCalendarConnection(
+      {required this.id,
+      required this.userId,
+      required this.workspaceId,
+      required this.provider,
+      required this.externalCalendarId,
+      required this.syncDirection,
+      required this.enabled,
+      this.lastSyncedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['user_id'] = Variable<String>(userId);
+    map['workspace_id'] = Variable<String>(workspaceId);
+    map['provider'] = Variable<String>(provider);
+    map['external_calendar_id'] = Variable<String>(externalCalendarId);
+    map['sync_direction'] = Variable<String>(syncDirection);
+    map['enabled'] = Variable<bool>(enabled);
+    if (!nullToAbsent || lastSyncedAt != null) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt);
+    }
+    return map;
+  }
+
+  LocalCalendarConnectionsCompanion toCompanion(bool nullToAbsent) {
+    return LocalCalendarConnectionsCompanion(
+      id: Value(id),
+      userId: Value(userId),
+      workspaceId: Value(workspaceId),
+      provider: Value(provider),
+      externalCalendarId: Value(externalCalendarId),
+      syncDirection: Value(syncDirection),
+      enabled: Value(enabled),
+      lastSyncedAt: lastSyncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSyncedAt),
+    );
+  }
+
+  factory LocalCalendarConnection.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalCalendarConnection(
+      id: serializer.fromJson<String>(json['id']),
+      userId: serializer.fromJson<String>(json['userId']),
+      workspaceId: serializer.fromJson<String>(json['workspaceId']),
+      provider: serializer.fromJson<String>(json['provider']),
+      externalCalendarId:
+          serializer.fromJson<String>(json['externalCalendarId']),
+      syncDirection: serializer.fromJson<String>(json['syncDirection']),
+      enabled: serializer.fromJson<bool>(json['enabled']),
+      lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'userId': serializer.toJson<String>(userId),
+      'workspaceId': serializer.toJson<String>(workspaceId),
+      'provider': serializer.toJson<String>(provider),
+      'externalCalendarId': serializer.toJson<String>(externalCalendarId),
+      'syncDirection': serializer.toJson<String>(syncDirection),
+      'enabled': serializer.toJson<bool>(enabled),
+      'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
+    };
+  }
+
+  LocalCalendarConnection copyWith(
+          {String? id,
+          String? userId,
+          String? workspaceId,
+          String? provider,
+          String? externalCalendarId,
+          String? syncDirection,
+          bool? enabled,
+          Value<DateTime?> lastSyncedAt = const Value.absent()}) =>
+      LocalCalendarConnection(
+        id: id ?? this.id,
+        userId: userId ?? this.userId,
+        workspaceId: workspaceId ?? this.workspaceId,
+        provider: provider ?? this.provider,
+        externalCalendarId: externalCalendarId ?? this.externalCalendarId,
+        syncDirection: syncDirection ?? this.syncDirection,
+        enabled: enabled ?? this.enabled,
+        lastSyncedAt:
+            lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
+      );
+  LocalCalendarConnection copyWithCompanion(
+      LocalCalendarConnectionsCompanion data) {
+    return LocalCalendarConnection(
+      id: data.id.present ? data.id.value : this.id,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      workspaceId:
+          data.workspaceId.present ? data.workspaceId.value : this.workspaceId,
+      provider: data.provider.present ? data.provider.value : this.provider,
+      externalCalendarId: data.externalCalendarId.present
+          ? data.externalCalendarId.value
+          : this.externalCalendarId,
+      syncDirection: data.syncDirection.present
+          ? data.syncDirection.value
+          : this.syncDirection,
+      enabled: data.enabled.present ? data.enabled.value : this.enabled,
+      lastSyncedAt: data.lastSyncedAt.present
+          ? data.lastSyncedAt.value
+          : this.lastSyncedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalCalendarConnection(')
+          ..write('id: $id, ')
+          ..write('userId: $userId, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('provider: $provider, ')
+          ..write('externalCalendarId: $externalCalendarId, ')
+          ..write('syncDirection: $syncDirection, ')
+          ..write('enabled: $enabled, ')
+          ..write('lastSyncedAt: $lastSyncedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, userId, workspaceId, provider,
+      externalCalendarId, syncDirection, enabled, lastSyncedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalCalendarConnection &&
+          other.id == this.id &&
+          other.userId == this.userId &&
+          other.workspaceId == this.workspaceId &&
+          other.provider == this.provider &&
+          other.externalCalendarId == this.externalCalendarId &&
+          other.syncDirection == this.syncDirection &&
+          other.enabled == this.enabled &&
+          other.lastSyncedAt == this.lastSyncedAt);
+}
+
+class LocalCalendarConnectionsCompanion
+    extends UpdateCompanion<LocalCalendarConnection> {
+  final Value<String> id;
+  final Value<String> userId;
+  final Value<String> workspaceId;
+  final Value<String> provider;
+  final Value<String> externalCalendarId;
+  final Value<String> syncDirection;
+  final Value<bool> enabled;
+  final Value<DateTime?> lastSyncedAt;
+  final Value<int> rowid;
+  const LocalCalendarConnectionsCompanion({
+    this.id = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.workspaceId = const Value.absent(),
+    this.provider = const Value.absent(),
+    this.externalCalendarId = const Value.absent(),
+    this.syncDirection = const Value.absent(),
+    this.enabled = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalCalendarConnectionsCompanion.insert({
+    required String id,
+    required String userId,
+    required String workspaceId,
+    this.provider = const Value.absent(),
+    this.externalCalendarId = const Value.absent(),
+    this.syncDirection = const Value.absent(),
+    this.enabled = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        userId = Value(userId),
+        workspaceId = Value(workspaceId);
+  static Insertable<LocalCalendarConnection> custom({
+    Expression<String>? id,
+    Expression<String>? userId,
+    Expression<String>? workspaceId,
+    Expression<String>? provider,
+    Expression<String>? externalCalendarId,
+    Expression<String>? syncDirection,
+    Expression<bool>? enabled,
+    Expression<DateTime>? lastSyncedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (userId != null) 'user_id': userId,
+      if (workspaceId != null) 'workspace_id': workspaceId,
+      if (provider != null) 'provider': provider,
+      if (externalCalendarId != null)
+        'external_calendar_id': externalCalendarId,
+      if (syncDirection != null) 'sync_direction': syncDirection,
+      if (enabled != null) 'enabled': enabled,
+      if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalCalendarConnectionsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? userId,
+      Value<String>? workspaceId,
+      Value<String>? provider,
+      Value<String>? externalCalendarId,
+      Value<String>? syncDirection,
+      Value<bool>? enabled,
+      Value<DateTime?>? lastSyncedAt,
+      Value<int>? rowid}) {
+    return LocalCalendarConnectionsCompanion(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      workspaceId: workspaceId ?? this.workspaceId,
+      provider: provider ?? this.provider,
+      externalCalendarId: externalCalendarId ?? this.externalCalendarId,
+      syncDirection: syncDirection ?? this.syncDirection,
+      enabled: enabled ?? this.enabled,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (workspaceId.present) {
+      map['workspace_id'] = Variable<String>(workspaceId.value);
+    }
+    if (provider.present) {
+      map['provider'] = Variable<String>(provider.value);
+    }
+    if (externalCalendarId.present) {
+      map['external_calendar_id'] = Variable<String>(externalCalendarId.value);
+    }
+    if (syncDirection.present) {
+      map['sync_direction'] = Variable<String>(syncDirection.value);
+    }
+    if (enabled.present) {
+      map['enabled'] = Variable<bool>(enabled.value);
+    }
+    if (lastSyncedAt.present) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalCalendarConnectionsCompanion(')
+          ..write('id: $id, ')
+          ..write('userId: $userId, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('provider: $provider, ')
+          ..write('externalCalendarId: $externalCalendarId, ')
+          ..write('syncDirection: $syncDirection, ')
+          ..write('enabled: $enabled, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -8509,6 +13907,23 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $LocalSavingsGoalsTable(this);
   late final $LocalIncomeSplitRulesTable localIncomeSplitRules =
       $LocalIncomeSplitRulesTable(this);
+  late final $LocalTaskStatusHistoriesTable localTaskStatusHistories =
+      $LocalTaskStatusHistoriesTable(this);
+  late final $LocalCommentsTable localComments = $LocalCommentsTable(this);
+  late final $LocalEntityLinksTable localEntityLinks =
+      $LocalEntityLinksTable(this);
+  late final $LocalSavedViewsTable localSavedViews =
+      $LocalSavedViewsTable(this);
+  late final $LocalTaskTemplatesTable localTaskTemplates =
+      $LocalTaskTemplatesTable(this);
+  late final $LocalTaskTimeLogsTable localTaskTimeLogs =
+      $LocalTaskTimeLogsTable(this);
+  late final $LocalAttachmentsTable localAttachments =
+      $LocalAttachmentsTable(this);
+  late final $LocalWorkspaceMembersTable localWorkspaceMembers =
+      $LocalWorkspaceMembersTable(this);
+  late final $LocalCalendarConnectionsTable localCalendarConnections =
+      $LocalCalendarConnectionsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8527,7 +13942,16 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         localBudgets,
         localRecurringBills,
         localSavingsGoals,
-        localIncomeSplitRules
+        localIncomeSplitRules,
+        localTaskStatusHistories,
+        localComments,
+        localEntityLinks,
+        localSavedViews,
+        localTaskTemplates,
+        localTaskTimeLogs,
+        localAttachments,
+        localWorkspaceMembers,
+        localCalendarConnections
       ];
 }
 
@@ -9023,6 +14447,7 @@ typedef $$LocalTransactionsTableCreateCompanionBuilder
   required String workspaceId,
   required String accountId,
   Value<String?> categoryId,
+  Value<String?> projectId,
   required String type,
   required String status,
   Value<String?> draftState,
@@ -9044,6 +14469,7 @@ typedef $$LocalTransactionsTableUpdateCompanionBuilder
   Value<String> workspaceId,
   Value<String> accountId,
   Value<String?> categoryId,
+  Value<String?> projectId,
   Value<String> type,
   Value<String> status,
   Value<String?> draftState,
@@ -9080,6 +14506,9 @@ class $$LocalTransactionsTableFilterComposer
 
   ColumnFilters<String> get categoryId => $composableBuilder(
       column: $table.categoryId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get projectId => $composableBuilder(
+      column: $table.projectId, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get type => $composableBuilder(
       column: $table.type, builder: (column) => ColumnFilters(column));
@@ -9144,6 +14573,9 @@ class $$LocalTransactionsTableOrderingComposer
   ColumnOrderings<String> get categoryId => $composableBuilder(
       column: $table.categoryId, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get projectId => $composableBuilder(
+      column: $table.projectId, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get type => $composableBuilder(
       column: $table.type, builder: (column) => ColumnOrderings(column));
 
@@ -9206,6 +14638,9 @@ class $$LocalTransactionsTableAnnotationComposer
 
   GeneratedColumn<String> get categoryId => $composableBuilder(
       column: $table.categoryId, builder: (column) => column);
+
+  GeneratedColumn<String> get projectId =>
+      $composableBuilder(column: $table.projectId, builder: (column) => column);
 
   GeneratedColumn<String> get type =>
       $composableBuilder(column: $table.type, builder: (column) => column);
@@ -9279,6 +14714,7 @@ class $$LocalTransactionsTableTableManager extends RootTableManager<
             Value<String> workspaceId = const Value.absent(),
             Value<String> accountId = const Value.absent(),
             Value<String?> categoryId = const Value.absent(),
+            Value<String?> projectId = const Value.absent(),
             Value<String> type = const Value.absent(),
             Value<String> status = const Value.absent(),
             Value<String?> draftState = const Value.absent(),
@@ -9299,6 +14735,7 @@ class $$LocalTransactionsTableTableManager extends RootTableManager<
             workspaceId: workspaceId,
             accountId: accountId,
             categoryId: categoryId,
+            projectId: projectId,
             type: type,
             status: status,
             draftState: draftState,
@@ -9319,6 +14756,7 @@ class $$LocalTransactionsTableTableManager extends RootTableManager<
             required String workspaceId,
             required String accountId,
             Value<String?> categoryId = const Value.absent(),
+            Value<String?> projectId = const Value.absent(),
             required String type,
             required String status,
             Value<String?> draftState = const Value.absent(),
@@ -9339,6 +14777,7 @@ class $$LocalTransactionsTableTableManager extends RootTableManager<
             workspaceId: workspaceId,
             accountId: accountId,
             categoryId: categoryId,
+            projectId: projectId,
             type: type,
             status: status,
             draftState: draftState,
@@ -10022,6 +15461,18 @@ typedef $$LocalTasksTableCreateCompanionBuilder = LocalTasksCompanion Function({
   Value<bool> dueIsDateOnly,
   Value<DateTime?> completedAt,
   Value<String?> milestonePaymentId,
+  Value<int> sortOrder,
+  Value<int> progressPercent,
+  Value<int> revisionCount,
+  Value<String?> latestRevisionNote,
+  Value<DateTime?> statusChangedAt,
+  Value<String?> parentTaskId,
+  Value<String?> assigneeId,
+  Value<String?> descriptionBlocksJson,
+  Value<String?> recurrenceRuleJson,
+  Value<String?> recurrenceParentId,
+  Value<String?> tagsJson,
+  Value<int?> estimateMinutes,
   Value<DateTime?> deletedAt,
   Value<int> rowid,
 });
@@ -10038,6 +15489,18 @@ typedef $$LocalTasksTableUpdateCompanionBuilder = LocalTasksCompanion Function({
   Value<bool> dueIsDateOnly,
   Value<DateTime?> completedAt,
   Value<String?> milestonePaymentId,
+  Value<int> sortOrder,
+  Value<int> progressPercent,
+  Value<int> revisionCount,
+  Value<String?> latestRevisionNote,
+  Value<DateTime?> statusChangedAt,
+  Value<String?> parentTaskId,
+  Value<String?> assigneeId,
+  Value<String?> descriptionBlocksJson,
+  Value<String?> recurrenceRuleJson,
+  Value<String?> recurrenceParentId,
+  Value<String?> tagsJson,
+  Value<int?> estimateMinutes,
   Value<DateTime?> deletedAt,
   Value<int> rowid,
 });
@@ -10086,6 +15549,49 @@ class $$LocalTasksTableFilterComposer
 
   ColumnFilters<String> get milestonePaymentId => $composableBuilder(
       column: $table.milestonePaymentId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get progressPercent => $composableBuilder(
+      column: $table.progressPercent,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get revisionCount => $composableBuilder(
+      column: $table.revisionCount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get latestRevisionNote => $composableBuilder(
+      column: $table.latestRevisionNote,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get statusChangedAt => $composableBuilder(
+      column: $table.statusChangedAt,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get parentTaskId => $composableBuilder(
+      column: $table.parentTaskId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get assigneeId => $composableBuilder(
+      column: $table.assigneeId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get descriptionBlocksJson => $composableBuilder(
+      column: $table.descriptionBlocksJson,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get recurrenceRuleJson => $composableBuilder(
+      column: $table.recurrenceRuleJson,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get recurrenceParentId => $composableBuilder(
+      column: $table.recurrenceParentId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get tagsJson => $composableBuilder(
+      column: $table.tagsJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get estimateMinutes => $composableBuilder(
+      column: $table.estimateMinutes,
       builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get deletedAt => $composableBuilder(
@@ -10139,6 +15645,51 @@ class $$LocalTasksTableOrderingComposer
       column: $table.milestonePaymentId,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get progressPercent => $composableBuilder(
+      column: $table.progressPercent,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get revisionCount => $composableBuilder(
+      column: $table.revisionCount,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get latestRevisionNote => $composableBuilder(
+      column: $table.latestRevisionNote,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get statusChangedAt => $composableBuilder(
+      column: $table.statusChangedAt,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get parentTaskId => $composableBuilder(
+      column: $table.parentTaskId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get assigneeId => $composableBuilder(
+      column: $table.assigneeId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get descriptionBlocksJson => $composableBuilder(
+      column: $table.descriptionBlocksJson,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get recurrenceRuleJson => $composableBuilder(
+      column: $table.recurrenceRuleJson,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get recurrenceParentId => $composableBuilder(
+      column: $table.recurrenceParentId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get tagsJson => $composableBuilder(
+      column: $table.tagsJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get estimateMinutes => $composableBuilder(
+      column: $table.estimateMinutes,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
       column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
 }
@@ -10188,6 +15739,42 @@ class $$LocalTasksTableAnnotationComposer
   GeneratedColumn<String> get milestonePaymentId => $composableBuilder(
       column: $table.milestonePaymentId, builder: (column) => column);
 
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<int> get progressPercent => $composableBuilder(
+      column: $table.progressPercent, builder: (column) => column);
+
+  GeneratedColumn<int> get revisionCount => $composableBuilder(
+      column: $table.revisionCount, builder: (column) => column);
+
+  GeneratedColumn<String> get latestRevisionNote => $composableBuilder(
+      column: $table.latestRevisionNote, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get statusChangedAt => $composableBuilder(
+      column: $table.statusChangedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get parentTaskId => $composableBuilder(
+      column: $table.parentTaskId, builder: (column) => column);
+
+  GeneratedColumn<String> get assigneeId => $composableBuilder(
+      column: $table.assigneeId, builder: (column) => column);
+
+  GeneratedColumn<String> get descriptionBlocksJson => $composableBuilder(
+      column: $table.descriptionBlocksJson, builder: (column) => column);
+
+  GeneratedColumn<String> get recurrenceRuleJson => $composableBuilder(
+      column: $table.recurrenceRuleJson, builder: (column) => column);
+
+  GeneratedColumn<String> get recurrenceParentId => $composableBuilder(
+      column: $table.recurrenceParentId, builder: (column) => column);
+
+  GeneratedColumn<String> get tagsJson =>
+      $composableBuilder(column: $table.tagsJson, builder: (column) => column);
+
+  GeneratedColumn<int> get estimateMinutes => $composableBuilder(
+      column: $table.estimateMinutes, builder: (column) => column);
+
   GeneratedColumn<DateTime> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 }
@@ -10227,6 +15814,18 @@ class $$LocalTasksTableTableManager extends RootTableManager<
             Value<bool> dueIsDateOnly = const Value.absent(),
             Value<DateTime?> completedAt = const Value.absent(),
             Value<String?> milestonePaymentId = const Value.absent(),
+            Value<int> sortOrder = const Value.absent(),
+            Value<int> progressPercent = const Value.absent(),
+            Value<int> revisionCount = const Value.absent(),
+            Value<String?> latestRevisionNote = const Value.absent(),
+            Value<DateTime?> statusChangedAt = const Value.absent(),
+            Value<String?> parentTaskId = const Value.absent(),
+            Value<String?> assigneeId = const Value.absent(),
+            Value<String?> descriptionBlocksJson = const Value.absent(),
+            Value<String?> recurrenceRuleJson = const Value.absent(),
+            Value<String?> recurrenceParentId = const Value.absent(),
+            Value<String?> tagsJson = const Value.absent(),
+            Value<int?> estimateMinutes = const Value.absent(),
             Value<DateTime?> deletedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -10243,6 +15842,18 @@ class $$LocalTasksTableTableManager extends RootTableManager<
             dueIsDateOnly: dueIsDateOnly,
             completedAt: completedAt,
             milestonePaymentId: milestonePaymentId,
+            sortOrder: sortOrder,
+            progressPercent: progressPercent,
+            revisionCount: revisionCount,
+            latestRevisionNote: latestRevisionNote,
+            statusChangedAt: statusChangedAt,
+            parentTaskId: parentTaskId,
+            assigneeId: assigneeId,
+            descriptionBlocksJson: descriptionBlocksJson,
+            recurrenceRuleJson: recurrenceRuleJson,
+            recurrenceParentId: recurrenceParentId,
+            tagsJson: tagsJson,
+            estimateMinutes: estimateMinutes,
             deletedAt: deletedAt,
             rowid: rowid,
           ),
@@ -10259,6 +15870,18 @@ class $$LocalTasksTableTableManager extends RootTableManager<
             Value<bool> dueIsDateOnly = const Value.absent(),
             Value<DateTime?> completedAt = const Value.absent(),
             Value<String?> milestonePaymentId = const Value.absent(),
+            Value<int> sortOrder = const Value.absent(),
+            Value<int> progressPercent = const Value.absent(),
+            Value<int> revisionCount = const Value.absent(),
+            Value<String?> latestRevisionNote = const Value.absent(),
+            Value<DateTime?> statusChangedAt = const Value.absent(),
+            Value<String?> parentTaskId = const Value.absent(),
+            Value<String?> assigneeId = const Value.absent(),
+            Value<String?> descriptionBlocksJson = const Value.absent(),
+            Value<String?> recurrenceRuleJson = const Value.absent(),
+            Value<String?> recurrenceParentId = const Value.absent(),
+            Value<String?> tagsJson = const Value.absent(),
+            Value<int?> estimateMinutes = const Value.absent(),
             Value<DateTime?> deletedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -10275,6 +15898,18 @@ class $$LocalTasksTableTableManager extends RootTableManager<
             dueIsDateOnly: dueIsDateOnly,
             completedAt: completedAt,
             milestonePaymentId: milestonePaymentId,
+            sortOrder: sortOrder,
+            progressPercent: progressPercent,
+            revisionCount: revisionCount,
+            latestRevisionNote: latestRevisionNote,
+            statusChangedAt: statusChangedAt,
+            parentTaskId: parentTaskId,
+            assigneeId: assigneeId,
+            descriptionBlocksJson: descriptionBlocksJson,
+            recurrenceRuleJson: recurrenceRuleJson,
+            recurrenceParentId: recurrenceParentId,
+            tagsJson: tagsJson,
+            estimateMinutes: estimateMinutes,
             deletedAt: deletedAt,
             rowid: rowid,
           ),
@@ -10491,6 +16126,10 @@ typedef $$LocalEventsTableCreateCompanionBuilder = LocalEventsCompanion
   Value<bool> allDay,
   Value<String> timezone,
   Value<String?> recurrence,
+  Value<String?> externalProvider,
+  Value<String?> externalEventId,
+  Value<String?> externalEtag,
+  Value<DateTime?> lastSyncedAt,
   Value<DateTime?> deletedAt,
   Value<int> rowid,
 });
@@ -10508,6 +16147,10 @@ typedef $$LocalEventsTableUpdateCompanionBuilder = LocalEventsCompanion
   Value<bool> allDay,
   Value<String> timezone,
   Value<String?> recurrence,
+  Value<String?> externalProvider,
+  Value<String?> externalEventId,
+  Value<String?> externalEtag,
+  Value<DateTime?> lastSyncedAt,
   Value<DateTime?> deletedAt,
   Value<int> rowid,
 });
@@ -10556,6 +16199,20 @@ class $$LocalEventsTableFilterComposer
 
   ColumnFilters<String> get recurrence => $composableBuilder(
       column: $table.recurrence, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get externalProvider => $composableBuilder(
+      column: $table.externalProvider,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get externalEventId => $composableBuilder(
+      column: $table.externalEventId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get externalEtag => $composableBuilder(
+      column: $table.externalEtag, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastSyncedAt => $composableBuilder(
+      column: $table.lastSyncedAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get deletedAt => $composableBuilder(
       column: $table.deletedAt, builder: (column) => ColumnFilters(column));
@@ -10606,6 +16263,22 @@ class $$LocalEventsTableOrderingComposer
   ColumnOrderings<String> get recurrence => $composableBuilder(
       column: $table.recurrence, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get externalProvider => $composableBuilder(
+      column: $table.externalProvider,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get externalEventId => $composableBuilder(
+      column: $table.externalEventId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get externalEtag => $composableBuilder(
+      column: $table.externalEtag,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastSyncedAt => $composableBuilder(
+      column: $table.lastSyncedAt,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
       column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
 }
@@ -10655,6 +16328,18 @@ class $$LocalEventsTableAnnotationComposer
   GeneratedColumn<String> get recurrence => $composableBuilder(
       column: $table.recurrence, builder: (column) => column);
 
+  GeneratedColumn<String> get externalProvider => $composableBuilder(
+      column: $table.externalProvider, builder: (column) => column);
+
+  GeneratedColumn<String> get externalEventId => $composableBuilder(
+      column: $table.externalEventId, builder: (column) => column);
+
+  GeneratedColumn<String> get externalEtag => $composableBuilder(
+      column: $table.externalEtag, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastSyncedAt => $composableBuilder(
+      column: $table.lastSyncedAt, builder: (column) => column);
+
   GeneratedColumn<DateTime> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 }
@@ -10694,6 +16379,10 @@ class $$LocalEventsTableTableManager extends RootTableManager<
             Value<bool> allDay = const Value.absent(),
             Value<String> timezone = const Value.absent(),
             Value<String?> recurrence = const Value.absent(),
+            Value<String?> externalProvider = const Value.absent(),
+            Value<String?> externalEventId = const Value.absent(),
+            Value<String?> externalEtag = const Value.absent(),
+            Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<DateTime?> deletedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -10710,6 +16399,10 @@ class $$LocalEventsTableTableManager extends RootTableManager<
             allDay: allDay,
             timezone: timezone,
             recurrence: recurrence,
+            externalProvider: externalProvider,
+            externalEventId: externalEventId,
+            externalEtag: externalEtag,
+            lastSyncedAt: lastSyncedAt,
             deletedAt: deletedAt,
             rowid: rowid,
           ),
@@ -10726,6 +16419,10 @@ class $$LocalEventsTableTableManager extends RootTableManager<
             Value<bool> allDay = const Value.absent(),
             Value<String> timezone = const Value.absent(),
             Value<String?> recurrence = const Value.absent(),
+            Value<String?> externalProvider = const Value.absent(),
+            Value<String?> externalEventId = const Value.absent(),
+            Value<String?> externalEtag = const Value.absent(),
+            Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<DateTime?> deletedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -10742,6 +16439,10 @@ class $$LocalEventsTableTableManager extends RootTableManager<
             allDay: allDay,
             timezone: timezone,
             recurrence: recurrence,
+            externalProvider: externalProvider,
+            externalEventId: externalEventId,
+            externalEtag: externalEtag,
+            lastSyncedAt: lastSyncedAt,
             deletedAt: deletedAt,
             rowid: rowid,
           ),
@@ -12487,6 +18188,2265 @@ typedef $$LocalIncomeSplitRulesTableProcessedTableManager
         ),
         LocalIncomeSplitRule,
         PrefetchHooks Function()>;
+typedef $$LocalTaskStatusHistoriesTableCreateCompanionBuilder
+    = LocalTaskStatusHistoriesCompanion Function({
+  required String id,
+  required String workspaceId,
+  required String taskId,
+  Value<String?> fromStatus,
+  required String toStatus,
+  Value<String?> note,
+  Value<String?> changedBy,
+  required DateTime createdAt,
+  Value<int> rowid,
+});
+typedef $$LocalTaskStatusHistoriesTableUpdateCompanionBuilder
+    = LocalTaskStatusHistoriesCompanion Function({
+  Value<String> id,
+  Value<String> workspaceId,
+  Value<String> taskId,
+  Value<String?> fromStatus,
+  Value<String> toStatus,
+  Value<String?> note,
+  Value<String?> changedBy,
+  Value<DateTime> createdAt,
+  Value<int> rowid,
+});
+
+class $$LocalTaskStatusHistoriesTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalTaskStatusHistoriesTable> {
+  $$LocalTaskStatusHistoriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get taskId => $composableBuilder(
+      column: $table.taskId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get fromStatus => $composableBuilder(
+      column: $table.fromStatus, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get toStatus => $composableBuilder(
+      column: $table.toStatus, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get changedBy => $composableBuilder(
+      column: $table.changedBy, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$LocalTaskStatusHistoriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalTaskStatusHistoriesTable> {
+  $$LocalTaskStatusHistoriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get taskId => $composableBuilder(
+      column: $table.taskId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get fromStatus => $composableBuilder(
+      column: $table.fromStatus, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get toStatus => $composableBuilder(
+      column: $table.toStatus, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get changedBy => $composableBuilder(
+      column: $table.changedBy, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$LocalTaskStatusHistoriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalTaskStatusHistoriesTable> {
+  $$LocalTaskStatusHistoriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => column);
+
+  GeneratedColumn<String> get taskId =>
+      $composableBuilder(column: $table.taskId, builder: (column) => column);
+
+  GeneratedColumn<String> get fromStatus => $composableBuilder(
+      column: $table.fromStatus, builder: (column) => column);
+
+  GeneratedColumn<String> get toStatus =>
+      $composableBuilder(column: $table.toStatus, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<String> get changedBy =>
+      $composableBuilder(column: $table.changedBy, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$LocalTaskStatusHistoriesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LocalTaskStatusHistoriesTable,
+    LocalTaskStatusHistory,
+    $$LocalTaskStatusHistoriesTableFilterComposer,
+    $$LocalTaskStatusHistoriesTableOrderingComposer,
+    $$LocalTaskStatusHistoriesTableAnnotationComposer,
+    $$LocalTaskStatusHistoriesTableCreateCompanionBuilder,
+    $$LocalTaskStatusHistoriesTableUpdateCompanionBuilder,
+    (
+      LocalTaskStatusHistory,
+      BaseReferences<_$AppDatabase, $LocalTaskStatusHistoriesTable,
+          LocalTaskStatusHistory>
+    ),
+    LocalTaskStatusHistory,
+    PrefetchHooks Function()> {
+  $$LocalTaskStatusHistoriesTableTableManager(
+      _$AppDatabase db, $LocalTaskStatusHistoriesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalTaskStatusHistoriesTableFilterComposer(
+                  $db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalTaskStatusHistoriesTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalTaskStatusHistoriesTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> workspaceId = const Value.absent(),
+            Value<String> taskId = const Value.absent(),
+            Value<String?> fromStatus = const Value.absent(),
+            Value<String> toStatus = const Value.absent(),
+            Value<String?> note = const Value.absent(),
+            Value<String?> changedBy = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalTaskStatusHistoriesCompanion(
+            id: id,
+            workspaceId: workspaceId,
+            taskId: taskId,
+            fromStatus: fromStatus,
+            toStatus: toStatus,
+            note: note,
+            changedBy: changedBy,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String workspaceId,
+            required String taskId,
+            Value<String?> fromStatus = const Value.absent(),
+            required String toStatus,
+            Value<String?> note = const Value.absent(),
+            Value<String?> changedBy = const Value.absent(),
+            required DateTime createdAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalTaskStatusHistoriesCompanion.insert(
+            id: id,
+            workspaceId: workspaceId,
+            taskId: taskId,
+            fromStatus: fromStatus,
+            toStatus: toStatus,
+            note: note,
+            changedBy: changedBy,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$LocalTaskStatusHistoriesTableProcessedTableManager
+    = ProcessedTableManager<
+        _$AppDatabase,
+        $LocalTaskStatusHistoriesTable,
+        LocalTaskStatusHistory,
+        $$LocalTaskStatusHistoriesTableFilterComposer,
+        $$LocalTaskStatusHistoriesTableOrderingComposer,
+        $$LocalTaskStatusHistoriesTableAnnotationComposer,
+        $$LocalTaskStatusHistoriesTableCreateCompanionBuilder,
+        $$LocalTaskStatusHistoriesTableUpdateCompanionBuilder,
+        (
+          LocalTaskStatusHistory,
+          BaseReferences<_$AppDatabase, $LocalTaskStatusHistoriesTable,
+              LocalTaskStatusHistory>
+        ),
+        LocalTaskStatusHistory,
+        PrefetchHooks Function()>;
+typedef $$LocalCommentsTableCreateCompanionBuilder = LocalCommentsCompanion
+    Function({
+  required String id,
+  required String workspaceId,
+  required String entityType,
+  required String entityId,
+  Value<String?> parentCommentId,
+  required String body,
+  Value<String?> authorId,
+  required DateTime createdAt,
+  required DateTime updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+typedef $$LocalCommentsTableUpdateCompanionBuilder = LocalCommentsCompanion
+    Function({
+  Value<String> id,
+  Value<String> workspaceId,
+  Value<String> entityType,
+  Value<String> entityId,
+  Value<String?> parentCommentId,
+  Value<String> body,
+  Value<String?> authorId,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+
+class $$LocalCommentsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalCommentsTable> {
+  $$LocalCommentsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get entityType => $composableBuilder(
+      column: $table.entityType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get entityId => $composableBuilder(
+      column: $table.entityId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get parentCommentId => $composableBuilder(
+      column: $table.parentCommentId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get body => $composableBuilder(
+      column: $table.body, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get authorId => $composableBuilder(
+      column: $table.authorId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$LocalCommentsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalCommentsTable> {
+  $$LocalCommentsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get entityType => $composableBuilder(
+      column: $table.entityType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get entityId => $composableBuilder(
+      column: $table.entityId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get parentCommentId => $composableBuilder(
+      column: $table.parentCommentId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get body => $composableBuilder(
+      column: $table.body, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get authorId => $composableBuilder(
+      column: $table.authorId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$LocalCommentsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalCommentsTable> {
+  $$LocalCommentsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => column);
+
+  GeneratedColumn<String> get entityType => $composableBuilder(
+      column: $table.entityType, builder: (column) => column);
+
+  GeneratedColumn<String> get entityId =>
+      $composableBuilder(column: $table.entityId, builder: (column) => column);
+
+  GeneratedColumn<String> get parentCommentId => $composableBuilder(
+      column: $table.parentCommentId, builder: (column) => column);
+
+  GeneratedColumn<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => column);
+
+  GeneratedColumn<String> get authorId =>
+      $composableBuilder(column: $table.authorId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$LocalCommentsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LocalCommentsTable,
+    LocalComment,
+    $$LocalCommentsTableFilterComposer,
+    $$LocalCommentsTableOrderingComposer,
+    $$LocalCommentsTableAnnotationComposer,
+    $$LocalCommentsTableCreateCompanionBuilder,
+    $$LocalCommentsTableUpdateCompanionBuilder,
+    (
+      LocalComment,
+      BaseReferences<_$AppDatabase, $LocalCommentsTable, LocalComment>
+    ),
+    LocalComment,
+    PrefetchHooks Function()> {
+  $$LocalCommentsTableTableManager(_$AppDatabase db, $LocalCommentsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalCommentsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalCommentsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalCommentsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> workspaceId = const Value.absent(),
+            Value<String> entityType = const Value.absent(),
+            Value<String> entityId = const Value.absent(),
+            Value<String?> parentCommentId = const Value.absent(),
+            Value<String> body = const Value.absent(),
+            Value<String?> authorId = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalCommentsCompanion(
+            id: id,
+            workspaceId: workspaceId,
+            entityType: entityType,
+            entityId: entityId,
+            parentCommentId: parentCommentId,
+            body: body,
+            authorId: authorId,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String workspaceId,
+            required String entityType,
+            required String entityId,
+            Value<String?> parentCommentId = const Value.absent(),
+            required String body,
+            Value<String?> authorId = const Value.absent(),
+            required DateTime createdAt,
+            required DateTime updatedAt,
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalCommentsCompanion.insert(
+            id: id,
+            workspaceId: workspaceId,
+            entityType: entityType,
+            entityId: entityId,
+            parentCommentId: parentCommentId,
+            body: body,
+            authorId: authorId,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$LocalCommentsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $LocalCommentsTable,
+    LocalComment,
+    $$LocalCommentsTableFilterComposer,
+    $$LocalCommentsTableOrderingComposer,
+    $$LocalCommentsTableAnnotationComposer,
+    $$LocalCommentsTableCreateCompanionBuilder,
+    $$LocalCommentsTableUpdateCompanionBuilder,
+    (
+      LocalComment,
+      BaseReferences<_$AppDatabase, $LocalCommentsTable, LocalComment>
+    ),
+    LocalComment,
+    PrefetchHooks Function()>;
+typedef $$LocalEntityLinksTableCreateCompanionBuilder
+    = LocalEntityLinksCompanion Function({
+  required String id,
+  required String workspaceId,
+  required String sourceType,
+  required String sourceId,
+  required String targetType,
+  required String targetId,
+  Value<String> relationType,
+  Value<String?> createdBy,
+  required DateTime createdAt,
+  Value<int> rowid,
+});
+typedef $$LocalEntityLinksTableUpdateCompanionBuilder
+    = LocalEntityLinksCompanion Function({
+  Value<String> id,
+  Value<String> workspaceId,
+  Value<String> sourceType,
+  Value<String> sourceId,
+  Value<String> targetType,
+  Value<String> targetId,
+  Value<String> relationType,
+  Value<String?> createdBy,
+  Value<DateTime> createdAt,
+  Value<int> rowid,
+});
+
+class $$LocalEntityLinksTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalEntityLinksTable> {
+  $$LocalEntityLinksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sourceType => $composableBuilder(
+      column: $table.sourceType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sourceId => $composableBuilder(
+      column: $table.sourceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get targetType => $composableBuilder(
+      column: $table.targetType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get targetId => $composableBuilder(
+      column: $table.targetId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get relationType => $composableBuilder(
+      column: $table.relationType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get createdBy => $composableBuilder(
+      column: $table.createdBy, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$LocalEntityLinksTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalEntityLinksTable> {
+  $$LocalEntityLinksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sourceType => $composableBuilder(
+      column: $table.sourceType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sourceId => $composableBuilder(
+      column: $table.sourceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get targetType => $composableBuilder(
+      column: $table.targetType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get targetId => $composableBuilder(
+      column: $table.targetId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get relationType => $composableBuilder(
+      column: $table.relationType,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get createdBy => $composableBuilder(
+      column: $table.createdBy, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$LocalEntityLinksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalEntityLinksTable> {
+  $$LocalEntityLinksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceType => $composableBuilder(
+      column: $table.sourceType, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceId =>
+      $composableBuilder(column: $table.sourceId, builder: (column) => column);
+
+  GeneratedColumn<String> get targetType => $composableBuilder(
+      column: $table.targetType, builder: (column) => column);
+
+  GeneratedColumn<String> get targetId =>
+      $composableBuilder(column: $table.targetId, builder: (column) => column);
+
+  GeneratedColumn<String> get relationType => $composableBuilder(
+      column: $table.relationType, builder: (column) => column);
+
+  GeneratedColumn<String> get createdBy =>
+      $composableBuilder(column: $table.createdBy, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$LocalEntityLinksTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LocalEntityLinksTable,
+    LocalEntityLink,
+    $$LocalEntityLinksTableFilterComposer,
+    $$LocalEntityLinksTableOrderingComposer,
+    $$LocalEntityLinksTableAnnotationComposer,
+    $$LocalEntityLinksTableCreateCompanionBuilder,
+    $$LocalEntityLinksTableUpdateCompanionBuilder,
+    (
+      LocalEntityLink,
+      BaseReferences<_$AppDatabase, $LocalEntityLinksTable, LocalEntityLink>
+    ),
+    LocalEntityLink,
+    PrefetchHooks Function()> {
+  $$LocalEntityLinksTableTableManager(
+      _$AppDatabase db, $LocalEntityLinksTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalEntityLinksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalEntityLinksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalEntityLinksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> workspaceId = const Value.absent(),
+            Value<String> sourceType = const Value.absent(),
+            Value<String> sourceId = const Value.absent(),
+            Value<String> targetType = const Value.absent(),
+            Value<String> targetId = const Value.absent(),
+            Value<String> relationType = const Value.absent(),
+            Value<String?> createdBy = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalEntityLinksCompanion(
+            id: id,
+            workspaceId: workspaceId,
+            sourceType: sourceType,
+            sourceId: sourceId,
+            targetType: targetType,
+            targetId: targetId,
+            relationType: relationType,
+            createdBy: createdBy,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String workspaceId,
+            required String sourceType,
+            required String sourceId,
+            required String targetType,
+            required String targetId,
+            Value<String> relationType = const Value.absent(),
+            Value<String?> createdBy = const Value.absent(),
+            required DateTime createdAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalEntityLinksCompanion.insert(
+            id: id,
+            workspaceId: workspaceId,
+            sourceType: sourceType,
+            sourceId: sourceId,
+            targetType: targetType,
+            targetId: targetId,
+            relationType: relationType,
+            createdBy: createdBy,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$LocalEntityLinksTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $LocalEntityLinksTable,
+    LocalEntityLink,
+    $$LocalEntityLinksTableFilterComposer,
+    $$LocalEntityLinksTableOrderingComposer,
+    $$LocalEntityLinksTableAnnotationComposer,
+    $$LocalEntityLinksTableCreateCompanionBuilder,
+    $$LocalEntityLinksTableUpdateCompanionBuilder,
+    (
+      LocalEntityLink,
+      BaseReferences<_$AppDatabase, $LocalEntityLinksTable, LocalEntityLink>
+    ),
+    LocalEntityLink,
+    PrefetchHooks Function()>;
+typedef $$LocalSavedViewsTableCreateCompanionBuilder = LocalSavedViewsCompanion
+    Function({
+  required String id,
+  required String workspaceId,
+  Value<String?> createdBy,
+  required String name,
+  required String scope,
+  Value<String> viewMode,
+  Value<String> filterJson,
+  Value<String> sortJson,
+  Value<bool> isPinned,
+  Value<int> sortOrder,
+  Value<DateTime?> createdAt,
+  Value<DateTime?> updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+typedef $$LocalSavedViewsTableUpdateCompanionBuilder = LocalSavedViewsCompanion
+    Function({
+  Value<String> id,
+  Value<String> workspaceId,
+  Value<String?> createdBy,
+  Value<String> name,
+  Value<String> scope,
+  Value<String> viewMode,
+  Value<String> filterJson,
+  Value<String> sortJson,
+  Value<bool> isPinned,
+  Value<int> sortOrder,
+  Value<DateTime?> createdAt,
+  Value<DateTime?> updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+
+class $$LocalSavedViewsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalSavedViewsTable> {
+  $$LocalSavedViewsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get createdBy => $composableBuilder(
+      column: $table.createdBy, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get scope => $composableBuilder(
+      column: $table.scope, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get viewMode => $composableBuilder(
+      column: $table.viewMode, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get filterJson => $composableBuilder(
+      column: $table.filterJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sortJson => $composableBuilder(
+      column: $table.sortJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isPinned => $composableBuilder(
+      column: $table.isPinned, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$LocalSavedViewsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalSavedViewsTable> {
+  $$LocalSavedViewsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get createdBy => $composableBuilder(
+      column: $table.createdBy, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get scope => $composableBuilder(
+      column: $table.scope, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get viewMode => $composableBuilder(
+      column: $table.viewMode, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get filterJson => $composableBuilder(
+      column: $table.filterJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sortJson => $composableBuilder(
+      column: $table.sortJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isPinned => $composableBuilder(
+      column: $table.isPinned, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$LocalSavedViewsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalSavedViewsTable> {
+  $$LocalSavedViewsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => column);
+
+  GeneratedColumn<String> get createdBy =>
+      $composableBuilder(column: $table.createdBy, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get scope =>
+      $composableBuilder(column: $table.scope, builder: (column) => column);
+
+  GeneratedColumn<String> get viewMode =>
+      $composableBuilder(column: $table.viewMode, builder: (column) => column);
+
+  GeneratedColumn<String> get filterJson => $composableBuilder(
+      column: $table.filterJson, builder: (column) => column);
+
+  GeneratedColumn<String> get sortJson =>
+      $composableBuilder(column: $table.sortJson, builder: (column) => column);
+
+  GeneratedColumn<bool> get isPinned =>
+      $composableBuilder(column: $table.isPinned, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$LocalSavedViewsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LocalSavedViewsTable,
+    LocalSavedView,
+    $$LocalSavedViewsTableFilterComposer,
+    $$LocalSavedViewsTableOrderingComposer,
+    $$LocalSavedViewsTableAnnotationComposer,
+    $$LocalSavedViewsTableCreateCompanionBuilder,
+    $$LocalSavedViewsTableUpdateCompanionBuilder,
+    (
+      LocalSavedView,
+      BaseReferences<_$AppDatabase, $LocalSavedViewsTable, LocalSavedView>
+    ),
+    LocalSavedView,
+    PrefetchHooks Function()> {
+  $$LocalSavedViewsTableTableManager(
+      _$AppDatabase db, $LocalSavedViewsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalSavedViewsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalSavedViewsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalSavedViewsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> workspaceId = const Value.absent(),
+            Value<String?> createdBy = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<String> scope = const Value.absent(),
+            Value<String> viewMode = const Value.absent(),
+            Value<String> filterJson = const Value.absent(),
+            Value<String> sortJson = const Value.absent(),
+            Value<bool> isPinned = const Value.absent(),
+            Value<int> sortOrder = const Value.absent(),
+            Value<DateTime?> createdAt = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalSavedViewsCompanion(
+            id: id,
+            workspaceId: workspaceId,
+            createdBy: createdBy,
+            name: name,
+            scope: scope,
+            viewMode: viewMode,
+            filterJson: filterJson,
+            sortJson: sortJson,
+            isPinned: isPinned,
+            sortOrder: sortOrder,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String workspaceId,
+            Value<String?> createdBy = const Value.absent(),
+            required String name,
+            required String scope,
+            Value<String> viewMode = const Value.absent(),
+            Value<String> filterJson = const Value.absent(),
+            Value<String> sortJson = const Value.absent(),
+            Value<bool> isPinned = const Value.absent(),
+            Value<int> sortOrder = const Value.absent(),
+            Value<DateTime?> createdAt = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalSavedViewsCompanion.insert(
+            id: id,
+            workspaceId: workspaceId,
+            createdBy: createdBy,
+            name: name,
+            scope: scope,
+            viewMode: viewMode,
+            filterJson: filterJson,
+            sortJson: sortJson,
+            isPinned: isPinned,
+            sortOrder: sortOrder,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$LocalSavedViewsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $LocalSavedViewsTable,
+    LocalSavedView,
+    $$LocalSavedViewsTableFilterComposer,
+    $$LocalSavedViewsTableOrderingComposer,
+    $$LocalSavedViewsTableAnnotationComposer,
+    $$LocalSavedViewsTableCreateCompanionBuilder,
+    $$LocalSavedViewsTableUpdateCompanionBuilder,
+    (
+      LocalSavedView,
+      BaseReferences<_$AppDatabase, $LocalSavedViewsTable, LocalSavedView>
+    ),
+    LocalSavedView,
+    PrefetchHooks Function()>;
+typedef $$LocalTaskTemplatesTableCreateCompanionBuilder
+    = LocalTaskTemplatesCompanion Function({
+  required String id,
+  required String workspaceId,
+  Value<String?> createdBy,
+  required String name,
+  Value<String> kind,
+  Value<String> defaultPriority,
+  Value<int?> defaultEstimateMinutes,
+  Value<String> checklistJson,
+  Value<String?> blocksJson,
+  Value<DateTime?> createdAt,
+  Value<DateTime?> updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+typedef $$LocalTaskTemplatesTableUpdateCompanionBuilder
+    = LocalTaskTemplatesCompanion Function({
+  Value<String> id,
+  Value<String> workspaceId,
+  Value<String?> createdBy,
+  Value<String> name,
+  Value<String> kind,
+  Value<String> defaultPriority,
+  Value<int?> defaultEstimateMinutes,
+  Value<String> checklistJson,
+  Value<String?> blocksJson,
+  Value<DateTime?> createdAt,
+  Value<DateTime?> updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+
+class $$LocalTaskTemplatesTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalTaskTemplatesTable> {
+  $$LocalTaskTemplatesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get createdBy => $composableBuilder(
+      column: $table.createdBy, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get kind => $composableBuilder(
+      column: $table.kind, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get defaultPriority => $composableBuilder(
+      column: $table.defaultPriority,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get defaultEstimateMinutes => $composableBuilder(
+      column: $table.defaultEstimateMinutes,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get checklistJson => $composableBuilder(
+      column: $table.checklistJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get blocksJson => $composableBuilder(
+      column: $table.blocksJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$LocalTaskTemplatesTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalTaskTemplatesTable> {
+  $$LocalTaskTemplatesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get createdBy => $composableBuilder(
+      column: $table.createdBy, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+      column: $table.kind, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get defaultPriority => $composableBuilder(
+      column: $table.defaultPriority,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get defaultEstimateMinutes => $composableBuilder(
+      column: $table.defaultEstimateMinutes,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get checklistJson => $composableBuilder(
+      column: $table.checklistJson,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get blocksJson => $composableBuilder(
+      column: $table.blocksJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$LocalTaskTemplatesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalTaskTemplatesTable> {
+  $$LocalTaskTemplatesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => column);
+
+  GeneratedColumn<String> get createdBy =>
+      $composableBuilder(column: $table.createdBy, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get defaultPriority => $composableBuilder(
+      column: $table.defaultPriority, builder: (column) => column);
+
+  GeneratedColumn<int> get defaultEstimateMinutes => $composableBuilder(
+      column: $table.defaultEstimateMinutes, builder: (column) => column);
+
+  GeneratedColumn<String> get checklistJson => $composableBuilder(
+      column: $table.checklistJson, builder: (column) => column);
+
+  GeneratedColumn<String> get blocksJson => $composableBuilder(
+      column: $table.blocksJson, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$LocalTaskTemplatesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LocalTaskTemplatesTable,
+    LocalTaskTemplate,
+    $$LocalTaskTemplatesTableFilterComposer,
+    $$LocalTaskTemplatesTableOrderingComposer,
+    $$LocalTaskTemplatesTableAnnotationComposer,
+    $$LocalTaskTemplatesTableCreateCompanionBuilder,
+    $$LocalTaskTemplatesTableUpdateCompanionBuilder,
+    (
+      LocalTaskTemplate,
+      BaseReferences<_$AppDatabase, $LocalTaskTemplatesTable, LocalTaskTemplate>
+    ),
+    LocalTaskTemplate,
+    PrefetchHooks Function()> {
+  $$LocalTaskTemplatesTableTableManager(
+      _$AppDatabase db, $LocalTaskTemplatesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalTaskTemplatesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalTaskTemplatesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalTaskTemplatesTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> workspaceId = const Value.absent(),
+            Value<String?> createdBy = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<String> kind = const Value.absent(),
+            Value<String> defaultPriority = const Value.absent(),
+            Value<int?> defaultEstimateMinutes = const Value.absent(),
+            Value<String> checklistJson = const Value.absent(),
+            Value<String?> blocksJson = const Value.absent(),
+            Value<DateTime?> createdAt = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalTaskTemplatesCompanion(
+            id: id,
+            workspaceId: workspaceId,
+            createdBy: createdBy,
+            name: name,
+            kind: kind,
+            defaultPriority: defaultPriority,
+            defaultEstimateMinutes: defaultEstimateMinutes,
+            checklistJson: checklistJson,
+            blocksJson: blocksJson,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String workspaceId,
+            Value<String?> createdBy = const Value.absent(),
+            required String name,
+            Value<String> kind = const Value.absent(),
+            Value<String> defaultPriority = const Value.absent(),
+            Value<int?> defaultEstimateMinutes = const Value.absent(),
+            Value<String> checklistJson = const Value.absent(),
+            Value<String?> blocksJson = const Value.absent(),
+            Value<DateTime?> createdAt = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalTaskTemplatesCompanion.insert(
+            id: id,
+            workspaceId: workspaceId,
+            createdBy: createdBy,
+            name: name,
+            kind: kind,
+            defaultPriority: defaultPriority,
+            defaultEstimateMinutes: defaultEstimateMinutes,
+            checklistJson: checklistJson,
+            blocksJson: blocksJson,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$LocalTaskTemplatesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $LocalTaskTemplatesTable,
+    LocalTaskTemplate,
+    $$LocalTaskTemplatesTableFilterComposer,
+    $$LocalTaskTemplatesTableOrderingComposer,
+    $$LocalTaskTemplatesTableAnnotationComposer,
+    $$LocalTaskTemplatesTableCreateCompanionBuilder,
+    $$LocalTaskTemplatesTableUpdateCompanionBuilder,
+    (
+      LocalTaskTemplate,
+      BaseReferences<_$AppDatabase, $LocalTaskTemplatesTable, LocalTaskTemplate>
+    ),
+    LocalTaskTemplate,
+    PrefetchHooks Function()>;
+typedef $$LocalTaskTimeLogsTableCreateCompanionBuilder
+    = LocalTaskTimeLogsCompanion Function({
+  required String id,
+  required String workspaceId,
+  required String taskId,
+  Value<String?> userId,
+  required DateTime startedAt,
+  Value<DateTime?> endedAt,
+  Value<int> durationSeconds,
+  Value<String> mode,
+  Value<String?> note,
+  Value<DateTime?> createdAt,
+  Value<DateTime?> updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+typedef $$LocalTaskTimeLogsTableUpdateCompanionBuilder
+    = LocalTaskTimeLogsCompanion Function({
+  Value<String> id,
+  Value<String> workspaceId,
+  Value<String> taskId,
+  Value<String?> userId,
+  Value<DateTime> startedAt,
+  Value<DateTime?> endedAt,
+  Value<int> durationSeconds,
+  Value<String> mode,
+  Value<String?> note,
+  Value<DateTime?> createdAt,
+  Value<DateTime?> updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+
+class $$LocalTaskTimeLogsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalTaskTimeLogsTable> {
+  $$LocalTaskTimeLogsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get taskId => $composableBuilder(
+      column: $table.taskId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get userId => $composableBuilder(
+      column: $table.userId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get startedAt => $composableBuilder(
+      column: $table.startedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get endedAt => $composableBuilder(
+      column: $table.endedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get durationSeconds => $composableBuilder(
+      column: $table.durationSeconds,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get mode => $composableBuilder(
+      column: $table.mode, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$LocalTaskTimeLogsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalTaskTimeLogsTable> {
+  $$LocalTaskTimeLogsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get taskId => $composableBuilder(
+      column: $table.taskId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+      column: $table.userId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get startedAt => $composableBuilder(
+      column: $table.startedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get endedAt => $composableBuilder(
+      column: $table.endedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get durationSeconds => $composableBuilder(
+      column: $table.durationSeconds,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get mode => $composableBuilder(
+      column: $table.mode, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$LocalTaskTimeLogsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalTaskTimeLogsTable> {
+  $$LocalTaskTimeLogsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => column);
+
+  GeneratedColumn<String> get taskId =>
+      $composableBuilder(column: $table.taskId, builder: (column) => column);
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startedAt =>
+      $composableBuilder(column: $table.startedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get endedAt =>
+      $composableBuilder(column: $table.endedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get durationSeconds => $composableBuilder(
+      column: $table.durationSeconds, builder: (column) => column);
+
+  GeneratedColumn<String> get mode =>
+      $composableBuilder(column: $table.mode, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$LocalTaskTimeLogsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LocalTaskTimeLogsTable,
+    LocalTaskTimeLog,
+    $$LocalTaskTimeLogsTableFilterComposer,
+    $$LocalTaskTimeLogsTableOrderingComposer,
+    $$LocalTaskTimeLogsTableAnnotationComposer,
+    $$LocalTaskTimeLogsTableCreateCompanionBuilder,
+    $$LocalTaskTimeLogsTableUpdateCompanionBuilder,
+    (
+      LocalTaskTimeLog,
+      BaseReferences<_$AppDatabase, $LocalTaskTimeLogsTable, LocalTaskTimeLog>
+    ),
+    LocalTaskTimeLog,
+    PrefetchHooks Function()> {
+  $$LocalTaskTimeLogsTableTableManager(
+      _$AppDatabase db, $LocalTaskTimeLogsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalTaskTimeLogsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalTaskTimeLogsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalTaskTimeLogsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> workspaceId = const Value.absent(),
+            Value<String> taskId = const Value.absent(),
+            Value<String?> userId = const Value.absent(),
+            Value<DateTime> startedAt = const Value.absent(),
+            Value<DateTime?> endedAt = const Value.absent(),
+            Value<int> durationSeconds = const Value.absent(),
+            Value<String> mode = const Value.absent(),
+            Value<String?> note = const Value.absent(),
+            Value<DateTime?> createdAt = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalTaskTimeLogsCompanion(
+            id: id,
+            workspaceId: workspaceId,
+            taskId: taskId,
+            userId: userId,
+            startedAt: startedAt,
+            endedAt: endedAt,
+            durationSeconds: durationSeconds,
+            mode: mode,
+            note: note,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String workspaceId,
+            required String taskId,
+            Value<String?> userId = const Value.absent(),
+            required DateTime startedAt,
+            Value<DateTime?> endedAt = const Value.absent(),
+            Value<int> durationSeconds = const Value.absent(),
+            Value<String> mode = const Value.absent(),
+            Value<String?> note = const Value.absent(),
+            Value<DateTime?> createdAt = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalTaskTimeLogsCompanion.insert(
+            id: id,
+            workspaceId: workspaceId,
+            taskId: taskId,
+            userId: userId,
+            startedAt: startedAt,
+            endedAt: endedAt,
+            durationSeconds: durationSeconds,
+            mode: mode,
+            note: note,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$LocalTaskTimeLogsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $LocalTaskTimeLogsTable,
+    LocalTaskTimeLog,
+    $$LocalTaskTimeLogsTableFilterComposer,
+    $$LocalTaskTimeLogsTableOrderingComposer,
+    $$LocalTaskTimeLogsTableAnnotationComposer,
+    $$LocalTaskTimeLogsTableCreateCompanionBuilder,
+    $$LocalTaskTimeLogsTableUpdateCompanionBuilder,
+    (
+      LocalTaskTimeLog,
+      BaseReferences<_$AppDatabase, $LocalTaskTimeLogsTable, LocalTaskTimeLog>
+    ),
+    LocalTaskTimeLog,
+    PrefetchHooks Function()>;
+typedef $$LocalAttachmentsTableCreateCompanionBuilder
+    = LocalAttachmentsCompanion Function({
+  required String id,
+  required String workspaceId,
+  required String ownerTable,
+  required String ownerId,
+  required String storagePath,
+  required String mime,
+  required int size,
+  Value<String?> fileName,
+  Value<String?> createdBy,
+  Value<DateTime?> createdAt,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+typedef $$LocalAttachmentsTableUpdateCompanionBuilder
+    = LocalAttachmentsCompanion Function({
+  Value<String> id,
+  Value<String> workspaceId,
+  Value<String> ownerTable,
+  Value<String> ownerId,
+  Value<String> storagePath,
+  Value<String> mime,
+  Value<int> size,
+  Value<String?> fileName,
+  Value<String?> createdBy,
+  Value<DateTime?> createdAt,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+
+class $$LocalAttachmentsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalAttachmentsTable> {
+  $$LocalAttachmentsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get ownerTable => $composableBuilder(
+      column: $table.ownerTable, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get ownerId => $composableBuilder(
+      column: $table.ownerId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get storagePath => $composableBuilder(
+      column: $table.storagePath, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get mime => $composableBuilder(
+      column: $table.mime, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get size => $composableBuilder(
+      column: $table.size, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get fileName => $composableBuilder(
+      column: $table.fileName, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get createdBy => $composableBuilder(
+      column: $table.createdBy, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$LocalAttachmentsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalAttachmentsTable> {
+  $$LocalAttachmentsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get ownerTable => $composableBuilder(
+      column: $table.ownerTable, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get ownerId => $composableBuilder(
+      column: $table.ownerId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get storagePath => $composableBuilder(
+      column: $table.storagePath, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get mime => $composableBuilder(
+      column: $table.mime, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get size => $composableBuilder(
+      column: $table.size, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get fileName => $composableBuilder(
+      column: $table.fileName, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get createdBy => $composableBuilder(
+      column: $table.createdBy, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$LocalAttachmentsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalAttachmentsTable> {
+  $$LocalAttachmentsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => column);
+
+  GeneratedColumn<String> get ownerTable => $composableBuilder(
+      column: $table.ownerTable, builder: (column) => column);
+
+  GeneratedColumn<String> get ownerId =>
+      $composableBuilder(column: $table.ownerId, builder: (column) => column);
+
+  GeneratedColumn<String> get storagePath => $composableBuilder(
+      column: $table.storagePath, builder: (column) => column);
+
+  GeneratedColumn<String> get mime =>
+      $composableBuilder(column: $table.mime, builder: (column) => column);
+
+  GeneratedColumn<int> get size =>
+      $composableBuilder(column: $table.size, builder: (column) => column);
+
+  GeneratedColumn<String> get fileName =>
+      $composableBuilder(column: $table.fileName, builder: (column) => column);
+
+  GeneratedColumn<String> get createdBy =>
+      $composableBuilder(column: $table.createdBy, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$LocalAttachmentsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LocalAttachmentsTable,
+    LocalAttachment,
+    $$LocalAttachmentsTableFilterComposer,
+    $$LocalAttachmentsTableOrderingComposer,
+    $$LocalAttachmentsTableAnnotationComposer,
+    $$LocalAttachmentsTableCreateCompanionBuilder,
+    $$LocalAttachmentsTableUpdateCompanionBuilder,
+    (
+      LocalAttachment,
+      BaseReferences<_$AppDatabase, $LocalAttachmentsTable, LocalAttachment>
+    ),
+    LocalAttachment,
+    PrefetchHooks Function()> {
+  $$LocalAttachmentsTableTableManager(
+      _$AppDatabase db, $LocalAttachmentsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalAttachmentsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalAttachmentsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalAttachmentsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> workspaceId = const Value.absent(),
+            Value<String> ownerTable = const Value.absent(),
+            Value<String> ownerId = const Value.absent(),
+            Value<String> storagePath = const Value.absent(),
+            Value<String> mime = const Value.absent(),
+            Value<int> size = const Value.absent(),
+            Value<String?> fileName = const Value.absent(),
+            Value<String?> createdBy = const Value.absent(),
+            Value<DateTime?> createdAt = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalAttachmentsCompanion(
+            id: id,
+            workspaceId: workspaceId,
+            ownerTable: ownerTable,
+            ownerId: ownerId,
+            storagePath: storagePath,
+            mime: mime,
+            size: size,
+            fileName: fileName,
+            createdBy: createdBy,
+            createdAt: createdAt,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String workspaceId,
+            required String ownerTable,
+            required String ownerId,
+            required String storagePath,
+            required String mime,
+            required int size,
+            Value<String?> fileName = const Value.absent(),
+            Value<String?> createdBy = const Value.absent(),
+            Value<DateTime?> createdAt = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalAttachmentsCompanion.insert(
+            id: id,
+            workspaceId: workspaceId,
+            ownerTable: ownerTable,
+            ownerId: ownerId,
+            storagePath: storagePath,
+            mime: mime,
+            size: size,
+            fileName: fileName,
+            createdBy: createdBy,
+            createdAt: createdAt,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$LocalAttachmentsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $LocalAttachmentsTable,
+    LocalAttachment,
+    $$LocalAttachmentsTableFilterComposer,
+    $$LocalAttachmentsTableOrderingComposer,
+    $$LocalAttachmentsTableAnnotationComposer,
+    $$LocalAttachmentsTableCreateCompanionBuilder,
+    $$LocalAttachmentsTableUpdateCompanionBuilder,
+    (
+      LocalAttachment,
+      BaseReferences<_$AppDatabase, $LocalAttachmentsTable, LocalAttachment>
+    ),
+    LocalAttachment,
+    PrefetchHooks Function()>;
+typedef $$LocalWorkspaceMembersTableCreateCompanionBuilder
+    = LocalWorkspaceMembersCompanion Function({
+  required String workspaceId,
+  required String userId,
+  Value<String> role,
+  Value<String?> displayName,
+  Value<String?> email,
+  Value<DateTime?> updatedAt,
+  Value<int> rowid,
+});
+typedef $$LocalWorkspaceMembersTableUpdateCompanionBuilder
+    = LocalWorkspaceMembersCompanion Function({
+  Value<String> workspaceId,
+  Value<String> userId,
+  Value<String> role,
+  Value<String?> displayName,
+  Value<String?> email,
+  Value<DateTime?> updatedAt,
+  Value<int> rowid,
+});
+
+class $$LocalWorkspaceMembersTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalWorkspaceMembersTable> {
+  $$LocalWorkspaceMembersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get userId => $composableBuilder(
+      column: $table.userId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get role => $composableBuilder(
+      column: $table.role, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get displayName => $composableBuilder(
+      column: $table.displayName, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get email => $composableBuilder(
+      column: $table.email, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$LocalWorkspaceMembersTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalWorkspaceMembersTable> {
+  $$LocalWorkspaceMembersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+      column: $table.userId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get role => $composableBuilder(
+      column: $table.role, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get displayName => $composableBuilder(
+      column: $table.displayName, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get email => $composableBuilder(
+      column: $table.email, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$LocalWorkspaceMembersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalWorkspaceMembersTable> {
+  $$LocalWorkspaceMembersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => column);
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<String> get displayName => $composableBuilder(
+      column: $table.displayName, builder: (column) => column);
+
+  GeneratedColumn<String> get email =>
+      $composableBuilder(column: $table.email, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$LocalWorkspaceMembersTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LocalWorkspaceMembersTable,
+    LocalWorkspaceMember,
+    $$LocalWorkspaceMembersTableFilterComposer,
+    $$LocalWorkspaceMembersTableOrderingComposer,
+    $$LocalWorkspaceMembersTableAnnotationComposer,
+    $$LocalWorkspaceMembersTableCreateCompanionBuilder,
+    $$LocalWorkspaceMembersTableUpdateCompanionBuilder,
+    (
+      LocalWorkspaceMember,
+      BaseReferences<_$AppDatabase, $LocalWorkspaceMembersTable,
+          LocalWorkspaceMember>
+    ),
+    LocalWorkspaceMember,
+    PrefetchHooks Function()> {
+  $$LocalWorkspaceMembersTableTableManager(
+      _$AppDatabase db, $LocalWorkspaceMembersTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalWorkspaceMembersTableFilterComposer(
+                  $db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalWorkspaceMembersTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalWorkspaceMembersTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> workspaceId = const Value.absent(),
+            Value<String> userId = const Value.absent(),
+            Value<String> role = const Value.absent(),
+            Value<String?> displayName = const Value.absent(),
+            Value<String?> email = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalWorkspaceMembersCompanion(
+            workspaceId: workspaceId,
+            userId: userId,
+            role: role,
+            displayName: displayName,
+            email: email,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String workspaceId,
+            required String userId,
+            Value<String> role = const Value.absent(),
+            Value<String?> displayName = const Value.absent(),
+            Value<String?> email = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalWorkspaceMembersCompanion.insert(
+            workspaceId: workspaceId,
+            userId: userId,
+            role: role,
+            displayName: displayName,
+            email: email,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$LocalWorkspaceMembersTableProcessedTableManager
+    = ProcessedTableManager<
+        _$AppDatabase,
+        $LocalWorkspaceMembersTable,
+        LocalWorkspaceMember,
+        $$LocalWorkspaceMembersTableFilterComposer,
+        $$LocalWorkspaceMembersTableOrderingComposer,
+        $$LocalWorkspaceMembersTableAnnotationComposer,
+        $$LocalWorkspaceMembersTableCreateCompanionBuilder,
+        $$LocalWorkspaceMembersTableUpdateCompanionBuilder,
+        (
+          LocalWorkspaceMember,
+          BaseReferences<_$AppDatabase, $LocalWorkspaceMembersTable,
+              LocalWorkspaceMember>
+        ),
+        LocalWorkspaceMember,
+        PrefetchHooks Function()>;
+typedef $$LocalCalendarConnectionsTableCreateCompanionBuilder
+    = LocalCalendarConnectionsCompanion Function({
+  required String id,
+  required String userId,
+  required String workspaceId,
+  Value<String> provider,
+  Value<String> externalCalendarId,
+  Value<String> syncDirection,
+  Value<bool> enabled,
+  Value<DateTime?> lastSyncedAt,
+  Value<int> rowid,
+});
+typedef $$LocalCalendarConnectionsTableUpdateCompanionBuilder
+    = LocalCalendarConnectionsCompanion Function({
+  Value<String> id,
+  Value<String> userId,
+  Value<String> workspaceId,
+  Value<String> provider,
+  Value<String> externalCalendarId,
+  Value<String> syncDirection,
+  Value<bool> enabled,
+  Value<DateTime?> lastSyncedAt,
+  Value<int> rowid,
+});
+
+class $$LocalCalendarConnectionsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalCalendarConnectionsTable> {
+  $$LocalCalendarConnectionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get userId => $composableBuilder(
+      column: $table.userId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get provider => $composableBuilder(
+      column: $table.provider, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get externalCalendarId => $composableBuilder(
+      column: $table.externalCalendarId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get syncDirection => $composableBuilder(
+      column: $table.syncDirection, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get enabled => $composableBuilder(
+      column: $table.enabled, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastSyncedAt => $composableBuilder(
+      column: $table.lastSyncedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$LocalCalendarConnectionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalCalendarConnectionsTable> {
+  $$LocalCalendarConnectionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+      column: $table.userId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get provider => $composableBuilder(
+      column: $table.provider, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get externalCalendarId => $composableBuilder(
+      column: $table.externalCalendarId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get syncDirection => $composableBuilder(
+      column: $table.syncDirection,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get enabled => $composableBuilder(
+      column: $table.enabled, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastSyncedAt => $composableBuilder(
+      column: $table.lastSyncedAt,
+      builder: (column) => ColumnOrderings(column));
+}
+
+class $$LocalCalendarConnectionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalCalendarConnectionsTable> {
+  $$LocalCalendarConnectionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<String> get workspaceId => $composableBuilder(
+      column: $table.workspaceId, builder: (column) => column);
+
+  GeneratedColumn<String> get provider =>
+      $composableBuilder(column: $table.provider, builder: (column) => column);
+
+  GeneratedColumn<String> get externalCalendarId => $composableBuilder(
+      column: $table.externalCalendarId, builder: (column) => column);
+
+  GeneratedColumn<String> get syncDirection => $composableBuilder(
+      column: $table.syncDirection, builder: (column) => column);
+
+  GeneratedColumn<bool> get enabled =>
+      $composableBuilder(column: $table.enabled, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastSyncedAt => $composableBuilder(
+      column: $table.lastSyncedAt, builder: (column) => column);
+}
+
+class $$LocalCalendarConnectionsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LocalCalendarConnectionsTable,
+    LocalCalendarConnection,
+    $$LocalCalendarConnectionsTableFilterComposer,
+    $$LocalCalendarConnectionsTableOrderingComposer,
+    $$LocalCalendarConnectionsTableAnnotationComposer,
+    $$LocalCalendarConnectionsTableCreateCompanionBuilder,
+    $$LocalCalendarConnectionsTableUpdateCompanionBuilder,
+    (
+      LocalCalendarConnection,
+      BaseReferences<_$AppDatabase, $LocalCalendarConnectionsTable,
+          LocalCalendarConnection>
+    ),
+    LocalCalendarConnection,
+    PrefetchHooks Function()> {
+  $$LocalCalendarConnectionsTableTableManager(
+      _$AppDatabase db, $LocalCalendarConnectionsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalCalendarConnectionsTableFilterComposer(
+                  $db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalCalendarConnectionsTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalCalendarConnectionsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> userId = const Value.absent(),
+            Value<String> workspaceId = const Value.absent(),
+            Value<String> provider = const Value.absent(),
+            Value<String> externalCalendarId = const Value.absent(),
+            Value<String> syncDirection = const Value.absent(),
+            Value<bool> enabled = const Value.absent(),
+            Value<DateTime?> lastSyncedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalCalendarConnectionsCompanion(
+            id: id,
+            userId: userId,
+            workspaceId: workspaceId,
+            provider: provider,
+            externalCalendarId: externalCalendarId,
+            syncDirection: syncDirection,
+            enabled: enabled,
+            lastSyncedAt: lastSyncedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String userId,
+            required String workspaceId,
+            Value<String> provider = const Value.absent(),
+            Value<String> externalCalendarId = const Value.absent(),
+            Value<String> syncDirection = const Value.absent(),
+            Value<bool> enabled = const Value.absent(),
+            Value<DateTime?> lastSyncedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalCalendarConnectionsCompanion.insert(
+            id: id,
+            userId: userId,
+            workspaceId: workspaceId,
+            provider: provider,
+            externalCalendarId: externalCalendarId,
+            syncDirection: syncDirection,
+            enabled: enabled,
+            lastSyncedAt: lastSyncedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$LocalCalendarConnectionsTableProcessedTableManager
+    = ProcessedTableManager<
+        _$AppDatabase,
+        $LocalCalendarConnectionsTable,
+        LocalCalendarConnection,
+        $$LocalCalendarConnectionsTableFilterComposer,
+        $$LocalCalendarConnectionsTableOrderingComposer,
+        $$LocalCalendarConnectionsTableAnnotationComposer,
+        $$LocalCalendarConnectionsTableCreateCompanionBuilder,
+        $$LocalCalendarConnectionsTableUpdateCompanionBuilder,
+        (
+          LocalCalendarConnection,
+          BaseReferences<_$AppDatabase, $LocalCalendarConnectionsTable,
+              LocalCalendarConnection>
+        ),
+        LocalCalendarConnection,
+        PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -12520,4 +20480,24 @@ class $AppDatabaseManager {
       $$LocalSavingsGoalsTableTableManager(_db, _db.localSavingsGoals);
   $$LocalIncomeSplitRulesTableTableManager get localIncomeSplitRules =>
       $$LocalIncomeSplitRulesTableTableManager(_db, _db.localIncomeSplitRules);
+  $$LocalTaskStatusHistoriesTableTableManager get localTaskStatusHistories =>
+      $$LocalTaskStatusHistoriesTableTableManager(
+          _db, _db.localTaskStatusHistories);
+  $$LocalCommentsTableTableManager get localComments =>
+      $$LocalCommentsTableTableManager(_db, _db.localComments);
+  $$LocalEntityLinksTableTableManager get localEntityLinks =>
+      $$LocalEntityLinksTableTableManager(_db, _db.localEntityLinks);
+  $$LocalSavedViewsTableTableManager get localSavedViews =>
+      $$LocalSavedViewsTableTableManager(_db, _db.localSavedViews);
+  $$LocalTaskTemplatesTableTableManager get localTaskTemplates =>
+      $$LocalTaskTemplatesTableTableManager(_db, _db.localTaskTemplates);
+  $$LocalTaskTimeLogsTableTableManager get localTaskTimeLogs =>
+      $$LocalTaskTimeLogsTableTableManager(_db, _db.localTaskTimeLogs);
+  $$LocalAttachmentsTableTableManager get localAttachments =>
+      $$LocalAttachmentsTableTableManager(_db, _db.localAttachments);
+  $$LocalWorkspaceMembersTableTableManager get localWorkspaceMembers =>
+      $$LocalWorkspaceMembersTableTableManager(_db, _db.localWorkspaceMembers);
+  $$LocalCalendarConnectionsTableTableManager get localCalendarConnections =>
+      $$LocalCalendarConnectionsTableTableManager(
+          _db, _db.localCalendarConnections);
 }
