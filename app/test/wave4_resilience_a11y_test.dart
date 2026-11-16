@@ -878,6 +878,116 @@ void main() {
         }, _AllowLocalHttpOverrides());
       },
     );
+
+    test(
+      'pullAllFromSupabase membaca saldo dari v_account_balances + menormalisasi upsert & project status active',
+      () async {
+        await HttpOverrides.runWithHttpOverrides(() async {
+          final server = await _FakeSupabaseServer.start();
+          final client = await _createSignedInClient(server);
+          addTearDown(() async {
+            await client.dispose();
+            await server.close();
+          });
+          final onlineSync = SyncService(db: db, supabase: client);
+
+          server.serverTables['accounts'] = [
+            {
+              'id': 'acc-live-1',
+              'workspace_id': 'ws-w4',
+              'name': 'BCA Utama',
+              'type': 'bank',
+              'currency': 'IDR',
+              'initial_balance': 1000000,
+              'is_liquid': true,
+              'visibility': 'shared',
+              'archived': false,
+              'sort_order': 0,
+            },
+          ];
+          server.serverTables['v_account_balances'] = [
+            {
+              'account_id': 'acc-live-1',
+              'workspace_id': 'ws-w4',
+              'balance': 2750000,
+              'is_liquid': true,
+            },
+          ];
+
+          await db.into(db.syncOutbox).insert(
+                SyncOutboxCompanion.insert(
+                  id: 'op-upsert-tx',
+                  targetTable: 'transactions',
+                  recordId: 'tx-upsert-1',
+                  action: 'upsert',
+                  payload: jsonEncode({
+                    'id': 'tx-upsert-1',
+                    'workspace_id': 'ws-w4',
+                    'account_id': 'acc-live-1',
+                    'type': 'expense',
+                    'status': 'draft',
+                    'source': 'notification',
+                    'origin': 'bank_notification',
+                    'amount': 50000,
+                    'currency': 'IDR',
+                  }),
+                  createdAt: DateTime.utc(2026, 11, 16, 10, 0),
+                  status: const Value('pending'),
+                ),
+              );
+          await db.into(db.syncOutbox).insert(
+                SyncOutboxCompanion.insert(
+                  id: 'op-proj-legacy',
+                  targetTable: 'projects',
+                  recordId: 'proj-legacy-1',
+                  action: 'insert',
+                  payload: jsonEncode({
+                    'id': 'proj-legacy-1',
+                    'workspace_id': 'ws-w4',
+                    'kind': 'freelance',
+                    'name': 'Proyek Legacy Status',
+                    'status': 'active',
+                    'contract_value': 5000000,
+                  }),
+                  createdAt: DateTime.utc(2026, 11, 16, 10, 1),
+                  status: const Value('pending'),
+                ),
+              );
+
+          await onlineSync.pullAllFromSupabase();
+
+          final accRow = await (db.select(db.localAccounts)
+                ..where((a) => a.id.equals('acc-live-1')))
+              .getSingle();
+          expect(accRow.initialBalance, 1000000);
+          expect(accRow.currentBalance, 2750000);
+
+          final upsertOp = await (db.select(db.syncOutbox)
+                ..where((t) => t.id.equals('op-upsert-tx')))
+              .getSingle();
+          final projOp = await (db.select(db.syncOutbox)
+                ..where((t) => t.id.equals('op-proj-legacy')))
+              .getSingle();
+          expect(upsertOp.status, 'synced');
+          expect(projOp.status, 'synced');
+
+          final txReq = server.requests.lastWhere(
+            (r) => r.path == '/rest/v1/transactions' && r.method == 'POST',
+          );
+          final txBody = jsonDecode(txReq.body) as Map<String, dynamic>;
+          expect(txBody['origin'], 'notification');
+          expect(txBody['source'], 'personal');
+          expect(txBody['draft_state'], 'baru');
+
+          final projReq = server.requests.lastWhere(
+            (r) => r.path == '/rest/v1/projects' && r.method == 'POST',
+          );
+          final projBody = jsonDecode(projReq.body) as Map<String, dynamic>;
+          expect(projBody['status'], 'berjalan');
+          expect(projBody['currency'], 'IDR');
+        }, _AllowLocalHttpOverrides());
+      },
+    );
   });
 
   group('2. Audit Aksesibilitas & Ketahanan Layar Utama v2 (Wave 4)', () {

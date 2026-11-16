@@ -1505,7 +1505,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                               workspaceId: wsId,
                               kind: kind,
                               name: name,
-                              status: const drift.Value('active'),
+                              status: const drift.Value('berjalan'),
                               clientName: drift.Value(
                                 clientCtrl.text.trim().isEmpty
                                     ? null
@@ -1525,10 +1525,13 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                           'workspace_id': wsId,
                           'kind': kind,
                           'name': name,
-                          'status': 'active',
+                          'status': 'berjalan',
                           if (clientCtrl.text.trim().isNotEmpty)
                             'client_name': clientCtrl.text.trim(),
-                          if (contract != null) 'contract_value': contract,
+                          if (kind == 'freelance' && contract != null) ...{
+                            'contract_value': contract,
+                            'currency': 'IDR',
+                          },
                           'started_on': startedOn.toUtc().toIso8601String(),
                           'deadline': deadline.toUtc().toIso8601String(),
                         },

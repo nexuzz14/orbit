@@ -49,17 +49,29 @@ class OrbitApp extends StatelessWidget {
       themeMode: ThemeMode.system,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      home: StreamBuilder<AuthState>(
-        stream: Supabase.instance.client.auth.onAuthStateChange,
-        builder: (context, snapshot) {
-          final session =
-              snapshot.data?.session ?? Supabase.instance.client.auth.currentSession;
-          if (session != null) {
-            return const OrbitAppLockGate(child: HomeScreen());
-          }
-          return const LoginScreen();
-        },
+      home: const _OrbitAuthRootGate(),
+      onUnknownRoute: (_) => MaterialPageRoute<void>(
+        builder: (_) => const _OrbitAuthRootGate(),
       ),
+    );
+  }
+}
+
+class _OrbitAuthRootGate extends StatelessWidget {
+  const _OrbitAuthRootGate();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<AuthState>(
+      stream: Supabase.instance.client.auth.onAuthStateChange,
+      builder: (context, snapshot) {
+        final session =
+            snapshot.data?.session ?? Supabase.instance.client.auth.currentSession;
+        if (session != null) {
+          return const OrbitAppLockGate(child: HomeScreen());
+        }
+        return const LoginScreen();
+      },
     );
   }
 }

@@ -62,11 +62,15 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     }
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadData({bool pull = false}) async {
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
+
+    if (pull) {
+      await SyncService.instance.pullAllFromSupabase();
+    }
 
     try {
       final db = AppDatabase.shared;
@@ -443,12 +447,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   Widget _buildInlineAccountsTab(BuildContext context) {
-    final totalBalance = _accounts.fold<double>(
-      0,
-      (sum, a) => sum + a.currentBalance,
-    );
+    final totalBalance = _accounts
+        .where((a) => a.isLiquid && !a.archived)
+        .fold<double>(0, (sum, a) => sum + a.currentBalance);
     return RefreshIndicator(
-      onRefresh: _loadData,
+      onRefresh: () => _loadData(pull: true),
       child: ListView(
         padding: const EdgeInsets.all(AppTokens.space4),
         children: [

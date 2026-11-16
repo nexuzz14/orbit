@@ -117,9 +117,12 @@ class _TodayScreenState extends State<TodayScreen> {
           if (t.type == 'income') inc += t.amount;
           if (t.type == 'expense') exp += t.amount;
         }
-        if (bal == 0) {
+        if (localAccs.isEmpty) {
           if (t.type == 'income') bal += t.amount;
           if (t.type == 'expense') bal -= t.amount;
+          if (t.type == 'transfer') {
+            bal += t.transferDirection == 'in' ? t.amount : -t.amount;
+          }
         }
       }
 

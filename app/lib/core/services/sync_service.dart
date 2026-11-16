@@ -332,7 +332,9 @@ class SyncService {
       final protectedProjectPayments =
           protectedIdsByTable['project_payments'] ?? const <String>{};
 
-      // 1. Tarik Akun Keuangan (accounts)
+      // 1. Tarik Akun Keuangan (accounts + view v_account_balances untuk saldo riil)
+      final missingViewBalanceIds = <String>{};
+      final initialBalancesByAcc = <String, double>{};
       try {
         final accountsData = await supabase
             .from('accounts')
@@ -340,18 +342,43 @@ class SyncService {
             .eq('workspace_id', wsId)
             .isFilter('deleted_at', null);
 
+        final balanceByAccountId = <String, double>{};
+        try {
+          final viewBalances = await supabase
+              .from('v_account_balances')
+              .select('account_id, balance')
+              .eq('workspace_id', wsId);
+          for (final vb in viewBalances) {
+            final accId = vb['account_id']?.toString() ?? '';
+            final balVal = (vb['balance'] as num?)?.toDouble();
+            if (accId.isNotEmpty && balVal != null) {
+              balanceByAccountId[accId] = balVal;
+            }
+          }
+        } catch (e) {
+          debugPrint('Sync v_account_balances fallback to local calc: $e');
+        }
+
         for (final m in accountsData) {
+          final accId = m['id'] as String;
+          final initBal = (m['initial_balance'] as num?)?.toDouble() ?? 0.0;
+          initialBalancesByAcc[accId] = initBal;
+          final viewBal = balanceByAccountId[accId];
+          final legacyCurrent = (m['current_balance'] as num?)?.toDouble();
+          if (viewBal == null && legacyCurrent == null) {
+            missingViewBalanceIds.add(accId);
+          }
+          final resolvedBalance = viewBal ?? legacyCurrent ?? initBal;
+
           await db.into(db.localAccounts).insertOnConflictUpdate(
             LocalAccountsCompanion.insert(
-              id: m['id'] as String,
+              id: accId,
               workspaceId: m['workspace_id'] as String,
               name: m['name'] as String,
               type: m['type'] as String,
               currency: m['currency'] as String? ?? 'IDR',
-              initialBalance:
-                  Value((m['initial_balance'] as num?)?.toDouble() ?? 0.0),
-              currentBalance:
-                  Value((m['current_balance'] as num?)?.toDouble() ?? 0.0),
+              initialBalance: Value(initBal),
+              currentBalance: Value(resolvedBalance),
               isLiquid: Value(m['is_liquid'] == true),
               visibility: Value(m['visibility'] as String? ?? 'shared'),
               archived: Value(m['archived'] == true),
@@ -607,6 +634,32 @@ class SyncService {
         }
       } catch (e) {
         debugPrint('Sync transactions error: $e');
+      }
+
+      // 7b. Jika v_account_balances tidak tersedia, hitung saldo riil dari initial_balance + transaksi lokal
+      if (missingViewBalanceIds.isNotEmpty) {
+        try {
+          final confirmedTxs = await (db.select(db.localTransactions)
+                ..where((t) => t.deletedAt.isNull() & t.status.equals('confirmed')))
+              .get();
+          for (final accId in missingViewBalanceIds) {
+            var computed = initialBalancesByAcc[accId] ?? 0.0;
+            for (final tx in confirmedTxs) {
+              if (tx.accountId != accId) continue;
+              if (tx.type == 'income') {
+                computed += tx.amount;
+              } else if (tx.type == 'expense') {
+                computed -= tx.amount;
+              } else if (tx.type == 'transfer') {
+                computed += tx.transferDirection == 'in' ? tx.amount : -tx.amount;
+              }
+            }
+            await (db.update(db.localAccounts)..where((a) => a.id.equals(accId)))
+                .write(LocalAccountsCompanion(currentBalance: Value(computed)));
+          }
+        } catch (e) {
+          debugPrint('Fallback account balance recompute skipped: $e');
+        }
       }
 
       // 8. Tarik Milestone Pembayaran (project_payments)
@@ -1277,7 +1330,7 @@ class SyncService {
           'merchant': payment.label,
           'note': 'Pelunasan termin: ${payment.label}',
           'occurred_at': now.toIso8601String(),
-          'origin': 'project_payment',
+          'origin': 'manual',
         },
       );
     }
@@ -1405,16 +1458,21 @@ class SyncService {
     required String action,
     required Map<String, dynamic> payload,
   }) async {
+    final normalizedPayload = _normalizeRemotePayload(targetTable, payload);
+
     if (action == 'rpc') {
-      await supabase.rpc(targetTable, params: payload);
+      await supabase.rpc(targetTable, params: normalizedPayload);
       return;
     }
-    if (action == 'insert') {
-      await _upsertOrInsertIdempotent(targetTable, payload);
+    if (action == 'insert' || action == 'upsert') {
+      await _upsertOrInsertIdempotent(targetTable, normalizedPayload);
       return;
     }
     if (action == 'update') {
-      await supabase.from(targetTable).update(payload).eq('id', recordId);
+      await supabase
+          .from(targetTable)
+          .update(normalizedPayload)
+          .eq('id', recordId);
       return;
     }
     if (action == 'delete') {
@@ -1429,6 +1487,66 @@ class SyncService {
       return;
     }
     throw UnsupportedError('Aksi sinkronisasi tidak dikenal: $action');
+  }
+
+  static Map<String, dynamic> _normalizeRemotePayload(
+    String targetTable,
+    Map<String, dynamic> payload,
+  ) {
+    final normalized = Map<String, dynamic>.from(payload);
+
+    if (targetTable == 'projects') {
+      if (normalized['status'] == 'active') {
+        normalized['status'] = 'berjalan';
+      }
+      final kind = normalized['kind']?.toString();
+      if (kind != null && kind != 'freelance') {
+        normalized.remove('contract_value');
+        normalized.remove('currency');
+        normalized.remove('platform_fee_percent');
+        normalized.remove('fee_mode');
+      } else if (normalized['contract_value'] != null) {
+        normalized['currency'] ??= 'IDR';
+      } else {
+        normalized.remove('currency');
+      }
+      return normalized;
+    }
+
+    if (targetTable == 'transactions') {
+      const validOrigins = {
+        'manual',
+        'sentence',
+        'notification',
+        'proof_image',
+        'statement',
+        'receipt',
+        'recurring',
+      };
+      final rawOrigin = normalized['origin']?.toString();
+      if (rawOrigin != null && !validOrigins.contains(rawOrigin)) {
+        normalized['origin'] = switch (rawOrigin) {
+          'bank_notification' => 'notification',
+          'csv_import' => 'statement',
+          'project_payment' => 'manual',
+          'share_text' => 'sentence',
+          'receipt_ocr' || 'ocr' => 'receipt',
+          _ => 'manual',
+        };
+      }
+
+      const validSources = {'intern', 'freelance', 'kuliah', 'personal'};
+      final rawSource = normalized['source']?.toString();
+      if (rawSource != null && !validSources.contains(rawSource)) {
+        normalized['source'] = 'personal';
+      }
+
+      if (normalized['status'] == 'draft' && normalized['draft_state'] == null) {
+        normalized['draft_state'] = 'baru';
+      }
+    }
+
+    return normalized;
   }
 
   /// Menambah atau memperbarui rekaman lokal dan mengirimnya ke Supabase jika online,
